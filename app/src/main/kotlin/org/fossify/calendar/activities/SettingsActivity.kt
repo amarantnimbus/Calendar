@@ -1,12 +1,19 @@
 package org.fossify.calendar.activities
 
+import android.app.DatePickerDialog
 import android.app.TimePickerDialog
 import android.content.ActivityNotFoundException
 import android.content.Intent
 import android.media.AudioManager
 import android.media.RingtoneManager
 import android.os.Bundle
+import android.text.InputType
+import android.view.View
+import android.widget.EditText
+import android.widget.FrameLayout
+import android.widget.ImageView
 import android.widget.Toast
+import androidx.appcompat.app.AlertDialog
 import com.google.android.material.timepicker.MaterialTimePicker
 import com.google.android.material.timepicker.TimeFormat
 import org.fossify.calendar.R
@@ -45,6 +52,14 @@ import org.fossify.calendar.helpers.EVENTS_LIST_VIEW
 import org.fossify.calendar.helpers.Formatter
 import org.fossify.calendar.helpers.HIGHLIGHT_WEEKENDS
 import org.fossify.calendar.helpers.HIGHLIGHT_WEEKENDS_COLOR
+import org.fossify.calendar.helpers.SHIFTS_ENABLED
+import org.fossify.calendar.helpers.SHIFT_COLOR_DAY
+import org.fossify.calendar.helpers.SHIFT_COLOR_NIGHT
+import org.fossify.calendar.helpers.SHIFT_COLOR_OFF_DUTY
+import org.fossify.calendar.helpers.SHIFT_CYCLE
+import org.fossify.calendar.helpers.SHIFT_OVERRIDES
+import org.fossify.calendar.helpers.SHIFT_START_DATE
+import org.fossify.calendar.helpers.ShiftHelper
 import org.fossify.calendar.helpers.IcsExporter
 import org.fossify.calendar.helpers.LAST_EVENT_REMINDER_MINUTES
 import org.fossify.calendar.helpers.LAST_EVENT_REMINDER_MINUTES_2
@@ -140,6 +155,7 @@ import org.joda.time.DateTimeConstants
 import java.io.File
 import java.io.InputStream
 import java.io.OutputStream
+import java.util.Locale
 import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.Locale
@@ -189,6 +205,7 @@ class SettingsActivity : SimpleActivity() {
         setupStartWeekOn()
         setupHighlightWeekends()
         setupHighlightWeekendsColor()
+        setupShifts()
         setupDeleteAllEvents()
         setupDisplayDescription()
         setupReplaceDescription()
@@ -233,6 +250,7 @@ class SettingsActivity : SimpleActivity() {
         arrayOf(
             binding.settingsColorCustomizationSectionLabel,
             binding.settingsGeneralSettingsLabel,
+            binding.settingsShiftsLabel,
             binding.settingsRemindersLabel,
             binding.settingsCaldavLabel,
             binding.settingsNewEventsLabel,
@@ -537,6 +555,126 @@ class SettingsActivity : SimpleActivity() {
                 }
             }
         }
+    }
+
+    private fun setupShifts() {
+        binding.apply {
+            settingsShiftsEnabled.isChecked = config.shiftsEnabled
+            settingsShiftsDetailsHolder.beVisibleIf(config.shiftsEnabled)
+            settingsShiftsEnabledHolder.setOnClickListener {
+                settingsShiftsEnabled.toggle()
+                config.shiftsEnabled = settingsShiftsEnabled.isChecked
+                if (config.shiftsEnabled && config.shiftStartDate.isEmpty()) {
+                    config.shiftStartDate = Formatter.getDayCodeFromDateTime(DateTime())
+                    setupShiftStartDate()
+                }
+                settingsShiftsDetailsHolder.beVisibleIf(config.shiftsEnabled)
+            }
+
+            setupShiftColor(settingsShiftColorDay, settingsShiftColorDayHolder, { config.shiftColorDay }) {
+                config.shiftColorDay = it
+            }
+
+            setupShiftColor(settingsShiftColorNight, settingsShiftColorNightHolder, { config.shiftColorNight }) {
+                config.shiftColorNight = it
+            }
+
+            setupShiftColor(settingsShiftColorOffDuty, settingsShiftColorOffDutyHolder, { config.shiftColorOffDuty }) {
+                config.shiftColorOffDuty = it
+            }
+        }
+
+        setupShiftStartDate()
+        setupShiftCycle()
+    }
+
+    private fun setupShiftColor(
+        sample: ImageView,
+        holder: View,
+        getColor: () -> Int,
+        setColor: (Int) -> Unit
+    ) {
+        sample.setFillWithStroke(getColor(), getProperBackgroundColor())
+        holder.setOnClickListener {
+            ColorPickerDialog(
+                activity = this@SettingsActivity,
+                color = getColor()
+            ) { wasPositivePressed, color ->
+                if (wasPositivePressed) {
+                    setColor(color)
+                    sample.setFillWithStroke(color, getProperBackgroundColor())
+                }
+            }
+        }
+    }
+
+    private fun getShiftStartDateText(): String {
+        val dayCode = config.shiftStartDate
+        return if (dayCode.length == 8) {
+            Formatter.getDateFromCode(this, dayCode)
+        } else {
+            ""
+        }
+    }
+
+    private fun setupShiftStartDate() {
+        binding.settingsShiftStartDate.text = getShiftStartDateText()
+        binding.settingsShiftStartDateHolder.setOnClickListener {
+            val current = if (config.shiftStartDate.length == 8) {
+                Formatter.getDateTimeFromCode(config.shiftStartDate)
+            } else {
+                DateTime()
+            }
+
+            DatePickerDialog(
+                this,
+                { _, year, month, dayOfMonth ->
+                    config.shiftStartDate = String.format(Locale.US, "%04d%02d%02d", year, month + 1, dayOfMonth)
+                    binding.settingsShiftStartDate.text = getShiftStartDateText()
+                },
+                current.year,
+                current.monthOfYear - 1,
+                current.dayOfMonth
+            ).show()
+        }
+    }
+
+    private fun setupShiftCycle() {
+        binding.settingsShiftCycle.text = config.shiftCycle
+        binding.settingsShiftCycleHolder.setOnClickListener {
+            showShiftCycleDialog()
+        }
+    }
+
+    private fun showShiftCycleDialog() {
+        val input = EditText(this).apply {
+            setText(config.shiftCycle)
+            setSelection(text.length)
+            hint = "2D,2N,2S,4L"
+            inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_FLAG_CAP_CHARACTERS
+        }
+
+        val padding = (20 * resources.displayMetrics.density).toInt()
+        val container = FrameLayout(this).apply {
+            setPadding(padding, padding / 2, padding, 0)
+            addView(input)
+        }
+
+        AlertDialog.Builder(this)
+            .setTitle(R.string.shift_cycle)
+            .setMessage(R.string.shift_cycle_explanation)
+            .setView(container)
+            .setPositiveButton(org.fossify.commons.R.string.ok) { _, _ ->
+                val text = input.text.toString().trim().uppercase()
+                if (ShiftHelper.parseCycle(text) == null) {
+                    toast(R.string.shift_cycle_invalid)
+                } else {
+                    config.shiftCycle = text
+                    binding.settingsShiftCycle.text = text
+                }
+            }
+            .setNegativeButton(org.fossify.commons.R.string.cancel, null)
+            .show()
     }
 
     private fun setupDeleteAllEvents() = binding.apply {
@@ -1158,6 +1296,13 @@ class SettingsActivity : SimpleActivity() {
                 put(HIGHLIGHT_WEEKENDS, config.highlightWeekends)
                 put(HIGHLIGHT_WEEKENDS_COLOR, config.highlightWeekendsColor)
                 put(ALLOW_CREATING_TASKS, config.allowCreatingTasks)
+                put(SHIFTS_ENABLED, config.shiftsEnabled)
+                put(SHIFT_COLOR_DAY, config.shiftColorDay)
+                put(SHIFT_COLOR_NIGHT, config.shiftColorNight)
+                put(SHIFT_COLOR_OFF_DUTY, config.shiftColorOffDuty)
+                put(SHIFT_START_DATE, config.shiftStartDate)
+                put(SHIFT_CYCLE, config.shiftCycle)
+                put(SHIFT_OVERRIDES, config.shiftOverrides)
             }
 
             exportSettings(configItems)
@@ -1274,6 +1419,18 @@ class SettingsActivity : SimpleActivity() {
                 HIGHLIGHT_WEEKENDS -> config.highlightWeekends = value.toBoolean()
                 HIGHLIGHT_WEEKENDS_COLOR -> config.highlightWeekendsColor = value.toInt()
                 ALLOW_CREATING_TASKS -> config.allowCreatingTasks = value.toBoolean()
+                SHIFTS_ENABLED -> config.shiftsEnabled = value.toBoolean()
+                SHIFT_COLOR_DAY -> config.shiftColorDay = value.toInt()
+                SHIFT_COLOR_NIGHT -> config.shiftColorNight = value.toInt()
+                SHIFT_COLOR_OFF_DUTY -> config.shiftColorOffDuty = value.toInt()
+                SHIFT_START_DATE -> config.shiftStartDate = value.toString().trim()
+                SHIFT_CYCLE -> {
+                    if (ShiftHelper.parseCycle(value.toString()) != null) {
+                        config.shiftCycle = value.toString().trim()
+                    }
+                }
+
+                SHIFT_OVERRIDES -> config.shiftOverrides = value.toString().trim()
             }
         }
 

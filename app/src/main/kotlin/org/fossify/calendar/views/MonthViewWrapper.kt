@@ -14,7 +14,10 @@ import org.fossify.calendar.extensions.launchNewTaskIntent
 import org.fossify.calendar.helpers.COLUMN_COUNT
 import org.fossify.calendar.helpers.Formatter
 import org.fossify.calendar.helpers.ROW_COUNT
+import org.fossify.calendar.helpers.Shift
+import org.fossify.calendar.helpers.ShiftHelper
 import org.fossify.calendar.helpers.TYPE_EVENT
+import org.fossify.calendar.helpers.TYPE_SHIFT
 import org.fossify.calendar.helpers.TYPE_TASK
 import org.fossify.calendar.models.DayMonthly
 import org.fossify.commons.compose.extensions.getActivity
@@ -28,6 +31,10 @@ class MonthViewWrapper(
     attrs: AttributeSet,
     defStyle: Int
 ) : FrameLayout(context, attrs, defStyle) {
+    companion object {
+        private const val BACK_TO_CYCLE = 100
+    }
+
     private var dayWidth = 0f
     private var dayHeight = 0f
     private var weekDaysLetterHeight = 0
@@ -163,27 +170,58 @@ class MonthViewWrapper(
             }
 
             setOnLongClickListener {
+                val items = arrayListOf(RadioItem(TYPE_EVENT, context.getString(R.string.event)))
                 if (context.config.allowCreatingTasks) {
-                    val items = arrayListOf(
-                        RadioItem(TYPE_EVENT, context.getString(R.string.event)),
-                        RadioItem(TYPE_TASK, context.getString(R.string.task))
-                    )
+                    items.add(RadioItem(TYPE_TASK, context.getString(R.string.task)))
+                }
 
+                if (context.config.shiftsEnabled) {
+                    items.add(RadioItem(TYPE_SHIFT, context.getString(R.string.change_shift)))
+                }
+
+                if (items.size == 1) {
+                    context.launchNewEventIntent(day.code)
+                } else {
                     RadioGroupDialog(context.getActivity(), items) {
-                        if (it == TYPE_EVENT) {
-                            context.launchNewEventIntent(day.code)
-                        } else {
-                            context.launchNewTaskIntent(day.code)
+                        when (it) {
+                            TYPE_EVENT -> context.launchNewEventIntent(day.code)
+                            TYPE_TASK -> context.launchNewTaskIntent(day.code)
+                            TYPE_SHIFT -> showShiftDialog(day)
+                            else -> Unit
                         }
                     }
-                } else {
-                    context.launchNewEventIntent(day.code)
                 }
                 true
             }
 
             addView(this)
         }
+    }
+
+    // lets the user change the shift of one day, or go back to what the cycle says
+    private fun showShiftDialog(day: DayMonthly) {
+        val items = ArrayList<RadioItem>()
+        Shift.values().forEach { shift ->
+            items.add(RadioItem(shift.ordinal, getShiftName(shift)))
+        }
+        items.add(RadioItem(BACK_TO_CYCLE, context.getString(R.string.shift_back_to_cycle)))
+
+        RadioGroupDialog(context.getActivity(), items) {
+            val shift = Shift.values().getOrNull(it as Int)
+            ShiftHelper.setOverride(context.config, day.code, shift)
+            binding.monthView.invalidate()
+        }
+    }
+
+    private fun getShiftName(shift: Shift): String {
+        val nameId = when (shift) {
+            Shift.DAY -> R.string.shift_day
+            Shift.NIGHT -> R.string.shift_night
+            Shift.OFF_DUTY -> R.string.shift_off_duty
+            Shift.FREE -> R.string.shift_free
+        }
+
+        return context.getString(nameId)
     }
 
     fun togglePrintMode() {

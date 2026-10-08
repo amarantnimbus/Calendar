@@ -272,4 +272,20 @@
     <string name="manage_holidays">Gestionar festivos</string>
     <string name="holidays_updated">Festivos actualizados</string>
     <string name="holiday_management_notice">La app ahora actualiza los festivos de modo automático. Indique otra vez sus países para habilitarlo. Puede ser necesario tener que eliminar a mano los festivos antes importados.</string>
+    <!-- Shifts -->
+    <string name="shifts">Turnos</string>
+    <string name="shifts_show_in_month_view">Colorear los días de la vista mensual según el turno</string>
+    <string name="shift_color_day">Color del turno de día</string>
+    <string name="shift_color_night">Color del turno de noche</string>
+    <string name="shift_color_off_duty">Color del turno saliente</string>
+    <string name="shift_start_date">Fecha de inicio del ciclo</string>
+    <string name="shift_cycle">Ciclo de turnos</string>
+    <string name="shift_cycle_explanation">Escribe bloques de días seguidos de una letra, separados por comas: D = día, N = noche, S = saliente, L = libre. Ejemplo: 2D,2N,2S,4L (se repite indefinidamente).</string>
+    <string name="shift_cycle_invalid">Ciclo no válido. Ejemplo de ciclo válido: 2D,2N,2S,4L</string>
+    <string name="change_shift">Cambiar turno</string>
+    <string name="shift_day">Día</string>
+    <string name="shift_night">Noche</string>
+    <string name="shift_off_duty">Saliente</string>
+    <string name="shift_free">Libre</string>
+    <string name="shift_back_to_cycle">Volver al ciclo</string>
 </resources>

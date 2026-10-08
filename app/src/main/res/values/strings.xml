@@ -321,6 +321,23 @@
     <string name="faq_5_text">Check your device battery and notification settings, if there is nothing blocking the reminders, or killing the app in the background. You might also want to take a look at &lt;a href=https://dontkillmyapp.com&gt;https://dontkillmyapp.com&lt;/a&gt;, it has some useful tips.</string>
     <string name="faq_6_title">How can I modify or delete an existing calendar?</string>
     <string name="faq_6_text">You can do both of those in the app Settings - Manage calendars. Just click on the wanted one for changing the label and color, or select the wanted one by long pressing it and use the trashbin at the top menu for deleting.</string>
+    <!-- Shifts -->
+    <string name="shifts">Shifts</string>
+    <string name="shifts_show_in_month_view">Color the days of the month view by shift</string>
+    <string name="shift_color_day">Day shift color</string>
+    <string name="shift_color_night">Night shift color</string>
+    <string name="shift_color_off_duty">Off-duty shift color</string>
+    <string name="shift_start_date">Cycle start date</string>
+    <string name="shift_cycle">Shift cycle</string>
+    <string name="shift_cycle_explanation">Write blocks of days followed by a letter, separated by commas: D = day, N = night, S = off duty, L = free. Example: 2D,2N,2S,4L (it repeats forever).</string>
+    <string name="shift_cycle_invalid">Invalid cycle. Example of a valid cycle: 2D,2N,2S,4L</string>
+    <string name="change_shift">Change shift</string>
+    <string name="shift_day">Day</string>
+    <string name="shift_night">Night</string>
+    <string name="shift_off_duty">Off duty</string>
+    <string name="shift_free">Free</string>
+    <string name="shift_back_to_cycle">Back to the cycle</string>
+
     <!--
         Haven't found some strings? There's more at
         https://github.com/FossifyOrg/Commons/tree/master/commons/src/main/res

@@ -69,6 +69,7 @@ const val DEFAULT_START_TIME_CURRENT_TIME = -2
 
 const val TYPE_EVENT = 0
 const val TYPE_TASK = 1
+const val TYPE_SHIFT = 2
 
 const val TWELVE_HOURS = 43200
 const val DAY = 86400
@@ -142,6 +143,13 @@ const val WEEKLY_VIEW_ITEM_HEIGHT_MULTIPLIER = "weekly_view_item_height_multipli
 const val WEEKLY_VIEW_DAYS = "weekly_view_days"
 const val HIGHLIGHT_WEEKENDS = "highlight_weekends"
 const val HIGHLIGHT_WEEKENDS_COLOR = "highlight_weekends_color"
+const val SHIFTS_ENABLED = "shifts_enabled"
+const val SHIFT_COLOR_DAY = "shift_color_day"
+const val SHIFT_COLOR_NIGHT = "shift_color_night"
+const val SHIFT_COLOR_OFF_DUTY = "shift_color_off_duty"
+const val SHIFT_START_DATE = "shift_start_date"
+const val SHIFT_CYCLE = "shift_cycle"
+const val SHIFT_OVERRIDES = "shift_overrides"
 const val LAST_USED_EVENT_SPAN = "last_used_event_span"
 const val ALLOW_CREATING_TASKS = "allow_creating_tasks"
 const val WAS_FILTERED_OUT_WARNING_SHOWN = "was_filtered_out_warning_shown"

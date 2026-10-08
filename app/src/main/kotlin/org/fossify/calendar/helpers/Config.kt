@@ -324,6 +324,37 @@ class Config(context: Context) : BaseConfig(context) {
         set(highlightWeekendsColor) = prefs.edit()
             .putInt(HIGHLIGHT_WEEKENDS_COLOR, highlightWeekendsColor).apply()
 
+    var shiftsEnabled: Boolean
+        get() = prefs.getBoolean(SHIFTS_ENABLED, false)
+        set(shiftsEnabled) = prefs.edit().putBoolean(SHIFTS_ENABLED, shiftsEnabled).apply()
+
+    var shiftColorDay: Int
+        get() = prefs.getInt(SHIFT_COLOR_DAY, 0xFFFFEB3B.toInt())
+        set(shiftColorDay) = prefs.edit().putInt(SHIFT_COLOR_DAY, shiftColorDay).apply()
+
+    var shiftColorNight: Int
+        get() = prefs.getInt(SHIFT_COLOR_NIGHT, 0xFF3F51B5.toInt())
+        set(shiftColorNight) = prefs.edit().putInt(SHIFT_COLOR_NIGHT, shiftColorNight).apply()
+
+    var shiftColorOffDuty: Int
+        get() = prefs.getInt(SHIFT_COLOR_OFF_DUTY, 0xFF4CAF50.toInt())
+        set(shiftColorOffDuty) = prefs.edit().putInt(SHIFT_COLOR_OFF_DUTY, shiftColorOffDuty).apply()
+
+    // Day code of the first day of the cycle, formatted as yyyyMMdd. Empty when not set yet.
+    var shiftStartDate: String
+        get() = prefs.getString(SHIFT_START_DATE, "")!!
+        set(shiftStartDate) = prefs.edit().putString(SHIFT_START_DATE, shiftStartDate).apply()
+
+    // Cycle written as blocks of "<days><letter>", e.g. "2D,2N,2S,4L".
+    var shiftCycle: String
+        get() = prefs.getString(SHIFT_CYCLE, "2D,2N,2S,4L")!!
+        set(shiftCycle) = prefs.edit().putString(SHIFT_CYCLE, shiftCycle).apply()
+
+    // Manual changes of single days, e.g. "20261008:N;20261009:L".
+    var shiftOverrides: String
+        get() = prefs.getString(SHIFT_OVERRIDES, "")!!
+        set(shiftOverrides) = prefs.edit().putString(SHIFT_OVERRIDES, shiftOverrides).apply()
+
     var lastUsedEventSpan: Int
         get() = prefs.getInt(LAST_USED_EVENT_SPAN, YEAR_SECONDS)
         set(lastUsedEventSpan) = prefs.edit().putInt(LAST_USED_EVENT_SPAN, lastUsedEventSpan)

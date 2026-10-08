@@ -12,6 +12,7 @@ import org.fossify.calendar.extensions.*
 import org.fossify.calendar.helpers.COLUMN_COUNT
 import org.fossify.calendar.helpers.Formatter
 import org.fossify.calendar.helpers.ROW_COUNT
+import org.fossify.calendar.helpers.ShiftHelper
 import org.fossify.calendar.models.DayMonthly
 import org.fossify.calendar.models.Event
 import org.fossify.calendar.models.MonthViewEvent
@@ -64,6 +65,7 @@ class MonthView(context: Context, attrs: AttributeSet, defStyle: Int) : View(con
     private var days = ArrayList<DayMonthly>()
     private var dayVerticalOffsets = SparseIntArray()
     private var selectedDayCoords = Point(-1, -1)
+    private val shiftPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply { style = Paint.Style.FILL }
 
     constructor(context: Context, attrs: AttributeSet) : this(context, attrs, 0)
 
@@ -178,6 +180,8 @@ class MonthView(context: Context, attrs: AttributeSet, defStyle: Int) : View(con
         dayVerticalOffsets.clear()
         measureDaySize(canvas)
 
+        drawShiftBackgrounds(canvas)
+
         if (config.showGrid && !isMonthDayView) {
             drawGrid(canvas)
         }
@@ -275,6 +279,28 @@ class MonthView(context: Context, attrs: AttributeSet, defStyle: Int) : View(con
         if (!isMonthDayView) {
             for (event in allEvents) {
                 drawEvent(event, canvas)
+            }
+        }
+    }
+
+    // paints the whole cell of each day with the color of its shift, at 50% transparency
+    private fun drawShiftBackgrounds(canvas: Canvas) {
+        val schedule = ShiftHelper.load(config) ?: return
+        var curId = 0
+        for (y in 0 until ROW_COUNT) {
+            for (x in 0 until COLUMN_COUNT) {
+                val day = days.getOrNull(curId)
+                if (day != null) {
+                    val shift = schedule.shiftFor(day.code)
+                    val color = if (shift != null) schedule.colorFor(shift) else null
+                    if (color != null) {
+                        shiftPaint.color = ShiftHelper.withHalfTransparency(color)
+                        val left = x * dayWidth + horizontalOffset
+                        val top = y * dayHeight + weekDaysLetterHeight
+                        canvas.drawRect(left, top, left + dayWidth, top + dayHeight, shiftPaint)
+                    }
+                }
+                curId++
             }
         }
     }
