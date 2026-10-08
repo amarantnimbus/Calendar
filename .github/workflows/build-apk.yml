@@ -1,0 +1,42 @@
+name: Build APK
+
+# Builds a debug APK that can be installed on a phone.
+# It runs by itself every time files are pushed to the repository,
+# and it can also be started by hand from the "Actions" tab.
+on:
+    push:
+        paths-ignore:
+            - "README.md"
+            - "CHANGELOG.md"
+    workflow_dispatch:
+
+jobs:
+    build:
+        runs-on: ubuntu-latest
+        steps:
+            - name: Check out the code
+              uses: actions/checkout@v4
+
+            - name: Set up Java 17
+              uses: actions/setup-java@v4
+              with:
+                  distribution: temurin
+                  java-version: 17
+
+            - name: Set up the Android SDK
+              uses: android-actions/setup-android@v3
+
+            - name: Set up Gradle
+              uses: gradle/actions/setup-gradle@v4
+
+            - name: Build the debug APK
+              run: |
+                  chmod +x ./gradlew
+                  ./gradlew assembleFossDebug --stacktrace
+
+            - name: Upload the APK
+              uses: actions/upload-artifact@v4
+              with:
+                  name: calendar-turnos-apk
+                  path: app/build/outputs/apk/foss/debug/*.apk
+                  if-no-files-found: error
