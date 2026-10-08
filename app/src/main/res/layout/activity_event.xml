@@ -30,10 +30,92 @@
         android:scrollbars="none"
         app:layout_behavior="@string/appbar_scrolling_view_behavior">
 
-        <RelativeLayout
-            android:id="@+id/event_holder"
+        <LinearLayout
             android:layout_width="match_parent"
-            android:layout_height="wrap_content">
+            android:layout_height="match_parent"
+            android:orientation="vertical">
+
+            <TextView
+                android:id="@+id/event_header_date"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="@dimen/activity_margin"
+                android:layout_marginTop="@dimen/activity_margin"
+                android:layout_marginEnd="@dimen/activity_margin"
+                android:textSize="26sp"
+                android:textStyle="bold" />
+
+            <TextView
+                android:id="@+id/event_header_time"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="@dimen/activity_margin"
+                android:layout_marginEnd="@dimen/activity_margin"
+                android:textSize="15sp" />
+
+            <LinearLayout
+                android:id="@+id/event_icon_row"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="@dimen/small_margin"
+                android:layout_marginEnd="@dimen/activity_margin"
+                android:gravity="center_vertical"
+                android:orientation="horizontal">
+
+                <ImageView
+                    android:id="@+id/event_icon_time"
+                    android:layout_width="48dp"
+                    android:layout_height="48dp"
+                    android:background="?attr/selectableItemBackgroundBorderless"
+                    android:contentDescription="@string/event_date_time"
+                    android:padding="12dp"
+                    android:src="@drawable/ic_clock_outline_vector" />
+
+                <ImageView
+                    android:id="@+id/event_icon_reminder"
+                    android:layout_width="48dp"
+                    android:layout_height="48dp"
+                    android:background="?attr/selectableItemBackgroundBorderless"
+                    android:contentDescription="@string/reminder"
+                    android:padding="12dp"
+                    android:src="@drawable/ic_bell_outline_vector" />
+
+                <ImageView
+                    android:id="@+id/event_icon_calendar"
+                    android:layout_width="48dp"
+                    android:layout_height="48dp"
+                    android:background="?attr/selectableItemBackgroundBorderless"
+                    android:padding="12dp"
+                    android:src="@drawable/ic_calendar_vector" />
+
+                <ImageView
+                    android:id="@+id/event_icon_color"
+                    android:layout_width="48dp"
+                    android:layout_height="48dp"
+                    android:background="?attr/selectableItemBackgroundBorderless"
+                    android:contentDescription="@string/color"
+                    android:padding="12dp"
+                    android:src="@drawable/ic_color_outline_vector" />
+
+                <View
+                    android:layout_width="0dp"
+                    android:layout_height="1dp"
+                    android:layout_weight="1" />
+
+                <CheckBox
+                    android:id="@+id/event_junts"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="@string/junts"
+                    android:textSize="@dimen/day_text_size" />
+
+            </LinearLayout>
+
+            <View
+                android:id="@+id/event_icon_divider"
+                android:layout_width="match_parent"
+                android:layout_height="1dp"
+                android:background="#000000" />
 
             <org.fossify.commons.views.MyEditText
                 android:id="@+id/event_title"
@@ -42,18 +124,42 @@
                 android:layout_marginStart="@dimen/activity_margin"
                 android:layout_marginTop="@dimen/activity_margin"
                 android:layout_marginEnd="@dimen/activity_margin"
-                android:hint="@string/title"
+                android:hint="@string/event_name_hint"
                 android:inputType="textCapSentences"
                 android:maxLength="180"
-                android:minEms="20"
+                android:textCursorDrawable="@null"
+                android:textSize="22sp" />
+
+            <org.fossify.commons.views.MyEditText
+                android:id="@+id/event_description"
+                android:layout_width="match_parent"
+                android:layout_height="0dp"
+                android:layout_marginStart="@dimen/activity_margin"
+                android:layout_marginTop="@dimen/activity_margin"
+                android:layout_marginEnd="@dimen/activity_margin"
+                android:layout_weight="1"
+                android:autoLink="all"
+                android:background="@null"
+                android:gravity="top"
+                android:hint="@string/comment_hint"
+                android:inputType="textCapSentences|textMultiLine"
+                android:linksClickable="true"
+                android:minHeight="200dp"
                 android:textCursorDrawable="@null"
                 android:textSize="@dimen/day_text_size" />
+
+        <RelativeLayout
+            android:id="@+id/event_holder"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:visibility="gone">
+
 
             <org.fossify.commons.views.MyAutoCompleteTextView
                 android:id="@+id/event_location"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_below="@+id/event_title"
+                android:layout_alignParentTop="true"
                 android:layout_marginStart="@dimen/activity_margin"
                 android:layout_marginTop="@dimen/activity_margin"
                 android:layout_toStartOf="@+id/event_show_on_map"
@@ -76,28 +182,12 @@
                 android:padding="@dimen/small_margin"
                 android:src="@drawable/ic_place_vector" />
 
-            <org.fossify.commons.views.MyEditText
-                android:id="@+id/event_description"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_below="@+id/event_location"
-                android:layout_marginStart="@dimen/activity_margin"
-                android:layout_marginTop="@dimen/activity_margin"
-                android:layout_marginEnd="@dimen/activity_margin"
-                android:autoLink="all"
-                android:gravity="top"
-                android:hint="@string/description"
-                android:inputType="textCapSentences|textMultiLine"
-                android:linksClickable="true"
-                android:minEms="20"
-                android:textCursorDrawable="@null"
-                android:textSize="@dimen/day_text_size" />
 
             <ImageView
                 android:id="@+id/event_description_divider"
                 android:layout_width="match_parent"
                 android:layout_height="@dimen/divider_height"
-                android:layout_below="@+id/event_description"
+                android:layout_below="@+id/event_location"
                 android:layout_marginTop="@dimen/activity_margin"
                 android:layout_marginBottom="@dimen/normal_margin"
                 android:background="@color/divider_grey"
@@ -690,5 +780,7 @@
                 android:importantForAccessibility="no" />
 
         </RelativeLayout>
+
+        </LinearLayout>
     </androidx.core.widget.NestedScrollView>
 </androidx.coordinatorlayout.widget.CoordinatorLayout>

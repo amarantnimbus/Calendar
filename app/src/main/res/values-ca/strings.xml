@@ -290,4 +290,10 @@
     <string name="shift_back_to_cycle">Torna al cicle</string>
     <string name="expand_day_in_month_view">Desplega el dia premut dins de la vista mensual</string>
     <string name="shift_full_cell">Pinta la casella sencera (en lloc de només una franja a dalt)</string>
+    <string name="junts">Junts</string>
+    <string name="event_name_hint">Nom de l\'esdeveniment</string>
+    <string name="comment_hint">Comentari</string>
+    <string name="event_date_time">Data i hora</string>
+    <string name="event_starts">Comença</string>
+    <string name="event_ends">Acaba</string>
 </resources>

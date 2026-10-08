@@ -9,6 +9,8 @@ import org.fossify.calendar.extensions.seconds
 import org.fossify.calendar.models.Event
 import org.joda.time.DateTime
 import org.joda.time.DateTimeZone
+import java.net.URLDecoder
+import java.net.URLEncoder
 import java.util.TreeMap
 
 /**
@@ -23,11 +25,27 @@ object ShiftSync {
     private const val HEADER = "FOSSIFY-TORNS-V1"
     private const val NOTE = "Aquest esdeveniment guarda els torns i l'app el mostra amagat. No l'esborris."
 
-    private val KNOWN_KEYS = setOf("start", "cycle", "overrides", "color_day", "color_night", "color_rest")
+    private val KNOWN_KEYS = setOf("start", "cycle", "overrides", "color_day", "color_night", "color_rest", "cal_colors")
+
+    const val JUNTS = "Junts"
+
+    /** Finds the calendar called "Junts" so the month view and the new event screen can use it. */
+    fun refreshJuntsCalendar(context: Context) {
+        val id = try {
+            context.eventsHelper.getCalendarsSync().firstOrNull {
+                it.title.equals(JUNTS, true) || it.caldavDisplayName.equals(JUNTS, true)
+            }?.id ?: -1L
+        } catch (e: Exception) {
+            -1L
+        }
+        if (id != context.config.juntsCalendarId) {
+            context.config.juntsCalendarId = id
+        }
+    }
 
     fun isConfigEvent(event: Event) = event.title == TITLE
 
-    private fun currentValues(config: Config): TreeMap<String, String> {
+    private fun currentValues(context: Context, config: Config = context.config): TreeMap<String, String> {
         val values = TreeMap<String, String>()
         values["start"] = config.shiftStartDate
         values["cycle"] = config.shiftCycle
@@ -35,7 +53,37 @@ object ShiftSync {
         values["color_day"] = config.shiftColorDay.toString()
         values["color_night"] = config.shiftColorNight.toString()
         values["color_rest"] = config.shiftColorOffDuty.toString()
+        values["cal_colors"] = calendarColors(context)
         return values
+    }
+
+    /** Colours of the synced calendars, by name, so every phone paints them the same. */
+    private fun calendarColors(context: Context): String {
+        return context.eventsHelper.getCalendarsSync()
+            .filter { it.caldavCalendarId != 0 }
+            .sortedBy { it.caldavDisplayName }
+            .joinToString(",") { URLEncoder.encode(it.caldavDisplayName, "UTF-8") + ":" + it.color }
+    }
+
+    private fun applyCalendarColors(context: Context, value: String) {
+        val wanted = HashMap<String, Int>()
+        value.split(",").forEach { part ->
+            val index = part.lastIndexOf(':')
+            val color = part.substring(index + 1).toIntOrNull()
+            if (index > 0 && color != null) {
+                wanted[URLDecoder.decode(part.substring(0, index), "UTF-8")] = color
+            }
+        }
+
+        context.eventsHelper.getCalendarsSync()
+            .filter { it.caldavCalendarId != 0 && wanted[it.caldavDisplayName] != null }
+            .forEach {
+                val color = wanted[it.caldavDisplayName]!!
+                if (it.color != color) {
+                    it.color = color
+                    context.eventsHelper.insertOrUpdateCalendarSync(it)
+                }
+            }
     }
 
     private fun canonical(values: Map<String, String>): String {
@@ -62,13 +110,15 @@ object ShiftSync {
         return if (values.isEmpty()) null else values
     }
 
-    private fun apply(config: Config, values: Map<String, String>) {
+    private fun apply(context: Context, values: Map<String, String>) {
+        val config = context.config
         values["start"]?.let { config.shiftStartDate = it }
         values["cycle"]?.let { if (ShiftHelper.parseCycle(it) != null) config.shiftCycle = it }
         values["overrides"]?.let { config.shiftOverrides = it }
         values["color_day"]?.toIntOrNull()?.let { config.shiftColorDay = it }
         values["color_night"]?.toIntOrNull()?.let { config.shiftColorNight = it }
         values["color_rest"]?.toIntOrNull()?.let { config.shiftColorOffDuty = it }
+        values["cal_colors"]?.let { applyCalendarColors(context, it) }
     }
 
     /**
@@ -77,6 +127,7 @@ object ShiftSync {
      */
     fun sync(context: Context): Boolean {
         val config = context.config
+        refreshJuntsCalendar(context)
         if (!config.caldavSync) {
             return false
         }
@@ -85,13 +136,13 @@ object ShiftSync {
             val remoteEvent = context.eventsDB.getEventsWithTitle(TITLE).maxByOrNull { it.lastUpdated }
             val remoteValues = remoteEvent?.let { parse(it.description) }
             val remoteText = remoteValues?.let { canonical(it) }
-            val localText = canonical(currentValues(config))
+            val localText = canonical(currentValues(context))
             val syncedText = config.shiftSyncedPayload
 
             if (syncedText.isEmpty()) {
                 // first time on this phone: what is already on the server wins
                 if (remoteValues != null) {
-                    applyRemote(config, remoteValues)
+                    applyRemote(context, remoteValues)
                     true
                 } else {
                     if (config.shiftsEnabled) {
@@ -104,7 +155,7 @@ object ShiftSync {
                 push(context, remoteEvent, localText)
                 false
             } else if (remoteText != null && remoteText != syncedText) {
-                applyRemote(config, remoteValues)
+                applyRemote(context, remoteValues)
                 true
             } else {
                 false
@@ -114,12 +165,13 @@ object ShiftSync {
         }
     }
 
-    private fun applyRemote(config: Config, values: Map<String, String>) {
-        apply(config, values)
+    private fun applyRemote(context: Context, values: Map<String, String>) {
+        val config = context.config
+        apply(context, values)
         if (!config.shiftsEnabled) {
             config.shiftsEnabled = true
         }
-        config.shiftSyncedPayload = canonical(currentValues(config))
+        config.shiftSyncedPayload = canonical(currentValues(context))
     }
 
     private fun push(context: Context, existing: Event?, text: String) {

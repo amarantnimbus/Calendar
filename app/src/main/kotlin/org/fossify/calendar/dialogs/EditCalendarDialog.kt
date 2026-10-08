@@ -38,7 +38,12 @@ class EditCalendarDialog(
             setupColor(typeColor)
             typeTitle.setText(calendar!!.title)
             typeColor.setOnClickListener {
-                if (calendar?.caldavCalendarId == 0) {
+                val palette = if (calendar?.caldavCalendarId == 0) {
+                    IntArray(0)
+                } else {
+                    activity.calDAVHelper.getAvailableCalDAVCalendarColors(calendar!!).keys.toIntArray()
+                }
+                if (palette.isEmpty()) {
                     ColorPickerDialog(
                         activity = activity,
                         color = calendar!!.color
@@ -49,13 +54,10 @@ class EditCalendarDialog(
                         }
                     }
                 } else {
-                    val currentColor = calendar!!.color
-                    val colors =
-                        activity.calDAVHelper.getAvailableCalDAVCalendarColors(calendar!!).keys.toIntArray()
                     SelectCalendarColorDialog(
                         activity = activity,
-                        colors = colors,
-                        currentColor = currentColor
+                        colors = palette,
+                        currentColor = calendar!!.color
                     ) {
                         calendar!!.color = it
                         setupColor(typeColor)

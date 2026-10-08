@@ -236,27 +236,33 @@ class MonthView(context: Context, attrs: AttributeSet, defStyle: Int) : View(con
                     var openCircleBottom = 0f
                     if (!isMonthDayView) {
                         val isTodayMarked = day.isToday && !isPrintVersion
-                        val isOpenDay = isExpandedDay && !isTodayMarked
+                        val isOpenDay = isExpandedDay
                         if (isTodayMarked || isOpenDay) {
                             val ts = textPaint.textSize
                             val baseRadius = max(textPaint.measureText(dayNumber), ts * 0.75f) / 2
                             val centerY = textY - dayTextRect.height() / 2
-                            if (isTodayMarked) {
-                                // red circle, adapted to one or two digits
-                                canvas.drawCircle(xPosCenter, centerY, baseRadius + ts * 0.16f, todayPaint)
-                                textPaint.color = Color.WHITE
-                            } else {
-                                // open day: bigger circle with the color of the shift and a hairline outline
+                            if (isOpenDay) {
+                                // open day: bigger circle, number and pills move down.
+                                // Color of the shift, or red when the open day is today.
                                 textShiftY = ts * 0.3f
                                 val radius = baseRadius + ts * 0.37f
                                 val shiftColor = schedule?.let { sch -> sch.shiftFor(day.code)?.let { sch.colorFor(it) } }
-                                val fillColor = (shiftColor ?: Color.WHITE) or 0xFF000000.toInt()
+                                val fillColor = if (isTodayMarked) {
+                                    0xFFD32F2F.toInt()
+                                } else {
+                                    (shiftColor ?: Color.WHITE) or 0xFF000000.toInt()
+                                }
+                                val isFreeDay = shiftColor == null && !isTodayMarked && schedule != null
                                 shiftPaint.color = fillColor
                                 canvas.drawCircle(xPosCenter, centerY + textShiftY, radius, shiftPaint)
-                                markPaint.color = outlineColor()
+                                markPaint.color = if (isFreeDay) Color.BLACK else outlineColor()
                                 canvas.drawCircle(xPosCenter, centerY + textShiftY, radius, markPaint)
-                                textPaint.color = fillColor.getContrastColor()
+                                textPaint.color = if (isTodayMarked) Color.WHITE else fillColor.getContrastColor()
                                 openCircleBottom = centerY + textShiftY + radius - yPos
+                            } else {
+                                // today, not open: small red circle adapted to one or two digits
+                                canvas.drawCircle(xPosCenter, centerY, baseRadius + ts * 0.16f, todayPaint)
+                                textPaint.color = Color.WHITE
                             }
                         }
                     } else if (isDaySelected) {
@@ -345,6 +351,8 @@ class MonthView(context: Context, attrs: AttributeSet, defStyle: Int) : View(con
         drawPanel(canvas)
     }
 
+    private val OPEN_FREE_DAY_COLOR = 0xFF55555A.toInt()
+
     // height of the colored band behind the day number
     private fun bandHeight() = textPaint.textSize * 1.4f
 
@@ -360,13 +368,25 @@ class MonthView(context: Context, attrs: AttributeSet, defStyle: Int) : View(con
                 val day = days.getOrNull(curId)
                 if (day != null) {
                     val shift = schedule.shiftFor(day.code)
-                    val color = if (shift != null) schedule.colorFor(shift) else null
-                    if (color != null) {
-                        shiftPaint.color = ShiftHelper.withHalfTransparency(color)
-                        val left = x * dayWidth + horizontalOffset
-                        val top = rowOrigin(y) + weekDaysLetterHeight
-                        val bottom = if (config.shiftFullCell) top + dayHeight else top + bandHeight()
+                    val shiftColor = if (shift != null) schedule.colorFor(shift) else null
+                    val isFreeOpenDay = shiftColor == null && !day.isToday && isExpandEnabled() && selectedDayIndex == curId
+                    val left = x * dayWidth + horizontalOffset
+                    val top = rowOrigin(y) + weekDaysLetterHeight
+                    val bottom = if (config.shiftFullCell) top + dayHeight else top + bandHeight()
+                    if (shiftColor != null) {
+                        shiftPaint.color = ShiftHelper.withHalfTransparency(shiftColor)
                         canvas.drawRect(left, top, left + dayWidth, bottom, shiftPaint)
+                    } else if (isFreeOpenDay) {
+                        // open day without shift: dark grey band
+                        shiftPaint.color = OPEN_FREE_DAY_COLOR
+                        canvas.drawRect(left, top, left + dayWidth, bottom, shiftPaint)
+                    }
+
+                    // days with an event of the shared "Junts" calendar get a fine outline
+                    val juntsId = config.juntsCalendarId
+                    if (juntsId != -1L && day.dayEvents.any { it.calendarId == juntsId }) {
+                        markPaint.color = outlineColor()
+                        canvas.drawRect(left + hairline, top + hairline, left + dayWidth - hairline, bottom - hairline, markPaint)
                     }
                 }
                 curId++

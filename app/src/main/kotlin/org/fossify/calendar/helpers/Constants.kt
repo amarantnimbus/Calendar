@@ -88,6 +88,7 @@ const val EVENT_LIST_PERIOD = "event_list_period"
 // Shared Preferences
 const val WEEK_NUMBERS = "week_numbers"
 const val SHIFT_SYNCED_PAYLOAD = "shift_synced_payload"
+const val JUNTS_CALENDAR_ID = "junts_calendar_id"
 const val SHIFT_FULL_CELL = "shift_full_cell"
 const val EXPAND_DAY_IN_MONTH_VIEW = "expand_day_in_month_view"
 const val START_WEEKLY_AT = "start_weekly_at"

@@ -121,6 +121,8 @@ import org.fossify.commons.extensions.beGone
 import org.fossify.commons.extensions.beGoneIf
 import org.fossify.commons.extensions.beVisible
 import org.fossify.commons.extensions.beVisibleIf
+import org.fossify.commons.extensions.getAlertDialogBuilder
+import org.fossify.commons.extensions.setupDialogStuff
 import org.fossify.commons.extensions.checkAppSideloading
 import org.fossify.commons.extensions.getColoredDrawableWithColor
 import org.fossify.commons.extensions.getDatePickerDialogTheme
@@ -572,6 +574,7 @@ class EventActivity : SimpleActivity() {
             showEventColorDialog()
         }
 
+        setupNewHeader()
         updateTextColors(eventNestedScrollview)
         updateIconColors()
         refreshMenuItems()
@@ -1160,25 +1163,29 @@ class EventActivity : SimpleActivity() {
             showOnlyWritable = true,
             showManageCalendars = true
         ) { calendar ->
-            mWasCalendarChanged = true
-            mCalendarId = calendar.id!!
-
-            if (calendar.caldavCalendarId == 0) {
-                mEventCalendarId = STORED_LOCALLY_ONLY
-                config.lastUsedLocalCalendarId = mCalendarId
-                config.lastUsedCaldavCalendarId = STORED_LOCALLY_ONLY
-            } else {
-                mEventCalendarId = calendar.caldavCalendarId
-                config.lastUsedCaldavCalendarId = calendar.caldavCalendarId
-            }
-
-            updateCalendarInfo(calendar)
-            updateReminderTypeImages()
-            updateCalDAVVisibility()
-            updateAvailabilityText()
-            updateStatusText()
-            updateAccessLevelText()
+            applyCalendarSelection(calendar)
         }
+    }
+
+    private fun applyCalendarSelection(calendar: CalendarEntity) {
+        mWasCalendarChanged = true
+        mCalendarId = calendar.id!!
+
+        if (calendar.caldavCalendarId == 0) {
+            mEventCalendarId = STORED_LOCALLY_ONLY
+            config.lastUsedLocalCalendarId = mCalendarId
+            config.lastUsedCaldavCalendarId = STORED_LOCALLY_ONLY
+        } else {
+            mEventCalendarId = calendar.caldavCalendarId
+            config.lastUsedCaldavCalendarId = calendar.caldavCalendarId
+        }
+
+        updateCalendarInfo(calendar)
+        updateReminderTypeImages()
+        updateCalDAVVisibility()
+        updateAvailabilityText()
+        updateStatusText()
+        updateAccessLevelText()
     }
 
     private fun showEventColorDialog() {
@@ -1441,6 +1448,8 @@ class EventActivity : SimpleActivity() {
             true
         }
 
+        eventIconColor.beVisibleIf(canCustomizeColors)
+        updateJuntsCheckbox(calendar)
         eventColorImage.beVisibleIf(canCustomizeColors)
         eventColorHolder.beVisibleIf(canCustomizeColors)
         eventColorDivider.beVisibleIf(canCustomizeColors)
@@ -1509,6 +1518,7 @@ class EventActivity : SimpleActivity() {
         }
 
         mIsAllDayEvent = isAllDay
+        updateHeader()
         binding.eventStartTime.beGoneIf(isAllDay)
         binding.eventEndTime.beGoneIf(isAllDay)
         updateTimeZoneText()
@@ -1808,11 +1818,13 @@ class EventActivity : SimpleActivity() {
     private fun updateStartDateText() {
         binding.eventStartDate.text = Formatter.getDate(this, mEventStartDateTime)
         checkStartEndValidity()
+        updateHeader()
     }
 
     private fun updateStartTimeText() {
         binding.eventStartTime.text = Formatter.getTime(this, mEventStartDateTime)
         checkStartEndValidity()
+        updateHeader()
     }
 
     private fun updateEndTexts() {
@@ -1823,11 +1835,13 @@ class EventActivity : SimpleActivity() {
     private fun updateEndDateText() {
         binding.eventEndDate.text = Formatter.getDate(this, mEventEndDateTime)
         checkStartEndValidity()
+        updateHeader()
     }
 
     private fun updateEndTimeText() {
         binding.eventEndTime.text = Formatter.getTime(this, mEventEndDateTime)
         checkStartEndValidity()
+        updateHeader()
     }
 
     private fun updateTimeZoneText() {
@@ -2414,9 +2428,142 @@ class EventActivity : SimpleActivity() {
             eventStatusImage,
             eventAccessLevelImage,
             eventAvailabilityImage,
-            eventColorImage
+            eventColorImage,
+            eventIconTime,
+            eventIconReminder,
+            eventIconCalendar,
+            eventIconColor
         ).forEach {
             it.applyColorFilter(textColor)
+        }
+    }
+
+    // ---- simplified event screen: header, icon row, "Junts" checkbox and date/time popup ----
+
+    private var mDateTimeRefresh: (() -> Unit)? = null
+    private var mCalendarBeforeJunts: CalendarEntity? = null
+
+    private fun setupNewHeader() = binding.apply {
+        eventIconTime.setOnClickListener { showDateTimeDialog() }
+        eventIconReminder.setOnClickListener { eventReminder1.performClick() }
+        eventIconCalendar.setOnClickListener { showCalendarDialog() }
+        eventIconColor.setOnClickListener { showEventColorDialog() }
+        val textColor = getProperTextColor()
+        eventHeaderDate.setTextColor(textColor)
+        eventHeaderTime.setTextColor(textColor)
+        eventJunts.setTextColor(textColor)
+        eventIconDivider.setBackgroundColor(textColor)
+        updateHeader()
+    }
+
+    private fun updateHeader() {
+        if (!::mEventStartDateTime.isInitialized || !::mEventEndDateTime.isInitialized) {
+            return
+        }
+
+        val pattern = org.joda.time.format.DateTimeFormat.forPattern("EEEE, d MMMM")
+            .withLocale(java.util.Locale.getDefault())
+        binding.eventHeaderDate.text = pattern.print(mEventStartDateTime)
+        binding.eventHeaderTime.text = if (binding.eventAllDay.isChecked) {
+            getString(R.string.all_day)
+        } else {
+            "${Formatter.getTime(this, mEventStartDateTime)} – ${Formatter.getTime(this, mEventEndDateTime)}"
+        }
+        mDateTimeRefresh?.invoke()
+    }
+
+    private fun showDateTimeDialog() {
+        hideKeyboard()
+        val view = layoutInflater.inflate(R.layout.dialog_event_datetime, null)
+        val allDay = view.findViewById<androidx.appcompat.widget.SwitchCompat>(R.id.dt_all_day)
+        val startDate = view.findViewById<android.widget.TextView>(R.id.dt_start_date)
+        val startTime = view.findViewById<android.widget.TextView>(R.id.dt_start_time)
+        val endDate = view.findViewById<android.widget.TextView>(R.id.dt_end_date)
+        val endTime = view.findViewById<android.widget.TextView>(R.id.dt_end_time)
+        val timeZone = view.findViewById<android.widget.TextView>(R.id.dt_time_zone)
+
+        val savedStart = mEventStartDateTime
+        val savedEnd = mEventEndDateTime
+        val savedAllDay = binding.eventAllDay.isChecked
+
+        val refresh: () -> Unit = {
+            startDate.text = Formatter.getDate(this, mEventStartDateTime)
+            startTime.text = Formatter.getTime(this, mEventStartDateTime)
+            endDate.text = Formatter.getDate(this, mEventEndDateTime)
+            endTime.text = Formatter.getTime(this, mEventEndDateTime)
+            val isAllDay = binding.eventAllDay.isChecked
+            startTime.beGoneIf(isAllDay)
+            endTime.beGoneIf(isAllDay)
+            timeZone.text = mEvent.getTimeZoneString()
+            timeZone.beVisibleIf(config.allowChangingTimeZones && !isAllDay)
+        }
+
+        allDay.isChecked = savedAllDay
+        allDay.setOnCheckedChangeListener { _, isChecked ->
+            binding.eventAllDay.isChecked = isChecked
+        }
+        startDate.setOnClickListener { setupStartDate() }
+        startTime.setOnClickListener { setupStartTime() }
+        endDate.setOnClickListener { setupEndDate() }
+        endTime.setOnClickListener { setupEndTime() }
+        timeZone.setOnClickListener { setupTimeZone() }
+
+        mDateTimeRefresh = refresh
+        refresh()
+
+        getAlertDialogBuilder()
+            .setPositiveButton(org.fossify.commons.R.string.ok, null)
+            .setNegativeButton(org.fossify.commons.R.string.cancel, null)
+            .setOnDismissListener { mDateTimeRefresh = null }
+            .apply {
+                setupDialogStuff(
+                    view = view,
+                    dialog = this,
+                    titleId = R.string.event_date_time
+                ) { alertDialog ->
+                    alertDialog.getButton(androidx.appcompat.app.AlertDialog.BUTTON_NEGATIVE).setOnClickListener {
+                        mDateTimeRefresh = null
+                        if (binding.eventAllDay.isChecked != savedAllDay) {
+                            binding.eventAllDay.isChecked = savedAllDay
+                        }
+                        mEventStartDateTime = savedStart
+                        mEventEndDateTime = savedEnd
+                        updateStartTexts()
+                        updateEndTexts()
+                        updateHeader()
+                        alertDialog.dismiss()
+                    }
+                }
+            }
+    }
+
+    private fun findJuntsCalendar(): CalendarEntity? {
+        return mStoredCalendars.firstOrNull {
+            it.title.equals("Junts", true) || it.caldavDisplayName.equals("Junts", true)
+        }
+    }
+
+    private fun updateJuntsCheckbox(current: CalendarEntity) {
+        val junts = findJuntsCalendar()
+        val checkbox = binding.eventJunts
+        checkbox.setOnCheckedChangeListener(null)
+        checkbox.beVisibleIf(junts != null)
+        if (junts != null) {
+            checkbox.isChecked = current.id == junts.id
+            checkbox.setOnCheckedChangeListener { _, isChecked ->
+                if (isChecked) {
+                    mCalendarBeforeJunts = mStoredCalendars.firstOrNull { it.id == mCalendarId }
+                    config.juntsCalendarId = junts.id ?: -1L
+                    applyCalendarSelection(junts)
+                } else {
+                    val previous = mCalendarBeforeJunts
+                        ?: mStoredCalendars.firstOrNull { it.id == config.lastUsedLocalCalendarId && it.id != junts.id }
+                        ?: mStoredCalendars.firstOrNull { it.id != junts.id }
+                    if (previous != null) {
+                        applyCalendarSelection(previous)
+                    }
+                }
+            }
         }
     }
 

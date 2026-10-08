@@ -345,4 +345,10 @@
     <string name="expand_day_in_month_view">Expand the tapped day inside the month view</string>
     <string name="more_events_count">+%d</string>
     <string name="shift_full_cell">Paint the whole day cell (instead of only a band at the top)</string>
+    <string name="junts">Junts</string>
+    <string name="event_name_hint">Event name</string>
+    <string name="comment_hint">Comment</string>
+    <string name="event_date_time">Date and time</string>
+    <string name="event_starts">Starts</string>
+    <string name="event_ends">Ends</string>
 </resources>

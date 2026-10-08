@@ -24,6 +24,10 @@ class Config(context: Context) : BaseConfig(context) {
         get() = prefs.getBoolean(SHIFT_FULL_CELL, false)
         set(shiftFullCell) = prefs.edit().putBoolean(SHIFT_FULL_CELL, shiftFullCell).apply()
 
+    var juntsCalendarId: Long
+        get() = prefs.getLong(JUNTS_CALENDAR_ID, -1L)
+        set(juntsCalendarId) = prefs.edit().putLong(JUNTS_CALENDAR_ID, juntsCalendarId).apply()
+
     var expandDayInMonthView: Boolean
         get() = prefs.getBoolean(EXPAND_DAY_IN_MONTH_VIEW, true)
         set(expandDayInMonthView) = prefs.edit().putBoolean(EXPAND_DAY_IN_MONTH_VIEW, expandDayInMonthView).apply()
