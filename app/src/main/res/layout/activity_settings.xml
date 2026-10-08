@@ -846,6 +846,21 @@
                 android:text="@string/monthly_view" />
 
             <RelativeLayout
+                android:id="@+id/settings_expand_day_in_month_view_holder"
+                style="@style/SettingsHolderSwitchStyle"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content">
+
+                <org.fossify.commons.views.MyMaterialSwitch
+                    android:id="@+id/settings_expand_day_in_month_view"
+                    style="@style/SettingsSwitchStyle"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="@string/expand_day_in_month_view" />
+
+            </RelativeLayout>
+
+            <RelativeLayout
                 android:id="@+id/settings_week_numbers_holder"
                 style="@style/SettingsHolderSwitchStyle"
                 android:layout_width="match_parent"

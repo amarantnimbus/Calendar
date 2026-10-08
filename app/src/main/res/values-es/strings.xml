@@ -288,4 +288,5 @@
     <string name="shift_off_duty">Saliente</string>
     <string name="shift_free">Libre</string>
     <string name="shift_back_to_cycle">Volver al ciclo</string>
+    <string name="expand_day_in_month_view">Desplegar el día pulsado dentro de la vista mensual</string>
 </resources>

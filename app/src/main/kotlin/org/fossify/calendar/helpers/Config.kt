@@ -16,6 +16,10 @@ class Config(context: Context) : BaseConfig(context) {
         fun newInstance(context: Context) = Config(context)
     }
 
+    var expandDayInMonthView: Boolean
+        get() = prefs.getBoolean(EXPAND_DAY_IN_MONTH_VIEW, false)
+        set(expandDayInMonthView) = prefs.edit().putBoolean(EXPAND_DAY_IN_MONTH_VIEW, expandDayInMonthView).apply()
+
     var showWeekNumbers: Boolean
         get() = prefs.getBoolean(WEEK_NUMBERS, false)
         set(showWeekNumbers) = prefs.edit().putBoolean(WEEK_NUMBERS, showWeekNumbers).apply()

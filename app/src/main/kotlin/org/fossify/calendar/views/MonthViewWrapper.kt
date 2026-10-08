@@ -40,6 +40,7 @@ class MonthViewWrapper(
     private var weekDaysLetterHeight = 0
     private var horizontalOffset = 0
     private var wereViewsAdded = false
+    private var expandedIndex = -1
     private var isMonthDayView = true
     private var days = ArrayList<DayMonthly>()
     private var inflater: LayoutInflater
@@ -69,10 +70,7 @@ class MonthViewWrapper(
     override fun onLayout(changed: Boolean, left: Int, top: Int, right: Int, bottom: Int) {
         super.onLayout(changed, left, top, right, bottom)
         measureSizes()
-        var y = 0
-        var x = 0
-        var curLeft = dayWidth.toInt()
-        val end = right + paddingRight
+        var index = 0
 
         for (i in 0 until childCount) {
             val child = getChildAt(i)
@@ -81,33 +79,21 @@ class MonthViewWrapper(
                 continue
             }
 
-            child.measure(
-                MeasureSpec.makeMeasureSpec(dayWidth.toInt(), MeasureSpec.EXACTLY),
-                MeasureSpec.makeMeasureSpec(dayHeight.toInt(), MeasureSpec.EXACTLY)
-            )
+            // the month view knows where every day cell is, also when a day is open under its week
+            val cell = binding.monthView.getCellRect(index % COLUMN_COUNT, index / COLUMN_COUNT)
+            index++
 
-            val childLeft = x * dayWidth + horizontalOffset - child.translationX
-            val childTop = y * dayHeight + weekDaysLetterHeight - child.translationY
-            val childWidth = child.measuredWidth
-            val childHeight = child.measuredHeight
-            val childRight = childLeft + childWidth
-            val childBottom = childTop + childHeight
+            child.measure(
+                MeasureSpec.makeMeasureSpec(cell.width().toInt(), MeasureSpec.EXACTLY),
+                MeasureSpec.makeMeasureSpec(cell.height().toInt(), MeasureSpec.EXACTLY)
+            )
 
             child.layout(
-                childLeft.toInt(),
-                childTop.toInt(),
-                childRight.toInt(),
-                childBottom.toInt()
+                cell.left.toInt(),
+                cell.top.toInt(),
+                cell.left.toInt() + child.measuredWidth,
+                cell.top.toInt() + child.measuredHeight
             )
-
-            if (curLeft + childWidth <= end) {
-                curLeft += childWidth
-                x++
-            } else {
-                y++
-                x = 0
-                curLeft = childWidth
-            }
         }
     }
 
@@ -141,6 +127,10 @@ class MonthViewWrapper(
         removeAllViews()
         binding = MonthViewBinding.inflate(inflater, this, true)
         wereViewsAdded = true
+        if (expandedIndex >= 0) {
+            // keep the open day when the events are reloaded
+            binding.monthView.expandDay(expandedIndex % COLUMN_COUNT, expandedIndex / COLUMN_COUNT)
+        }
         days.forEachIndexed { index, day ->
             addViewBackground(index % COLUMN_COUNT, index / COLUMN_COUNT, day)
         }
@@ -162,6 +152,18 @@ class MonthViewWrapper(
             }"
 
             setOnClickListener {
+                if (!isMonthDayView && context.config.expandDayInMonthView) {
+                    // first tap opens the day under its week, a second tap opens the full day
+                    if (binding.monthView.isDaySelected(viewX, viewY)) {
+                        dayClickCallback?.invoke(day)
+                    } else {
+                        expandedIndex = viewY * COLUMN_COUNT + viewX
+                        binding.monthView.expandDay(viewX, viewY)
+                        requestLayout()
+                    }
+                    return@setOnClickListener
+                }
+
                 dayClickCallback?.invoke(day)
 
                 if (isMonthDayView) {

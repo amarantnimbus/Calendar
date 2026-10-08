@@ -81,6 +81,7 @@ import org.fossify.calendar.helpers.USE_PREVIOUS_EVENT_REMINDERS
 import org.fossify.calendar.helpers.VIBRATE
 import org.fossify.calendar.helpers.WEEKLY_VIEW
 import org.fossify.calendar.helpers.WEEK_NUMBERS
+import org.fossify.calendar.helpers.EXPAND_DAY_IN_MONTH_VIEW
 import org.fossify.calendar.helpers.YEARLY_VIEW
 import org.fossify.calendar.models.CalendarEntity
 import org.fossify.commons.dialogs.ColorPickerDialog
@@ -209,6 +210,7 @@ class SettingsActivity : SimpleActivity() {
         setupDisplayDescription()
         setupReplaceDescription()
         setupWeekNumbers()
+        setupExpandDayInMonthView()
         setupShowGrid()
         setupWeeklyStart()
         setupMidnightSpanEvents()
@@ -746,6 +748,14 @@ class SettingsActivity : SimpleActivity() {
         }
     }
 
+    private fun setupExpandDayInMonthView() = binding.apply {
+        settingsExpandDayInMonthView.isChecked = config.expandDayInMonthView
+        settingsExpandDayInMonthViewHolder.setOnClickListener {
+            settingsExpandDayInMonthView.toggle()
+            config.expandDayInMonthView = settingsExpandDayInMonthView.isChecked
+        }
+    }
+
     private fun setupWeekNumbers() = binding.apply {
         settingsWeekNumbers.isChecked = config.showWeekNumbers
         settingsWeekNumbersHolder.setOnClickListener {
@@ -1262,6 +1272,7 @@ class SettingsActivity : SimpleActivity() {
                 put(WIDGET_BG_COLOR, config.widgetBgColor)
                 put(WIDGET_TEXT_COLOR, config.widgetTextColor)
                 put(WEEK_NUMBERS, config.showWeekNumbers)
+                put(EXPAND_DAY_IN_MONTH_VIEW, config.expandDayInMonthView)
                 put(START_WEEKLY_AT, config.startWeeklyAt)
                 put(SHOW_MIDNIGHT_SPANNING_EVENTS_AT_TOP, config.showMidnightSpanningEventsAtTop)
                 put(ALLOW_CUSTOMIZE_DAY_COUNT, config.allowCustomizeDayCount)
@@ -1382,6 +1393,7 @@ class SettingsActivity : SimpleActivity() {
                 WIDGET_BG_COLOR -> config.widgetBgColor = value.toInt()
                 WIDGET_TEXT_COLOR -> config.widgetTextColor = value.toInt()
                 WEEK_NUMBERS -> config.showWeekNumbers = value.toBoolean()
+                EXPAND_DAY_IN_MONTH_VIEW -> config.expandDayInMonthView = value.toBoolean()
                 START_WEEKLY_AT -> config.startWeeklyAt = value.toInt()
                 SHOW_MIDNIGHT_SPANNING_EVENTS_AT_TOP -> config.showMidnightSpanningEventsAtTop =
                     value.toBoolean()

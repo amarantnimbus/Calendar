@@ -342,4 +342,6 @@
         Haven't found some strings? There's more at
         https://github.com/FossifyOrg/Commons/tree/master/commons/src/main/res
     -->
+    <string name="expand_day_in_month_view">Expand the tapped day inside the month view</string>
+    <string name="more_events_count">+%d</string>
 </resources>

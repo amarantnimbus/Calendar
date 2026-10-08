@@ -1,16 +1,22 @@
 package org.fossify.calendar.views
 
 import android.content.Context
+import android.content.Intent
 import android.graphics.*
 import android.text.TextPaint
 import android.text.TextUtils
 import android.util.AttributeSet
 import android.util.SparseIntArray
+import android.view.MotionEvent
 import android.view.View
 import org.fossify.calendar.R
 import org.fossify.calendar.extensions.*
 import org.fossify.calendar.helpers.COLUMN_COUNT
+import org.fossify.calendar.helpers.EVENT_ID
+import org.fossify.calendar.helpers.EVENT_OCCURRENCE_TS
 import org.fossify.calendar.helpers.Formatter
+import org.fossify.calendar.helpers.IS_TASK_COMPLETED
+import org.fossify.calendar.helpers.getActivityToOpen
 import org.fossify.calendar.helpers.ROW_COUNT
 import org.fossify.calendar.helpers.ShiftHelper
 import org.fossify.calendar.models.DayMonthly
@@ -65,6 +71,12 @@ class MonthView(context: Context, attrs: AttributeSet, defStyle: Int) : View(con
     private var days = ArrayList<DayMonthly>()
     private var dayVerticalOffsets = SparseIntArray()
     private var selectedDayCoords = Point(-1, -1)
+    private var selectedDayIndex = -1
+    private var panelHeight = 0f
+    private var panelEvents = ArrayList<Event>()
+    private var panelHiddenCount = 0
+    private val panelPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply { style = Paint.Style.FILL }
+    private val panelRect = RectF()
     private val shiftPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply { style = Paint.Style.FILL }
 
     constructor(context: Context, attrs: AttributeSet) : this(context, attrs, 0)
@@ -202,12 +214,23 @@ class MonthView(context: Context, attrs: AttributeSet, defStyle: Int) : View(con
                     dayVerticalOffsets.put(day.indexOnMonthView, dayVerticalOffsets[day.indexOnMonthView] + weekDaysLetterHeight)
                     val verticalOffset = dayVerticalOffsets[day.indexOnMonthView]
                     val xPos = x * dayWidth + horizontalOffset
-                    val yPos = y * dayHeight + verticalOffset
+                    val yPos = rowOrigin(y) + verticalOffset
                     val textY = yPos + textPaint.textSize
                     val xPosCenter = xPos + dayWidth / 2
 
                     val isDaySelected = selectedDayCoords.x != -1 && x == selectedDayCoords.x && y == selectedDayCoords.y
-                    if (isDaySelected) {
+                    val isExpandedDay = isExpandEnabled() && selectedDayIndex == curId
+                    if (isExpandedDay) {
+                        // big filled circle for the day that is open under its week
+                        val bigCirclePaint = Paint(textPaint).apply { color = primaryColor }
+                        canvas.drawCircle(
+                            xPosCenter,
+                            textY - dayTextRect.height() / 2,
+                            textPaint.textSize * 1.05f,
+                            bigCirclePaint
+                        )
+                        textPaint.color = primaryColor.getContrastColor()
+                    } else if (isDaySelected) {
                         canvas.drawCircle(
                             xPosCenter,
                             textY - dayTextRect.height() / 2,
@@ -270,7 +293,9 @@ class MonthView(context: Context, attrs: AttributeSet, defStyle: Int) : View(con
                     }
 
                     canvas.drawText(dayNumber, xPosCenter, textY, textPaint)
-                    dayVerticalOffsets.put(day.indexOnMonthView, (verticalOffset + textPaint.textSize * 2).toInt())
+                    // the open day leaves a larger gap so the event pills do not cover its big circle
+                    val gapFactor = if (isExpandedDay) 2.6f else 2f
+                    dayVerticalOffsets.put(day.indexOnMonthView, (verticalOffset + textPaint.textSize * gapFactor).toInt())
                 }
                 curId++
             }
@@ -281,6 +306,8 @@ class MonthView(context: Context, attrs: AttributeSet, defStyle: Int) : View(con
                 drawEvent(event, canvas)
             }
         }
+
+        drawPanel(canvas)
     }
 
     // paints the whole cell of each day with the color of its shift, at 50% transparency
@@ -296,7 +323,7 @@ class MonthView(context: Context, attrs: AttributeSet, defStyle: Int) : View(con
                     if (color != null) {
                         shiftPaint.color = ShiftHelper.withHalfTransparency(color)
                         val left = x * dayWidth + horizontalOffset
-                        val top = y * dayHeight + weekDaysLetterHeight
+                        val top = rowOrigin(y) + weekDaysLetterHeight
                         canvas.drawRect(left, top, left + dayWidth, top + dayHeight, shiftPaint)
                     }
                 }
@@ -318,7 +345,8 @@ class MonthView(context: Context, attrs: AttributeSet, defStyle: Int) : View(con
         // horizontal lines
         canvas.drawLine(0f, 0f, canvas.width.toFloat(), 0f, gridPaint)
         for (i in 0 until ROW_COUNT) {
-            canvas.drawLine(0f, i * dayHeight + weekDaysLetterHeight, canvas.width.toFloat(), i * dayHeight + weekDaysLetterHeight, gridPaint)
+            val lineY = rowOrigin(i) + weekDaysLetterHeight
+            canvas.drawLine(0f, lineY, canvas.width.toFloat(), lineY, gridPaint)
         }
         canvas.drawLine(0f, canvas.height.toFloat(), canvas.width.toFloat(), canvas.height.toFloat(), gridPaint)
     }
@@ -348,16 +376,160 @@ class MonthView(context: Context, attrs: AttributeSet, defStyle: Int) : View(con
             val id = "$weekOfYear:"
             val horizontalMarginFactor = 0.5f
             val xPos = horizontalOffset * horizontalMarginFactor
-            val yPos = i * dayHeight + weekDaysLetterHeight
+            val yPos = rowOrigin(i) + weekDaysLetterHeight
             canvas.drawText(id, xPos, yPos + textPaint.textSize, weekNumberPaint)
         }
     }
 
     private fun measureDaySize(canvas: Canvas) {
-        dayWidth = (canvas.width - horizontalOffset) / 7f
-        dayHeight = (canvas.height - weekDaysLetterHeight) / ROW_COUNT.toFloat()
+        measureDaySize(canvas.width, canvas.height)
+    }
+
+    private fun measureDaySize(viewWidth: Int, viewHeight: Int) {
+        updatePanel(viewHeight)
+        dayWidth = (viewWidth - horizontalOffset) / 7f
+        dayHeight = (viewHeight - weekDaysLetterHeight - panelHeight) / ROW_COUNT.toFloat()
         val availableHeightForEvents = dayHeight.toInt() - weekDaysLetterHeight
         maxEventsPerDay = availableHeightForEvents / eventTitleHeight
+    }
+
+    private fun isExpandEnabled() = config.expandDayInMonthView && !isMonthDayView && !isPrintVersion
+
+    private fun cardHeight() = eventTitleHeight * 2.6f
+    private fun cardGap() = smallPadding * 4f
+
+    // decides which events go in the panel under the selected week and how tall the panel is
+    private fun updatePanel(viewHeight: Int) {
+        panelEvents = ArrayList()
+        panelHiddenCount = 0
+        panelHeight = 0f
+        val day = days.getOrNull(selectedDayIndex)
+        if (!isExpandEnabled() || day == null || day.dayEvents.isEmpty()) {
+            return
+        }
+
+        val sorted = day.dayEvents.sortedWith(compareBy({ !it.getIsAllDay() }, { it.startTS }, { it.endTS }, { it.title }))
+        val maxPanel = (viewHeight - weekDaysLetterHeight) * 0.45f
+        val step = cardHeight() + cardGap()
+        val maxCards = max(1, ((maxPanel - cardGap()) / step).toInt())
+        val visible = if (sorted.size <= maxCards) sorted.size else max(1, maxCards - 1)
+        panelEvents.addAll(sorted.take(visible))
+        panelHiddenCount = sorted.size - visible
+        val rows = visible + if (panelHiddenCount > 0) 1 else 0
+        panelHeight = cardGap() + rows * step - (if (panelHiddenCount > 0) cardHeight() - eventTitleHeight else 0f)
+    }
+
+    private fun expandedRow(): Int = if (panelHeight > 0f) selectedDayIndex / 7 else -1
+
+    // top of a week row (without the header with the week day letters)
+    private fun rowOrigin(row: Int): Float {
+        val extra = if (expandedRow() in 0 until row) panelHeight else 0f
+        return row * dayHeight + extra
+    }
+
+    /** Area of one day cell, used by the wrapper to place the clickable views. */
+    fun getCellRect(x: Int, y: Int): RectF {
+        measureDaySize(width, height)
+        val left = x * dayWidth + horizontalOffset
+        val top = rowOrigin(y) + weekDaysLetterHeight
+        return RectF(left, top, left + dayWidth, top + dayHeight)
+    }
+
+    fun isDaySelected(x: Int, y: Int) = selectedDayIndex == y * 7 + x
+
+    fun expandDay(x: Int, y: Int) {
+        selectedDayIndex = y * 7 + x
+        invalidate()
+    }
+
+    private fun openEvent(event: Event) {
+        Intent(context, getActivityToOpen(event.isTask())).apply {
+            putExtra(EVENT_ID, event.id)
+            putExtra(EVENT_OCCURRENCE_TS, event.startTS)
+            putExtra(IS_TASK_COMPLETED, event.isTaskCompleted())
+            context.startActivity(this)
+        }
+    }
+
+    // the panel starts right under the week row of the selected day
+    private fun panelTop() = (expandedRow() + 1) * dayHeight + weekDaysLetterHeight
+
+    private fun cardTop(index: Int) = panelTop() + cardGap() + index * (cardHeight() + cardGap())
+
+    override fun onTouchEvent(event: MotionEvent): Boolean {
+        if (panelHeight <= 0f || selectedDayIndex < 0) {
+            return super.onTouchEvent(event)
+        }
+
+        val inPanel = event.y >= panelTop() && event.y <= panelTop() + panelHeight
+        if (!inPanel) {
+            return super.onTouchEvent(event)
+        }
+
+        if (event.action == MotionEvent.ACTION_UP) {
+            for (i in panelEvents.indices) {
+                val top = cardTop(i)
+                if (event.y >= top && event.y <= top + cardHeight() + cardGap() / 2) {
+                    openEvent(panelEvents[i])
+                    break
+                }
+            }
+        }
+        return true
+    }
+
+    private fun drawPanel(canvas: Canvas) {
+        if (panelHeight <= 0f) {
+            return
+        }
+
+        val left = horizontalOffset + smallPadding * 4f
+        val right = width - smallPadding * 4f
+        val cardH = cardHeight()
+        val titlePaint = Paint(eventTitlePaint).apply { color = textColor }
+        val timePaint = Paint(eventTitlePaint).apply { color = textColor.adjustAlpha(MEDIUM_ALPHA) }
+
+        panelEvents.forEachIndexed { index, ev ->
+            val top = cardTop(index)
+            panelRect.set(left, top, right, top + cardH)
+            panelPaint.color = textColor.adjustAlpha(0.12f)
+            canvas.drawRoundRect(panelRect, BG_CORNER_RADIUS, BG_CORNER_RADIUS, panelPaint)
+
+            // colored bar on the left
+            panelPaint.color = ev.color
+            panelRect.set(left, top, left + smallPadding * 5f, top + cardH)
+            canvas.drawRoundRect(panelRect, BG_CORNER_RADIUS, BG_CORNER_RADIUS, panelPaint)
+
+            val textLeft = left + smallPadding * 12f
+            var textRight = right - smallPadding * 8f
+            val centerY = top + cardH / 2
+
+            if (ev.isTask()) {
+                val iconSize = eventTitleHeight
+                val iconColor = if (ev.isTaskCompleted()) ev.color else textColor.adjustAlpha(MEDIUM_ALPHA)
+                val icon = resources.getColoredDrawableWithColor(R.drawable.ic_task_vector, iconColor).mutate()
+                val iconLeft = (right - smallPadding * 8f - iconSize).toInt()
+                icon.setBounds(iconLeft, (centerY - iconSize / 2).toInt(), iconLeft + iconSize, (centerY + iconSize / 2).toInt())
+                icon.draw(canvas)
+                textRight = iconLeft - smallPadding * 4f
+            }
+
+            val timeText = if (ev.getIsAllDay()) "" else Formatter.getTimeFromTS(context, ev.startTS)
+            if (timeText.isNotEmpty()) {
+                canvas.drawText(timeText, textLeft, centerY - eventTitleHeight * 0.2f, timePaint)
+            }
+
+            val titleY = if (timeText.isNotEmpty()) centerY + eventTitleHeight * 0.95f else centerY + eventTitleHeight * 0.35f
+            val title = TextUtils.ellipsize(ev.title, eventTitlePaint, textRight - textLeft, TextUtils.TruncateAt.END)
+            titlePaint.isStrikeThruText = ev.isTask() && ev.isTaskCompleted()
+            canvas.drawText(title, 0, title.length, textLeft, titleY, titlePaint)
+        }
+
+        if (panelHiddenCount > 0) {
+            val top = cardTop(panelEvents.size)
+            val morePaint = Paint(timePaint).apply { textAlign = Paint.Align.CENTER }
+            canvas.drawText("+$panelHiddenCount", (left + right) / 2, top + eventTitleHeight, morePaint)
+        }
     }
 
     private fun drawEvent(event: MonthViewEvent, canvas: Canvas) {
@@ -366,7 +538,7 @@ class MonthView(context: Context, attrs: AttributeSet, defStyle: Int) : View(con
             verticalOffset = max(verticalOffset, dayVerticalOffsets[event.startDayIndex + i])
         }
         val xPos = event.startDayIndex % 7 * dayWidth + horizontalOffset
-        val yPos = (event.startDayIndex / 7) * dayHeight
+        val yPos = rowOrigin(event.startDayIndex / 7)
         val xPosCenter = xPos + dayWidth / 2
 
         if (verticalOffset - eventTitleHeight * 2 > dayHeight) {

@@ -272,4 +272,21 @@
     <string name="holiday_management_notice">Ara l\'aplicació actualitza automàticament els festius. Seleccioneu els països de nou per a permetre-ho. És possible que els festius importats prèviament s\'hagin d\'eliminar manualment.</string>
     <string name="manage_holidays">Gestió dels festius</string>
     <string name="holidays_updated">S\'han actualitzat els festius</string>
+    <!-- Shifts -->
+    <string name="shifts">Torns</string>
+    <string name="shifts_show_in_month_view">Pinta els dies de la vista mensual segons el torn</string>
+    <string name="shift_color_day">Color del torn de dia</string>
+    <string name="shift_color_night">Color del torn de nit</string>
+    <string name="shift_color_off_duty">Color del torn sortint</string>
+    <string name="shift_start_date">Data d\'inici del cicle</string>
+    <string name="shift_cycle">Cicle de torns</string>
+    <string name="shift_cycle_explanation">Escriu blocs de dies seguits d\'una lletra, separats per comes: D = dia, N = nit, S = sortint, L = lliure. Exemple: 2D,2N,2S,4L (es repeteix indefinidament).</string>
+    <string name="shift_cycle_invalid">Cicle no vàlid. Exemple de cicle vàlid: 2D,2N,2S,4L</string>
+    <string name="change_shift">Canvia el torn</string>
+    <string name="shift_day">Dia</string>
+    <string name="shift_night">Nit</string>
+    <string name="shift_off_duty">Sortint</string>
+    <string name="shift_free">Lliure</string>
+    <string name="shift_back_to_cycle">Torna al cicle</string>
+    <string name="expand_day_in_month_view">Desplega el dia premut dins de la vista mensual</string>
 </resources>
