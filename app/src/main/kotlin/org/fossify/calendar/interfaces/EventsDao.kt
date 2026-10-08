@@ -44,6 +44,9 @@ interface EventsDao {
     @Query("SELECT * FROM events WHERE id = :id")
     fun getEventOrTaskWithId(id: Long): Event?
 
+    @Query("SELECT * FROM events WHERE title = :title AND type = $TYPE_EVENT")
+    fun getEventsWithTitle(title: String): List<Event>
+
     @Query("SELECT * FROM events WHERE import_id = :importId AND type = $TYPE_EVENT")
     fun getEventWithImportId(importId: String): Event?
 

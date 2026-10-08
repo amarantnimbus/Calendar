@@ -16,6 +16,10 @@ class Config(context: Context) : BaseConfig(context) {
         fun newInstance(context: Context) = Config(context)
     }
 
+    var shiftSyncedPayload: String
+        get() = prefs.getString(SHIFT_SYNCED_PAYLOAD, "") ?: ""
+        set(shiftSyncedPayload) = prefs.edit().putString(SHIFT_SYNCED_PAYLOAD, shiftSyncedPayload).apply()
+
     var shiftFullCell: Boolean
         get() = prefs.getBoolean(SHIFT_FULL_CELL, false)
         set(shiftFullCell) = prefs.edit().putBoolean(SHIFT_FULL_CELL, shiftFullCell).apply()

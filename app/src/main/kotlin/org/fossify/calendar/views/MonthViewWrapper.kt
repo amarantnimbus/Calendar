@@ -16,6 +16,7 @@ import org.fossify.calendar.helpers.Formatter
 import org.fossify.calendar.helpers.ROW_COUNT
 import org.fossify.calendar.helpers.Shift
 import org.fossify.calendar.helpers.ShiftHelper
+import org.fossify.calendar.helpers.ShiftSync
 import org.fossify.calendar.helpers.TYPE_EVENT
 import org.fossify.calendar.helpers.TYPE_SHIFT
 import org.fossify.calendar.helpers.TYPE_TASK
@@ -23,6 +24,7 @@ import org.fossify.calendar.models.DayMonthly
 import org.fossify.commons.compose.extensions.getActivity
 import org.fossify.commons.dialogs.RadioGroupDialog
 import org.fossify.commons.extensions.onGlobalLayout
+import org.fossify.commons.helpers.ensureBackgroundThread
 import org.fossify.commons.models.RadioItem
 
 // used in the Monthly view fragment, 1 view per screen
@@ -212,6 +214,9 @@ class MonthViewWrapper(
             val shift = Shift.values().getOrNull(it as Int)
             ShiftHelper.setOverride(context.config, day.code, shift)
             binding.monthView.invalidate()
+            if (context.config.caldavSync) {
+                ensureBackgroundThread { ShiftSync.sync(context) }
+            }
         }
     }
 

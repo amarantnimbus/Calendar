@@ -526,6 +526,7 @@ class EventsHelper(val context: Context) {
             .asSequence()
             .distinct()
             .filterNot { it.repetitionExceptions.contains(Formatter.getDayCodeFromTS(it.startTS)) }
+            .filterNot { ShiftSync.isConfigEvent(it) }
             .toMutableList() as ArrayList<Event>
 
         val calendarColors = getCalendarColors()

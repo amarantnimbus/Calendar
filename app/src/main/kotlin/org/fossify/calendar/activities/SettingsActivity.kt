@@ -83,6 +83,7 @@ import org.fossify.calendar.helpers.WEEKLY_VIEW
 import org.fossify.calendar.helpers.WEEK_NUMBERS
 import org.fossify.calendar.helpers.EXPAND_DAY_IN_MONTH_VIEW
 import org.fossify.calendar.helpers.SHIFT_FULL_CELL
+import org.fossify.calendar.helpers.ShiftSync
 import org.fossify.calendar.helpers.YEARLY_VIEW
 import org.fossify.calendar.models.CalendarEntity
 import org.fossify.commons.dialogs.ColorPickerDialog
@@ -272,6 +273,9 @@ class SettingsActivity : SimpleActivity() {
     override fun onPause() {
         super.onPause()
         mStoredPrimaryColor = getProperPrimaryColor()
+        if (config.caldavSync) {
+            ensureBackgroundThread { ShiftSync.sync(this) }
+        }
     }
 
     override fun onStop() {

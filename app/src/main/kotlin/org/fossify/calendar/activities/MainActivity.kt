@@ -70,6 +70,7 @@ import org.fossify.calendar.helpers.SOURCE_CONTACT_BIRTHDAY
 import org.fossify.calendar.helpers.UPDATE_BOTTOM
 import org.fossify.calendar.helpers.UPDATE_TOP
 import org.fossify.calendar.helpers.VIEW_TO_OPEN
+import org.fossify.calendar.helpers.ShiftSync
 import org.fossify.calendar.helpers.WEEKLY_VIEW
 import org.fossify.calendar.helpers.WEEK_START_DATE_TIME
 import org.fossify.calendar.helpers.YEAR
@@ -258,6 +259,14 @@ class MainActivity : SimpleActivity(), RefreshRecyclerViewListener {
             || mStoredHighlightWeekends != config.highlightWeekends || mStoredHighlightWeekendsColor != config.highlightWeekendsColor
         ) {
             updateViewPager()
+        }
+
+        if (config.caldavSync) {
+            ensureBackgroundThread {
+                if (ShiftSync.sync(this)) {
+                    refreshViewPager()
+                }
+            }
         }
 
         eventsHelper.getCalendars(this, false) {

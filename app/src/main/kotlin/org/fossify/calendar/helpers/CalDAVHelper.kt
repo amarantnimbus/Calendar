@@ -75,6 +75,7 @@ class CalDAVHelper(val context: Context) {
                 context.scheduleCalDAVSync(true)
             }
 
+            ShiftSync.sync(context)
             callback()
         } finally {
             context.updateWidgets()
