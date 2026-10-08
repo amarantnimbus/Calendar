@@ -82,6 +82,7 @@ import org.fossify.calendar.helpers.VIBRATE
 import org.fossify.calendar.helpers.WEEKLY_VIEW
 import org.fossify.calendar.helpers.WEEK_NUMBERS
 import org.fossify.calendar.helpers.EXPAND_DAY_IN_MONTH_VIEW
+import org.fossify.calendar.helpers.SHIFT_FULL_CELL
 import org.fossify.calendar.helpers.YEARLY_VIEW
 import org.fossify.calendar.models.CalendarEntity
 import org.fossify.commons.dialogs.ColorPickerDialog
@@ -570,6 +571,12 @@ class SettingsActivity : SimpleActivity() {
                     setupShiftStartDate()
                 }
                 settingsShiftsDetailsHolder.beVisibleIf(config.shiftsEnabled)
+            }
+
+            settingsShiftFullCell.isChecked = config.shiftFullCell
+            settingsShiftFullCellHolder.setOnClickListener {
+                settingsShiftFullCell.toggle()
+                config.shiftFullCell = settingsShiftFullCell.isChecked
             }
 
             setupShiftColor(settingsShiftColorDay, settingsShiftColorDayHolder, { config.shiftColorDay }) {
@@ -1273,6 +1280,7 @@ class SettingsActivity : SimpleActivity() {
                 put(WIDGET_TEXT_COLOR, config.widgetTextColor)
                 put(WEEK_NUMBERS, config.showWeekNumbers)
                 put(EXPAND_DAY_IN_MONTH_VIEW, config.expandDayInMonthView)
+                put(SHIFT_FULL_CELL, config.shiftFullCell)
                 put(START_WEEKLY_AT, config.startWeeklyAt)
                 put(SHOW_MIDNIGHT_SPANNING_EVENTS_AT_TOP, config.showMidnightSpanningEventsAtTop)
                 put(ALLOW_CUSTOMIZE_DAY_COUNT, config.allowCustomizeDayCount)
@@ -1394,6 +1402,7 @@ class SettingsActivity : SimpleActivity() {
                 WIDGET_TEXT_COLOR -> config.widgetTextColor = value.toInt()
                 WEEK_NUMBERS -> config.showWeekNumbers = value.toBoolean()
                 EXPAND_DAY_IN_MONTH_VIEW -> config.expandDayInMonthView = value.toBoolean()
+                SHIFT_FULL_CELL -> config.shiftFullCell = value.toBoolean()
                 START_WEEKLY_AT -> config.startWeeklyAt = value.toInt()
                 SHOW_MIDNIGHT_SPANNING_EVENTS_AT_TOP -> config.showMidnightSpanningEventsAtTop =
                     value.toBoolean()

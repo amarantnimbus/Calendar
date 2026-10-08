@@ -16,8 +16,12 @@ class Config(context: Context) : BaseConfig(context) {
         fun newInstance(context: Context) = Config(context)
     }
 
+    var shiftFullCell: Boolean
+        get() = prefs.getBoolean(SHIFT_FULL_CELL, false)
+        set(shiftFullCell) = prefs.edit().putBoolean(SHIFT_FULL_CELL, shiftFullCell).apply()
+
     var expandDayInMonthView: Boolean
-        get() = prefs.getBoolean(EXPAND_DAY_IN_MONTH_VIEW, false)
+        get() = prefs.getBoolean(EXPAND_DAY_IN_MONTH_VIEW, true)
         set(expandDayInMonthView) = prefs.edit().putBoolean(EXPAND_DAY_IN_MONTH_VIEW, expandDayInMonthView).apply()
 
     var showWeekNumbers: Boolean

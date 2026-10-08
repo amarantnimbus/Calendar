@@ -277,16 +277,17 @@
     <string name="shifts_show_in_month_view">Colorear los días de la vista mensual según el turno</string>
     <string name="shift_color_day">Color del turno de día</string>
     <string name="shift_color_night">Color del turno de noche</string>
-    <string name="shift_color_off_duty">Color del turno saliente</string>
+    <string name="shift_color_off_duty">Color del turno de descanso</string>
     <string name="shift_start_date">Fecha de inicio del ciclo</string>
     <string name="shift_cycle">Ciclo de turnos</string>
-    <string name="shift_cycle_explanation">Escribe bloques de días seguidos de una letra, separados por comas: D = día, N = noche, S = saliente, L = libre. Ejemplo: 2D,2N,2S,4L (se repite indefinidamente).</string>
+    <string name="shift_cycle_explanation">Escribe bloques de días seguidos de una letra, separados por comas: D = día, N = noche, S = descanso, L = libre. Ejemplo: 2D,2N,2S,4L (se repite indefinidamente).</string>
     <string name="shift_cycle_invalid">Ciclo no válido. Ejemplo de ciclo válido: 2D,2N,2S,4L</string>
     <string name="change_shift">Cambiar turno</string>
     <string name="shift_day">Día</string>
     <string name="shift_night">Noche</string>
-    <string name="shift_off_duty">Saliente</string>
+    <string name="shift_off_duty">Descanso</string>
     <string name="shift_free">Libre</string>
     <string name="shift_back_to_cycle">Volver al ciclo</string>
     <string name="expand_day_in_month_view">Desplegar el día pulsado dentro de la vista mensual</string>
+    <string name="shift_full_cell">Pintar la casilla entera (en lugar de solo una franja arriba)</string>
 </resources>

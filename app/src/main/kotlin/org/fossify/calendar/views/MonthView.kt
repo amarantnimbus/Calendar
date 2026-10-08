@@ -19,6 +19,7 @@ import org.fossify.calendar.helpers.IS_TASK_COMPLETED
 import org.fossify.calendar.helpers.getActivityToOpen
 import org.fossify.calendar.helpers.ROW_COUNT
 import org.fossify.calendar.helpers.ShiftHelper
+import org.fossify.calendar.helpers.ShiftSchedule
 import org.fossify.calendar.models.DayMonthly
 import org.fossify.calendar.models.Event
 import org.fossify.calendar.models.MonthViewEvent
@@ -35,7 +36,7 @@ import kotlin.math.min
 // used in the Monthly view fragment, 1 view per screen
 class MonthView(context: Context, attrs: AttributeSet, defStyle: Int) : View(context, attrs, defStyle) {
     companion object {
-        private const val BG_CORNER_RADIUS = 8f
+        private const val BG_CORNER_RADIUS = 3f
         private const val EVENT_DOT_COLUMN_COUNT = 3
         private const val EVENT_DOT_ROW_COUNT = 1
     }
@@ -77,6 +78,16 @@ class MonthView(context: Context, attrs: AttributeSet, defStyle: Int) : View(con
     private var panelHiddenCount = 0
     private val panelPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply { style = Paint.Style.FILL }
     private val panelRect = RectF()
+    private val panelFramePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply { style = Paint.Style.STROKE }
+    private val hairline = max(1f, 0.6f * context.resources.displayMetrics.density)
+    private val markPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        style = Paint.Style.STROKE
+        strokeWidth = hairline
+    }
+    private val todayPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        style = Paint.Style.FILL
+        color = 0xFFD32F2F.toInt()
+    }
     private val shiftPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply { style = Paint.Style.FILL }
 
     constructor(context: Context, attrs: AttributeSet) : this(context, attrs, 0)
@@ -192,7 +203,8 @@ class MonthView(context: Context, attrs: AttributeSet, defStyle: Int) : View(con
         dayVerticalOffsets.clear()
         measureDaySize(canvas)
 
-        drawShiftBackgrounds(canvas)
+        val schedule = ShiftHelper.load(config)
+        drawShiftBackgrounds(canvas, schedule)
 
         if (config.showGrid && !isMonthDayView) {
             drawGrid(canvas)
@@ -220,16 +232,33 @@ class MonthView(context: Context, attrs: AttributeSet, defStyle: Int) : View(con
 
                     val isDaySelected = selectedDayCoords.x != -1 && x == selectedDayCoords.x && y == selectedDayCoords.y
                     val isExpandedDay = isExpandEnabled() && selectedDayIndex == curId
-                    if (isExpandedDay) {
-                        // big filled circle for the day that is open under its week
-                        val bigCirclePaint = Paint(textPaint).apply { color = primaryColor }
-                        canvas.drawCircle(
-                            xPosCenter,
-                            textY - dayTextRect.height() / 2,
-                            textPaint.textSize * 1.05f,
-                            bigCirclePaint
-                        )
-                        textPaint.color = primaryColor.getContrastColor()
+                    var textShiftY = 0f
+                    var openCircleBottom = 0f
+                    if (!isMonthDayView) {
+                        val isTodayMarked = day.isToday && !isPrintVersion
+                        val isOpenDay = isExpandedDay && !isTodayMarked
+                        if (isTodayMarked || isOpenDay) {
+                            val ts = textPaint.textSize
+                            val baseRadius = max(textPaint.measureText(dayNumber), ts * 0.75f) / 2
+                            val centerY = textY - dayTextRect.height() / 2
+                            if (isTodayMarked) {
+                                // red circle, adapted to one or two digits
+                                canvas.drawCircle(xPosCenter, centerY, baseRadius + ts * 0.16f, todayPaint)
+                                textPaint.color = Color.WHITE
+                            } else {
+                                // open day: bigger circle with the color of the shift and a hairline outline
+                                textShiftY = ts * 0.3f
+                                val radius = baseRadius + ts * 0.37f
+                                val shiftColor = schedule?.let { sch -> sch.shiftFor(day.code)?.let { sch.colorFor(it) } }
+                                val fillColor = (shiftColor ?: Color.WHITE) or 0xFF000000.toInt()
+                                shiftPaint.color = fillColor
+                                canvas.drawCircle(xPosCenter, centerY + textShiftY, radius, shiftPaint)
+                                markPaint.color = outlineColor()
+                                canvas.drawCircle(xPosCenter, centerY + textShiftY, radius, markPaint)
+                                textPaint.color = fillColor.getContrastColor()
+                                openCircleBottom = centerY + textShiftY + radius - yPos
+                            }
+                        }
                     } else if (isDaySelected) {
                         canvas.drawCircle(
                             xPosCenter,
@@ -292,10 +321,16 @@ class MonthView(context: Context, attrs: AttributeSet, defStyle: Int) : View(con
                         }
                     }
 
-                    canvas.drawText(dayNumber, xPosCenter, textY, textPaint)
+                    canvas.drawText(dayNumber, xPosCenter, textY + textShiftY, textPaint)
                     // the open day leaves a larger gap so the event pills do not cover its big circle
-                    val gapFactor = if (isExpandedDay) 2.6f else 2f
-                    dayVerticalOffsets.put(day.indexOnMonthView, (verticalOffset + textPaint.textSize * gapFactor).toInt())
+                    val gapFactor = 2f
+                    val nextOffset = if (isMonthDayView) {
+                        verticalOffset + textPaint.textSize * gapFactor
+                    } else {
+                        // event pills start below the colored day band
+                        verticalOffset + max(bandHeight(), openCircleBottom) + eventTitleHeight + smallPadding * 2
+                    }
+                    dayVerticalOffsets.put(day.indexOnMonthView, nextOffset.toInt())
                 }
                 curId++
             }
@@ -310,9 +345,15 @@ class MonthView(context: Context, attrs: AttributeSet, defStyle: Int) : View(con
         drawPanel(canvas)
     }
 
+    // height of the colored band behind the day number
+    private fun bandHeight() = textPaint.textSize * 1.4f
+
     // paints the whole cell of each day with the color of its shift, at 50% transparency
-    private fun drawShiftBackgrounds(canvas: Canvas) {
-        val schedule = ShiftHelper.load(config) ?: return
+    private fun drawShiftBackgrounds(canvas: Canvas, schedule: ShiftSchedule?) {
+        if (schedule == null) {
+            return
+        }
+
         var curId = 0
         for (y in 0 until ROW_COUNT) {
             for (x in 0 until COLUMN_COUNT) {
@@ -324,7 +365,8 @@ class MonthView(context: Context, attrs: AttributeSet, defStyle: Int) : View(con
                         shiftPaint.color = ShiftHelper.withHalfTransparency(color)
                         val left = x * dayWidth + horizontalOffset
                         val top = rowOrigin(y) + weekDaysLetterHeight
-                        canvas.drawRect(left, top, left + dayWidth, top + dayHeight, shiftPaint)
+                        val bottom = if (config.shiftFullCell) top + dayHeight else top + bandHeight()
+                        canvas.drawRect(left, top, left + dayWidth, bottom, shiftPaint)
                     }
                 }
                 curId++
@@ -396,7 +438,7 @@ class MonthView(context: Context, attrs: AttributeSet, defStyle: Int) : View(con
     private fun isExpandEnabled() = config.expandDayInMonthView && !isMonthDayView && !isPrintVersion
 
     private fun cardHeight() = eventTitleHeight * 2.6f
-    private fun cardGap() = smallPadding * 4f
+    private fun cardGap() = smallPadding * 12f
 
     // decides which events go in the panel under the selected week and how tall the panel is
     private fun updatePanel(viewHeight: Int) {
@@ -434,6 +476,9 @@ class MonthView(context: Context, attrs: AttributeSet, defStyle: Int) : View(con
         val top = rowOrigin(y) + weekDaysLetterHeight
         return RectF(left, top, left + dayWidth, top + dayHeight)
     }
+
+    // black frames in light themes, white ones in dark themes
+    private fun outlineColor() = if (Color.luminance(textColor) > 0.5f) Color.WHITE else Color.BLACK
 
     fun isDaySelected(x: Int, y: Int) = selectedDayIndex == y * 7 + x
 
@@ -492,15 +537,19 @@ class MonthView(context: Context, attrs: AttributeSet, defStyle: Int) : View(con
         panelEvents.forEachIndexed { index, ev ->
             val top = cardTop(index)
             panelRect.set(left, top, right, top + cardH)
-            panelPaint.color = textColor.adjustAlpha(0.12f)
-            canvas.drawRoundRect(panelRect, BG_CORNER_RADIUS, BG_CORNER_RADIUS, panelPaint)
+            // very thin gray frame around the card, no fill
+            val frameWidth = hairline
+            panelFramePaint.color = outlineColor()
+            panelFramePaint.strokeWidth = frameWidth
+            panelRect.set(left + frameWidth / 2, top + frameWidth / 2, right - frameWidth / 2, top + cardH - frameWidth / 2)
+            canvas.drawRoundRect(panelRect, BG_CORNER_RADIUS, BG_CORNER_RADIUS, panelFramePaint)
 
             // colored bar on the left
             panelPaint.color = ev.color
-            panelRect.set(left, top, left + smallPadding * 5f, top + cardH)
+            panelRect.set(left, top, left + smallPadding * 7.5f, top + cardH)
             canvas.drawRoundRect(panelRect, BG_CORNER_RADIUS, BG_CORNER_RADIUS, panelPaint)
 
-            val textLeft = left + smallPadding * 12f
+            val textLeft = left + smallPadding * 14f
             var textRight = right - smallPadding * 8f
             val centerY = top + cardH / 2
 

@@ -326,15 +326,15 @@
     <string name="shifts_show_in_month_view">Color the days of the month view by shift</string>
     <string name="shift_color_day">Day shift color</string>
     <string name="shift_color_night">Night shift color</string>
-    <string name="shift_color_off_duty">Off-duty shift color</string>
+    <string name="shift_color_off_duty">Rest shift color</string>
     <string name="shift_start_date">Cycle start date</string>
     <string name="shift_cycle">Shift cycle</string>
-    <string name="shift_cycle_explanation">Write blocks of days followed by a letter, separated by commas: D = day, N = night, S = off duty, L = free. Example: 2D,2N,2S,4L (it repeats forever).</string>
+    <string name="shift_cycle_explanation">Write blocks of days followed by a letter, separated by commas: D = day, N = night, S = rest, L = free. Example: 2D,2N,2S,4L (it repeats forever).</string>
     <string name="shift_cycle_invalid">Invalid cycle. Example of a valid cycle: 2D,2N,2S,4L</string>
     <string name="change_shift">Change shift</string>
     <string name="shift_day">Day</string>
     <string name="shift_night">Night</string>
-    <string name="shift_off_duty">Off duty</string>
+    <string name="shift_off_duty">Rest</string>
     <string name="shift_free">Free</string>
     <string name="shift_back_to_cycle">Back to the cycle</string>
 
@@ -344,4 +344,5 @@
     -->
     <string name="expand_day_in_month_view">Expand the tapped day inside the month view</string>
     <string name="more_events_count">+%d</string>
+    <string name="shift_full_cell">Paint the whole day cell (instead of only a band at the top)</string>
 </resources>

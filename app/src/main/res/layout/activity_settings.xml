@@ -393,6 +393,21 @@
 
                 </RelativeLayout>
 
+                <RelativeLayout
+                    android:id="@+id/settings_shift_full_cell_holder"
+                    style="@style/SettingsHolderSwitchStyle"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content">
+
+                    <org.fossify.commons.views.MyMaterialSwitch
+                        android:id="@+id/settings_shift_full_cell"
+                        style="@style/SettingsSwitchStyle"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="@string/shift_full_cell" />
+
+                </RelativeLayout>
+
             </LinearLayout>
 
             <include
