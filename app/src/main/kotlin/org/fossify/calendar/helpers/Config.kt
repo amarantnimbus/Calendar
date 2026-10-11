@@ -24,6 +24,26 @@ class Config(context: Context) : BaseConfig(context) {
         get() = prefs.getBoolean(SHIFT_FULL_CELL, false)
         set(shiftFullCell) = prefs.edit().putBoolean(SHIFT_FULL_CELL, shiftFullCell).apply()
 
+    var fsUrl: String
+        get() = prefs.getString(FS_URL, "")!!
+        set(value) = prefs.edit().putString(FS_URL, value).apply()
+
+    var fsApiKey: String
+        get() = prefs.getString(FS_API_KEY, "")!!
+        set(value) = prefs.edit().putString(FS_API_KEY, value).apply()
+
+    var fsProjectsCache: String
+        get() = prefs.getString(FS_PROJECTS_CACHE, "")!!
+        set(value) = prefs.edit().putString(FS_PROJECTS_CACHE, value).apply()
+
+    var fsPendingQueue: String
+        get() = prefs.getString(FS_PENDING_QUEUE, "")!!
+        set(value) = prefs.edit().putString(FS_PENDING_QUEUE, value).apply()
+
+    var workFeatures: Boolean
+        get() = prefs.getBoolean(WORK_FEATURES, false)
+        set(workFeatures) = prefs.edit().putBoolean(WORK_FEATURES, workFeatures).apply()
+
     var juntsCalendarId: Long
         get() = prefs.getLong(JUNTS_CALENDAR_ID, -1L)
         set(juntsCalendarId) = prefs.edit().putLong(JUNTS_CALENDAR_ID, juntsCalendarId).apply()

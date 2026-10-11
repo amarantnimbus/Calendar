@@ -296,4 +296,19 @@
     <string name="event_date_time">Data i hora</string>
     <string name="event_starts">Comença</string>
     <string name="event_ends">Acaba</string>
+    <string name="work_features">Funcions de feina</string>
+    <string name="no_date">Sense data</string>
+    <string name="pending_events">Pendents de planificar</string>
+    <string name="no_pending">No hi ha res pendent</string>
+    <string name="new_pending">Nou pendent</string>
+    <string name="work_features_summary">Funcions de feina: bústia de pendents i esdeveniments sense data</string>
+    <string name="fs_connection">Connexió amb FacturaScripts</string>
+    <string name="fs_url_hint">Adreça (p. ex. http://nas:8080)</string>
+    <string name="fs_key_hint">Clau d\'API</string>
+    <string name="fs_test">Prova i desa</string>
+    <string name="fs_ok">Connexió correcta: %1$d projectes</string>
+    <string name="fs_error">No s\'ha pogut connectar: %1$s</string>
+    <string name="fs_project">Projecte</string>
+    <string name="fs_no_project">Cap projecte</string>
+    <string name="fs_no_projects">No hi ha projectes carregats. Configura FacturaScripts a Configuració.</string>
 </resources>

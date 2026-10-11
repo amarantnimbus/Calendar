@@ -1,5 +1,7 @@
 package org.fossify.calendar.adapters
 
+import android.graphics.Color
+import android.graphics.drawable.GradientDrawable
 import android.view.ViewGroup
 import androidx.core.view.updateLayoutParams
 import androidx.recyclerview.widget.RecyclerView
@@ -9,6 +11,7 @@ import org.fossify.calendar.databinding.QuickFilterCalendarViewBinding
 import org.fossify.calendar.extensions.config
 import org.fossify.calendar.models.CalendarEntity
 import org.fossify.commons.extensions.adjustAlpha
+import org.fossify.commons.extensions.getContrastColor
 import org.fossify.commons.extensions.getProperTextColor
 import org.fossify.commons.helpers.LOWER_ALPHA
 
@@ -89,15 +92,29 @@ class QuickFilterCalendarAdapter(
         fun bindView(calendar: CalendarEntity) {
             val isSelected = activeKeys.contains(calendar.id)
             binding.apply {
-                quickFilterCalendar.text = calendar.title
-                val textColor = if (isSelected) textColorActive else textColorInactive
-                quickFilterCalendar.setTextColor(textColor)
+                val name = if (calendar.caldavCalendarId != 0) {
+                    calendar.caldavDisplayName.ifEmpty { calendar.title }
+                } else {
+                    calendar.title
+                }
+                quickFilterCalendar.text = name.trim().take(1).uppercase()
 
-                val indicatorHeightRes =
-                    if (isSelected) R.dimen.quick_filter_active_line_size else R.dimen.quick_filter_inactive_line_size
-                quickFilterCalendarColor.layoutParams.height =
-                    root.resources.getDimensionPixelSize(indicatorHeightRes)
-                quickFilterCalendarColor.setBackgroundColor(calendar.color)
+                // bubble: filled with the calendar color when visible, grey outline when hidden
+                val bubble = GradientDrawable()
+                bubble.shape = GradientDrawable.OVAL
+                if (isSelected) {
+                    bubble.setColor(calendar.color)
+                    quickFilterCalendar.setTextColor(calendar.color.getContrastColor())
+                } else {
+                    bubble.setColor(Color.TRANSPARENT)
+                    bubble.setStroke(
+                        (2 * root.resources.displayMetrics.density).toInt(),
+                        textColorInactive
+                    )
+                    quickFilterCalendar.setTextColor(textColorInactive)
+                }
+                quickFilterCalendarColor.setImageDrawable(null)
+                quickFilterCalendarColor.background = bubble
 
                 // avoid too quick clicks, could cause glitches
                 quickFilterCalendar.setOnClickListener {

@@ -117,6 +117,19 @@
                 android:layout_height="1dp"
                 android:background="#000000" />
 
+            <TextView
+                android:id="@+id/event_project"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="@dimen/activity_margin"
+                android:layout_marginTop="@dimen/medium_margin"
+                android:layout_marginEnd="@dimen/activity_margin"
+                android:background="?attr/selectableItemBackground"
+                android:paddingTop="@dimen/small_margin"
+                android:paddingBottom="@dimen/small_margin"
+                android:textSize="@dimen/day_text_size"
+                android:visibility="gone" />
+
             <org.fossify.commons.views.MyEditText
                 android:id="@+id/event_title"
                 android:layout_width="match_parent"

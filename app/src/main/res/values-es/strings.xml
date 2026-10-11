@@ -296,4 +296,19 @@
     <string name="event_date_time">Fecha y hora</string>
     <string name="event_starts">Empieza</string>
     <string name="event_ends">Termina</string>
+    <string name="work_features">Funciones de trabajo</string>
+    <string name="no_date">Sin fecha</string>
+    <string name="pending_events">Pendientes de planificar</string>
+    <string name="no_pending">No hay nada pendiente</string>
+    <string name="new_pending">Nuevo pendiente</string>
+    <string name="work_features_summary">Funciones de trabajo: bandeja de pendientes y eventos sin fecha</string>
+    <string name="fs_connection">Conexión con FacturaScripts</string>
+    <string name="fs_url_hint">Dirección (p. ej. http://nas:8080)</string>
+    <string name="fs_key_hint">Clave de API</string>
+    <string name="fs_test">Probar y guardar</string>
+    <string name="fs_ok">Conexión correcta: %1$d proyectos</string>
+    <string name="fs_error">No se pudo conectar: %1$s</string>
+    <string name="fs_project">Proyecto</string>
+    <string name="fs_no_project">Ningún proyecto</string>
+    <string name="fs_no_projects">No hay proyectos cargados. Configura FacturaScripts en Ajustes.</string>
 </resources>

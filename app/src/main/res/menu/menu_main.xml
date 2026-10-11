@@ -9,10 +9,15 @@
         android:title="@string/go_to_today"
         app:showAsAction="always" />
     <item
+        android:id="@+id/pending_events"
+        android:icon="@drawable/ic_inbox_vector"
+        android:title="@string/pending_events"
+        app:showAsAction="always" />
+    <item
         android:id="@+id/change_view"
         android:icon="@drawable/ic_change_view_vector"
         android:title="@string/change_view"
-        app:showAsAction="always" />
+        app:showAsAction="never" />
     <item
         android:id="@+id/filter"
         android:icon="@drawable/ic_filter_vector"
@@ -52,15 +57,15 @@
         android:id="@+id/settings"
         android:icon="@drawable/ic_settings_cog_vector"
         android:title="@string/settings"
-        app:showAsAction="ifRoom" />
+        app:showAsAction="always" />
     <item
         android:id="@+id/about"
         android:icon="@drawable/ic_info_vector"
         android:title="@string/about"
-        app:showAsAction="ifRoom" />
+        app:showAsAction="never" />
     <item
         android:id="@+id/more_apps_from_us"
         android:icon="@drawable/ic_google_play_vector"
         android:title="@string/more_fossify_apps"
-        app:showAsAction="ifRoom" />
+        app:showAsAction="never" />
 </menu>

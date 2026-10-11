@@ -861,6 +861,43 @@
                 android:text="@string/monthly_view" />
 
             <RelativeLayout
+                android:id="@+id/settings_work_features_holder"
+                style="@style/SettingsHolderSwitchStyle"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content">
+
+                <org.fossify.commons.views.MyMaterialSwitch
+                    android:id="@+id/settings_work_features"
+                    style="@style/SettingsSwitchStyle"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="@string/work_features_summary" />
+
+            </RelativeLayout>
+
+            <RelativeLayout
+                android:id="@+id/settings_fs_holder"
+                style="@style/SettingsHolderTextViewStyle"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content">
+
+                <org.fossify.commons.views.MyTextView
+                    android:id="@+id/settings_fs_label"
+                    style="@style/SettingsTextLabelStyle"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="@string/fs_connection" />
+
+                <org.fossify.commons.views.MyTextView
+                    android:id="@+id/settings_fs_value"
+                    style="@style/SettingsTextValueStyle"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_below="@+id/settings_fs_label" />
+
+            </RelativeLayout>
+
+            <RelativeLayout
                 android:id="@+id/settings_expand_day_in_month_view_holder"
                 style="@style/SettingsHolderSwitchStyle"
                 android:layout_width="match_parent"

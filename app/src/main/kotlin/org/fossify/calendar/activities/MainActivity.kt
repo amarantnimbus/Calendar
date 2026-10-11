@@ -11,6 +11,8 @@ import android.provider.ContactsContract.CommonDataKinds
 import android.provider.ContactsContract.Contacts
 import android.provider.ContactsContract.Data
 import android.view.MenuItem
+import android.view.MotionEvent
+import android.view.ScaleGestureDetector
 import android.widget.Toast
 import androidx.core.graphics.drawable.toDrawable
 import androidx.fragment.app.FragmentManager
@@ -46,12 +48,17 @@ import org.fossify.calendar.helpers.BIRTHDAY_EVENT
 import org.fossify.calendar.helpers.DAILY_VIEW
 import org.fossify.calendar.helpers.DAY_CODE
 import org.fossify.calendar.helpers.EVENTS_LIST_VIEW
+import org.fossify.calendar.extensions.getNewEventTimestampFromCode
 import org.fossify.calendar.helpers.EVENT_ID
+import org.fossify.calendar.helpers.FacturaScripts
+import org.fossify.calendar.helpers.NEW_EVENT_START_TS
+import org.fossify.calendar.helpers.NEW_PENDING_EVENT
 import org.fossify.calendar.helpers.EVENT_OCCURRENCE_TS
 import org.fossify.calendar.helpers.FETCH_INTERVAL
 import org.fossify.calendar.helpers.FLAG_ALL_DAY
 import org.fossify.calendar.helpers.FLAG_MISSING_YEAR
 import org.fossify.calendar.helpers.Formatter
+import org.fossify.calendar.helpers.ViewSwitchState
 import org.fossify.calendar.helpers.Formatter.DAYCODE_PATTERN
 import org.fossify.calendar.helpers.HolidayHelper
 import org.fossify.calendar.helpers.INITIAL_EVENTS
@@ -269,6 +276,10 @@ class MainActivity : SimpleActivity(), RefreshRecyclerViewListener {
             }
         }
 
+        if (config.workFeatures) {
+            ensureBackgroundThread { FacturaScripts.flush(this) }
+        }
+
         eventsHelper.getCalendars(this, false) {
             val newShouldFilterBeVisible = it.size > 1 || config.displayCalendars.isEmpty()
             if (newShouldFilterBeVisible != mShouldFilterBeVisible) {
@@ -337,11 +348,12 @@ class MainActivity : SimpleActivity(), RefreshRecyclerViewListener {
         binding.mainMenu.requireToolbar().menu.apply {
             goToTodayButton = findItem(R.id.go_to_today)
             findItem(R.id.print).isVisible = config.storedView != MONTHLY_DAILY_VIEW
-            findItem(R.id.filter).isVisible = mShouldFilterBeVisible
+            findItem(R.id.filter).isVisible = false
+            findItem(R.id.pending_events).isVisible = config.workFeatures
             findItem(R.id.go_to_today).isVisible =
                 shouldGoToTodayBeVisible && !binding.mainMenu.isSearchOpen
             findItem(R.id.go_to_date).isVisible = config.storedView != EVENTS_LIST_VIEW
-            findItem(R.id.refresh_caldav_calendars).isVisible = config.caldavSync
+            findItem(R.id.refresh_caldav_calendars).isVisible = false
             findItem(R.id.more_apps_from_us).isVisible =
                 resources.getBoolean(org.fossify.commons.R.bool.is_google_play_build)
         }
@@ -363,6 +375,7 @@ class MainActivity : SimpleActivity(), RefreshRecyclerViewListener {
 
             when (menuItem.itemId) {
                 R.id.change_view -> showViewDialog()
+                R.id.pending_events -> showPendingEventsDialog()
                 R.id.go_to_today -> goToToday()
                 R.id.go_to_date -> showGoToDateDialog()
                 R.id.print -> printView()
@@ -602,6 +615,90 @@ class MainActivity : SimpleActivity(), RefreshRecyclerViewListener {
                         }
                     }
                 }
+            }
+        }
+    }
+
+    // pinch together = zoom out (day -> month -> year), spread = zoom in (year -> month -> day)
+    private var mPinchFactor = 1f
+    private val mPinchDetector by lazy {
+        ScaleGestureDetector(this, object : ScaleGestureDetector.SimpleOnScaleGestureListener() {
+            override fun onScaleBegin(detector: ScaleGestureDetector): Boolean {
+                mPinchFactor = 1f
+                return true
+            }
+
+            override fun onScale(detector: ScaleGestureDetector): Boolean {
+                mPinchFactor *= detector.scaleFactor
+                return true
+            }
+
+            override fun onScaleEnd(detector: ScaleGestureDetector) {
+                if (mPinchFactor < 0.8f) {
+                    changeViewWithPinch(zoomIn = false)
+                } else if (mPinchFactor > 1.25f) {
+                    changeViewWithPinch(zoomIn = true)
+                }
+            }
+        })
+    }
+
+    override fun dispatchTouchEvent(event: MotionEvent): Boolean {
+        if (!binding.mainMenu.isSearchOpen) {
+            mPinchDetector.onTouchEvent(event)
+        }
+        return super.dispatchTouchEvent(event)
+    }
+
+    private fun changeViewWithPinch(zoomIn: Boolean) {
+        val fragment = getCurrentFragment() ?: return
+        val selectedDay = ViewSwitchState.selectedDayCode
+        when (fragment.viewType) {
+            DAILY_VIEW -> if (!zoomIn) switchViewWithPinch(MONTHLY_VIEW)
+            MONTHLY_VIEW, MONTHLY_DAILY_VIEW -> {
+                if (zoomIn) {
+                    switchViewWithPinch(DAILY_VIEW, selectedDay ?: Formatter.getTodayCode())
+                } else {
+                    switchViewWithPinch(YEARLY_VIEW)
+                }
+            }
+            YEARLY_VIEW -> if (zoomIn) switchViewWithPinch(MONTHLY_VIEW)
+        }
+    }
+
+    private fun switchViewWithPinch(view: Int, dayCode: String? = null) {
+        resetActionBarTitle()
+        closeSearch()
+        ViewSwitchState.selectedDayCode = null
+        updateView(view, dayCode)
+        shouldGoToTodayBeVisible = false
+        refreshMenuItems()
+    }
+
+    private fun showPendingEventsDialog() {
+        ensureBackgroundThread {
+            val pending = eventsDB.getUnscheduledEvents().filter { !ShiftSync.isConfigEvent(it) }
+            runOnUiThread {
+                val builder = androidx.appcompat.app.AlertDialog.Builder(this)
+                    .setTitle(R.string.pending_events)
+                    .setPositiveButton(R.string.new_pending) { _, _ ->
+                        val intent = Intent(this, EventActivity::class.java)
+                        intent.putExtra(NEW_PENDING_EVENT, true)
+                        intent.putExtra(NEW_EVENT_START_TS, getNewEventTimestampFromCode(Formatter.getTodayCode()))
+                        startActivity(intent)
+                    }
+                    .setNegativeButton(org.fossify.commons.R.string.cancel, null)
+
+                if (pending.isEmpty()) {
+                    builder.setMessage(R.string.no_pending)
+                } else {
+                    builder.setItems(pending.map { it.title.ifEmpty { "-" } }.toTypedArray()) { _, which ->
+                        val intent = Intent(this, EventActivity::class.java)
+                        intent.putExtra(EVENT_ID, pending[which].id)
+                        startActivity(intent)
+                    }
+                }
+                builder.show()
             }
         }
     }
@@ -1084,9 +1181,9 @@ class MainActivity : SimpleActivity(), RefreshRecyclerViewListener {
         callback(eventsFound, eventsAdded)
     }
 
-    private fun updateView(view: Int) {
+    private fun updateView(view: Int, forcedDayCode: String? = null) {
         binding.calendarFab.beVisibleIf(view != YEARLY_VIEW && view != WEEKLY_VIEW)
-        val dateCode = getDateCodeToDisplay(view)
+        val dateCode = forcedDayCode ?: getDateCodeToDisplay(view)
         config.storedView = view
         checkSwipeRefreshAvailability()
         updateViewPager(dateCode)

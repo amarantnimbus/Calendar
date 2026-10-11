@@ -78,6 +78,8 @@ import org.fossify.commons.extensions.addBitIf
 import org.fossify.commons.extensions.applyColorFilter
 import org.fossify.commons.extensions.beGoneIf
 import org.fossify.commons.extensions.beVisibleIf
+import org.fossify.commons.extensions.getAlertDialogBuilder
+import org.fossify.commons.extensions.setupDialogStuff
 import org.fossify.commons.extensions.checkAppSideloading
 import org.fossify.commons.extensions.getContrastColor
 import org.fossify.commons.extensions.getDatePickerDialogTheme
@@ -422,6 +424,12 @@ class TaskActivity : SimpleActivity() {
         taskReminder2.setOnClickListener { showReminder2Dialog() }
         taskReminder3.setOnClickListener { showReminder3Dialog() }
         taskColorHolder.setOnClickListener { showTaskColorDialog() }
+
+        taskIconTime.setOnClickListener { showDateTimeDialog() }
+        taskIconReminder.setOnClickListener { taskReminder1.performClick() }
+        taskIconCalendar.setOnClickListener { showCalendarDialog() }
+        taskIconColor.setOnClickListener { showTaskColorDialog() }
+        updateHeader()
     }
 
     private fun setupEditTask() {
@@ -780,10 +788,12 @@ class TaskActivity : SimpleActivity() {
 
     private fun updateDateText() {
         binding.taskDate.text = Formatter.getDate(this, mTaskDateTime)
+        updateHeader()
     }
 
     private fun updateTimeText() {
         binding.taskTime.text = Formatter.getTime(this, mTaskDateTime)
+        updateHeader()
     }
 
     private fun toggleAllDay(isChecked: Boolean) {
@@ -809,6 +819,7 @@ class TaskActivity : SimpleActivity() {
 
         mIsAllDayTask = isChecked
         binding.taskTime.beGoneIf(isChecked)
+        updateHeader()
     }
 
     private fun setupMarkCompleteButton() {
@@ -990,10 +1001,14 @@ class TaskActivity : SimpleActivity() {
             updateTextColors(taskNestedScrollview)
             val textColor = getProperTextColor()
             arrayOf(
-                taskTimeImage, taskReminderImage, calendarImage, taskRepetitionImage, taskColorImage
+                taskTimeImage, taskReminderImage, calendarImage, taskRepetitionImage, taskColorImage,
+                taskIconTime, taskIconReminder, taskIconCalendar, taskIconColor
             ).forEach {
                 it.applyColorFilter(textColor)
             }
+            taskHeaderDate.setTextColor(textColor)
+            taskHeaderTime.setTextColor(textColor)
+            taskIconDivider.setBackgroundColor(textColor)
         }
     }
 
@@ -1262,6 +1277,77 @@ class TaskActivity : SimpleActivity() {
 
     private fun updateRepetitionText() {
         binding.taskRepetition.text = getRepetitionText(mRepeatInterval)
+    }
+
+    private var mDateTimeRefresh: (() -> Unit)? = null
+
+    private fun updateHeader() {
+        if (!::mTaskDateTime.isInitialized) {
+            return
+        }
+
+        val pattern = org.joda.time.format.DateTimeFormat.forPattern("EEEE, d MMMM")
+            .withLocale(java.util.Locale.getDefault())
+        binding.taskHeaderDate.text = pattern.print(mTaskDateTime)
+        binding.taskHeaderTime.text = if (binding.taskAllDay.isChecked) {
+            getString(R.string.all_day)
+        } else {
+            Formatter.getTime(this, mTaskDateTime)
+        }
+        mDateTimeRefresh?.invoke()
+    }
+
+    private fun showDateTimeDialog() {
+        hideKeyboard()
+        val view = layoutInflater.inflate(R.layout.dialog_event_datetime, null)
+        val allDay = view.findViewById<androidx.appcompat.widget.SwitchCompat>(R.id.dt_all_day)
+        val startDate = view.findViewById<android.widget.TextView>(R.id.dt_start_date)
+        val startTime = view.findViewById<android.widget.TextView>(R.id.dt_start_time)
+        view.findViewById<android.view.View>(R.id.dt_end_label).visibility = android.view.View.GONE
+        view.findViewById<android.view.View>(R.id.dt_end_row).visibility = android.view.View.GONE
+        view.findViewById<android.view.View>(R.id.dt_time_zone).visibility = android.view.View.GONE
+
+        val savedDateTime = mTaskDateTime
+        val savedAllDay = binding.taskAllDay.isChecked
+
+        val refresh: () -> Unit = {
+            startDate.text = Formatter.getDate(this, mTaskDateTime)
+            startTime.text = Formatter.getTime(this, mTaskDateTime)
+            startTime.beGoneIf(binding.taskAllDay.isChecked)
+        }
+
+        allDay.isChecked = savedAllDay
+        allDay.setOnCheckedChangeListener { _, isChecked ->
+            binding.taskAllDay.isChecked = isChecked
+        }
+        startDate.setOnClickListener { setupDate() }
+        startTime.setOnClickListener { setupTime() }
+
+        mDateTimeRefresh = refresh
+        refresh()
+
+        getAlertDialogBuilder()
+            .setPositiveButton(org.fossify.commons.R.string.ok, null)
+            .setNegativeButton(org.fossify.commons.R.string.cancel, null)
+            .setOnDismissListener { mDateTimeRefresh = null }
+            .apply {
+                setupDialogStuff(
+                    view = view,
+                    dialog = this,
+                    titleId = R.string.event_date_time
+                ) { alertDialog ->
+                    alertDialog.getButton(androidx.appcompat.app.AlertDialog.BUTTON_NEGATIVE).setOnClickListener {
+                        mDateTimeRefresh = null
+                        if (binding.taskAllDay.isChecked != savedAllDay) {
+                            binding.taskAllDay.isChecked = savedAllDay
+                        }
+                        mTaskDateTime = savedDateTime
+                        updateDateText()
+                        updateTimeText()
+                        alertDialog.dismiss()
+                    }
+                }
+            }
     }
 
     private fun updateActionBarTitle() {

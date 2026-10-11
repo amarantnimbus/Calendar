@@ -79,7 +79,9 @@ import org.fossify.calendar.helpers.IS_DUPLICATE_INTENT
 import org.fossify.calendar.helpers.IS_NEW_EVENT
 import org.fossify.calendar.helpers.LOCAL_CALENDAR_ID
 import org.fossify.calendar.helpers.NEW_EVENT_SET_HOUR_DURATION
+import org.fossify.calendar.helpers.FacturaScripts
 import org.fossify.calendar.helpers.NEW_EVENT_START_TS
+import org.fossify.calendar.helpers.NEW_PENDING_EVENT
 import org.fossify.calendar.helpers.ORIGINAL_ATTENDEES
 import org.fossify.calendar.helpers.ORIGINAL_END_TS
 import org.fossify.calendar.helpers.ORIGINAL_START_TS
@@ -655,7 +657,9 @@ class EventActivity : SimpleActivity() {
             newEndTS = second
         }
 
-        val hasTimeChanged = if (mOriginalStartTS == 0L) {
+        val hasTimeChanged = if (mIsUnscheduled) {
+            false
+        } else if (mOriginalStartTS == 0L) {
             mEvent.startTS != newStartTS || mEvent.endTS != newEndTS
         } else {
             mOriginalStartTS != newStartTS || mOriginalEndTS != newEndTS
@@ -664,7 +668,7 @@ class EventActivity : SimpleActivity() {
         val reminders = getReminders()
         return binding.eventTitle.text.toString() != mEvent.title ||
                 binding.eventLocation.text.toString() != mEvent.location ||
-                binding.eventDescription.text.toString() != mEvent.description ||
+                FacturaScripts.withMarker(binding.eventDescription.text.toString(), mProject) != mEvent.description ||
                 binding.eventTimeZone.text != mEvent.getTimeZoneString() ||
                 reminders != mEvent.getReminders() ||
                 mRepeatInterval != mEvent.repeatInterval ||
@@ -717,7 +721,12 @@ class EventActivity : SimpleActivity() {
         window.setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_STATE_ALWAYS_HIDDEN)
         binding.eventToolbar.title = getString(R.string.edit_event)
         mOriginalTimeZone = mEvent.timeZone
-        if (config.allowChangingTimeZones) {
+        if (mEvent.startTS == 0L && mEvent.endTS == 0L) {
+            // event waiting to be scheduled: show today while it has no date
+            mIsUnscheduled = true
+            mEventStartDateTime = DateTime.now().withTimeAtStartOfDay()
+            mEventEndDateTime = mEventStartDateTime
+        } else if (config.allowChangingTimeZones) {
             try {
                 mEventStartDateTime = Formatter.getDateTimeFromTS(realStart)
                     .withZone(DateTimeZone.forID(mOriginalTimeZone))
@@ -735,7 +744,8 @@ class EventActivity : SimpleActivity() {
 
         binding.eventTitle.setText(mEvent.title)
         binding.eventLocation.setText(mEvent.location)
-        binding.eventDescription.setText(mEvent.description)
+        binding.eventDescription.setText(FacturaScripts.stripMarker(mEvent.description))
+        mProject = FacturaScripts.markerProject(mEvent.description)
 
         mReminder1Minutes = mEvent.reminder1Minutes
         mReminder2Minutes = mEvent.reminder2Minutes
@@ -812,6 +822,16 @@ class EventActivity : SimpleActivity() {
                 config.defaultDuration
             }
             mEventEndDateTime = mEventStartDateTime.plusMinutes(addMinutes)
+        }
+        if (intent.getBooleanExtra(NEW_PENDING_EVENT, false) && config.workFeatures) {
+            mIsUnscheduled = true
+        }
+
+        if (!mIsAllDayEvent) {
+            // new events are all-day unless the time is changed by hand
+            mEvent.flags = mEvent.flags or FLAG_ALL_DAY
+            mIsAllDayEvent = true
+            mEventEndDateTime = mEventStartDateTime
         }
         addDefValuesToNewEvent()
         checkAttendees()
@@ -1615,6 +1635,17 @@ class EventActivity : SimpleActivity() {
             newEndTS = second
         }
 
+        if (mIsUnscheduled) {
+            // waiting to be scheduled: no date, never synced, no repetition
+            newStartTS = 0L
+            newEndTS = 0L
+            mRepeatInterval = 0
+            val localCalendar = calendarsDB.getCalendars().firstOrNull { it.caldavCalendarId == 0 }
+            if (localCalendar?.id != null) {
+                mCalendarId = localCalendar.id!!
+            }
+        }
+
         if (newStartTS > newEndTS) {
             toast(R.string.end_before_start)
             return
@@ -1662,6 +1693,10 @@ class EventActivity : SimpleActivity() {
             if ((reminders.getOrNull(0)?.minutes ?: 0) < -1) reminders.removeAt(0)
         }
 
+        if (mIsUnscheduled) {
+            reminders.clear()
+        }
+
         val reminder1 = reminders.getOrNull(0) ?: Reminder(REMINDER_OFF, REMINDER_NOTIFICATION)
         val reminder2 = reminders.getOrNull(1) ?: Reminder(REMINDER_OFF, REMINDER_NOTIFICATION)
         val reminder3 = reminders.getOrNull(2) ?: Reminder(REMINDER_OFF, REMINDER_NOTIFICATION)
@@ -1685,7 +1720,7 @@ class EventActivity : SimpleActivity() {
             startTS = newStartTS
             endTS = newEndTS
             title = newTitle
-            description = binding.eventDescription.value
+            description = FacturaScripts.withMarker(binding.eventDescription.value, mProject)
             reminder1Minutes = reminder1.minutes
             reminder2Minutes = reminder2.minutes
             reminder3Minutes = reminder3.minutes
@@ -1709,6 +1744,18 @@ class EventActivity : SimpleActivity() {
             availability = mAvailability
             status = mStatus
             color = mEventColor
+        }
+
+        val diaryProject = mProject
+        if (diaryProject != null && !mIsUnscheduled && config.workFeatures) {
+            val entry = FacturaScripts.Entry(
+                uid = mEvent.importId,
+                projectId = diaryProject.id,
+                date = mEventStartDateTime.toString("yyyy-MM-dd"),
+                title = newTitle,
+                text = FacturaScripts.stripMarker(mEvent.description)
+            )
+            ensureBackgroundThread { FacturaScripts.push(this, entry) }
         }
 
         // recreate the event if it was moved in a different CalDAV calendar
@@ -2440,6 +2487,8 @@ class EventActivity : SimpleActivity() {
 
     // ---- simplified event screen: header, icon row, "Junts" checkbox and date/time popup ----
 
+    private var mIsUnscheduled = false
+    private var mProject: FacturaScripts.Project? = null
     private var mDateTimeRefresh: (() -> Unit)? = null
     private var mCalendarBeforeJunts: CalendarEntity? = null
 
@@ -2458,6 +2507,13 @@ class EventActivity : SimpleActivity() {
 
     private fun updateHeader() {
         if (!::mEventStartDateTime.isInitialized || !::mEventEndDateTime.isInitialized) {
+            return
+        }
+
+        if (mIsUnscheduled) {
+            binding.eventHeaderDate.text = getString(R.string.no_date)
+            binding.eventHeaderTime.text = ""
+            mDateTimeRefresh?.invoke()
             return
         }
 
@@ -2481,7 +2537,16 @@ class EventActivity : SimpleActivity() {
         val endDate = view.findViewById<android.widget.TextView>(R.id.dt_end_date)
         val endTime = view.findViewById<android.widget.TextView>(R.id.dt_end_time)
         val timeZone = view.findViewById<android.widget.TextView>(R.id.dt_time_zone)
+        val unscheduled = view.findViewById<androidx.appcompat.widget.SwitchCompat>(R.id.dt_unscheduled)
+        val rowsToHide = listOf<android.view.View>(
+            allDay,
+            view.findViewById(R.id.dt_start_label),
+            view.findViewById(R.id.dt_start_row),
+            view.findViewById(R.id.dt_end_label),
+            view.findViewById(R.id.dt_end_row)
+        )
 
+        val savedUnscheduled = mIsUnscheduled
         val savedStart = mEventStartDateTime
         val savedEnd = mEventEndDateTime
         val savedAllDay = binding.eventAllDay.isChecked
@@ -2495,7 +2560,19 @@ class EventActivity : SimpleActivity() {
             startTime.beGoneIf(isAllDay)
             endTime.beGoneIf(isAllDay)
             timeZone.text = mEvent.getTimeZoneString()
-            timeZone.beVisibleIf(config.allowChangingTimeZones && !isAllDay)
+            timeZone.beVisibleIf(config.allowChangingTimeZones && !isAllDay && !mIsUnscheduled)
+            rowsToHide.forEach { it.beGoneIf(mIsUnscheduled) }
+            if (!mIsUnscheduled) {
+                startTime.beGoneIf(isAllDay)
+                endTime.beGoneIf(isAllDay)
+            }
+        }
+
+        unscheduled.beVisibleIf(config.workFeatures && mIsNewOrUnscheduledEditable())
+        unscheduled.isChecked = mIsUnscheduled
+        unscheduled.setOnCheckedChangeListener { _, isChecked ->
+            mIsUnscheduled = isChecked
+            updateHeader()
         }
 
         allDay.isChecked = savedAllDay
@@ -2523,6 +2600,7 @@ class EventActivity : SimpleActivity() {
                 ) { alertDialog ->
                     alertDialog.getButton(androidx.appcompat.app.AlertDialog.BUTTON_NEGATIVE).setOnClickListener {
                         mDateTimeRefresh = null
+                        mIsUnscheduled = savedUnscheduled
                         if (binding.eventAllDay.isChecked != savedAllDay) {
                             binding.eventAllDay.isChecked = savedAllDay
                         }
@@ -2535,6 +2613,53 @@ class EventActivity : SimpleActivity() {
                     }
                 }
             }
+    }
+
+    // the "no date" switch is for events that are new or already without a date
+    private fun mIsNewOrUnscheduledEditable() = mIsNewEvent || mIsUnscheduled || mEvent.startTS == 0L
+
+    private fun updateProjectRow() {
+        binding.eventProject.beVisibleIf(config.workFeatures)
+        val name = mProject?.name
+        binding.eventProject.text = if (name == null) {
+            getString(R.string.fs_project) + " ▾"
+        } else {
+            getString(R.string.fs_project) + ": " + name + " ▾"
+        }
+        binding.eventProject.setTextColor(getProperTextColor())
+    }
+
+    private fun showProjectDialog() {
+        hideKeyboard()
+        ensureBackgroundThread {
+            var projects = FacturaScripts.cachedProjects(this)
+            if (projects.isEmpty() && FacturaScripts.isConfigured(this)) {
+                projects = FacturaScripts.fetchProjects(this) ?: emptyList()
+            }
+
+            runOnUiThread {
+                if (projects.isEmpty()) {
+                    toast(R.string.fs_no_projects)
+                    return@runOnUiThread
+                }
+
+                val names = ArrayList<String>()
+                names.add(getString(R.string.fs_no_project))
+                projects.forEach { names.add(it.name) }
+                androidx.appcompat.app.AlertDialog.Builder(this)
+                    .setTitle(R.string.fs_project)
+                    .setItems(names.toTypedArray()) { _, which ->
+                        mProject = if (which == 0) null else projects[which - 1]
+                        updateProjectRow()
+                    }
+                    .show()
+            }
+
+            // keep the list fresh for next time
+            if (FacturaScripts.isConfigured(this)) {
+                FacturaScripts.fetchProjects(this)
+            }
+        }
     }
 
     private fun findJuntsCalendar(): CalendarEntity? {

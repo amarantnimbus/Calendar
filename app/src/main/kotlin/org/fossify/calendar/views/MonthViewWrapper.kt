@@ -11,6 +11,7 @@ import org.fossify.calendar.extensions.config
 import org.fossify.calendar.extensions.getWeekNumberWidth
 import org.fossify.calendar.extensions.launchNewEventIntent
 import org.fossify.calendar.extensions.launchNewTaskIntent
+import org.fossify.calendar.helpers.ViewSwitchState
 import org.fossify.calendar.helpers.COLUMN_COUNT
 import org.fossify.calendar.helpers.Formatter
 import org.fossify.calendar.helpers.ROW_COUNT
@@ -160,6 +161,7 @@ class MonthViewWrapper(
                         dayClickCallback?.invoke(day)
                     } else {
                         expandedIndex = viewY * COLUMN_COUNT + viewX
+                        ViewSwitchState.selectedDayCode = day.code
                         binding.monthView.expandDay(viewX, viewY)
                         requestLayout()
                     }

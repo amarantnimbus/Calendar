@@ -12,7 +12,17 @@
         android:text="@string/all_day"
         android:textSize="18sp" />
 
+    <androidx.appcompat.widget.SwitchCompat
+        android:id="@+id/dt_unscheduled"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="12dp"
+        android:text="@string/no_date"
+        android:textSize="18sp"
+        android:visibility="gone" />
+
     <TextView
+        android:id="@+id/dt_start_label"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_marginTop="20dp"
@@ -20,6 +30,7 @@
         android:textSize="14sp" />
 
     <LinearLayout
+        android:id="@+id/dt_start_row"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="horizontal">
@@ -46,6 +57,7 @@
     </LinearLayout>
 
     <TextView
+        android:id="@+id/dt_end_label"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_marginTop="16dp"
@@ -53,6 +65,7 @@
         android:textSize="14sp" />
 
     <LinearLayout
+        android:id="@+id/dt_end_row"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="horizontal">

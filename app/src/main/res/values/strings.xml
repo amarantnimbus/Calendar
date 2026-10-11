@@ -351,4 +351,19 @@
     <string name="event_date_time">Date and time</string>
     <string name="event_starts">Starts</string>
     <string name="event_ends">Ends</string>
+    <string name="work_features">Work features</string>
+    <string name="no_date">No date</string>
+    <string name="pending_events">Pending to schedule</string>
+    <string name="no_pending">Nothing pending</string>
+    <string name="new_pending">New pending</string>
+    <string name="work_features_summary">Work features: pending inbox and events without a date</string>
+    <string name="fs_connection">FacturaScripts connection</string>
+    <string name="fs_url_hint">Address (e.g. http://nas:8080)</string>
+    <string name="fs_key_hint">API key</string>
+    <string name="fs_test">Test and save</string>
+    <string name="fs_ok">Connected: %1$d projects</string>
+    <string name="fs_error">Could not connect: %1$s</string>
+    <string name="fs_project">Project</string>
+    <string name="fs_no_project">No project</string>
+    <string name="fs_no_projects">No projects loaded. Set up FacturaScripts in Settings.</string>
 </resources>

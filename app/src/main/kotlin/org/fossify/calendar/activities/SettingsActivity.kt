@@ -213,6 +213,7 @@ class SettingsActivity : SimpleActivity() {
         setupReplaceDescription()
         setupWeekNumbers()
         setupExpandDayInMonthView()
+        setupWorkFeatures()
         setupShowGrid()
         setupWeeklyStart()
         setupMidnightSpanEvents()
@@ -757,6 +758,62 @@ class SettingsActivity : SimpleActivity() {
             settingsStartWeekWithCurrentDay.toggle()
             config.startWeekWithCurrentDay = settingsStartWeekWithCurrentDay.isChecked
         }
+    }
+
+    private fun setupWorkFeatures() = binding.apply {
+        settingsWorkFeatures.isChecked = config.workFeatures
+        settingsWorkFeaturesHolder.setOnClickListener {
+            settingsWorkFeatures.toggle()
+            config.workFeatures = settingsWorkFeatures.isChecked
+            updateFsVisibility()
+        }
+        updateFsVisibility()
+
+        settingsFsHolder.setOnClickListener { showFacturaScriptsDialog() }
+    }
+
+    private fun updateFsVisibility() = binding.apply {
+        settingsFsHolder.beVisibleIf(config.workFeatures)
+        settingsFsValue.text = if (config.fsUrl.isBlank()) "-" else config.fsUrl
+    }
+
+    private fun showFacturaScriptsDialog() {
+        val density = resources.displayMetrics.density
+        val pad = (20 * density).toInt()
+        val urlField = android.widget.EditText(this)
+        urlField.hint = getString(R.string.fs_url_hint)
+        urlField.inputType = android.text.InputType.TYPE_TEXT_VARIATION_URI
+        urlField.setText(config.fsUrl)
+        val keyField = android.widget.EditText(this)
+        keyField.hint = getString(R.string.fs_key_hint)
+        keyField.setText(config.fsApiKey)
+
+        val layout = android.widget.LinearLayout(this)
+        layout.orientation = android.widget.LinearLayout.VERTICAL
+        layout.setPadding(pad, pad / 2, pad, 0)
+        layout.addView(urlField)
+        layout.addView(keyField)
+
+        androidx.appcompat.app.AlertDialog.Builder(this)
+            .setTitle(R.string.fs_connection)
+            .setView(layout)
+            .setPositiveButton(R.string.fs_test) { _, _ ->
+                config.fsUrl = urlField.text.toString().trim()
+                config.fsApiKey = keyField.text.toString().trim()
+                updateFsVisibility()
+                ensureBackgroundThread {
+                    val projects = org.fossify.calendar.helpers.FacturaScripts.fetchProjects(this)
+                    runOnUiThread {
+                        if (projects != null) {
+                            toast(getString(R.string.fs_ok, projects.size))
+                        } else {
+                            toast(getString(R.string.fs_error, org.fossify.calendar.helpers.FacturaScripts.lastError))
+                        }
+                    }
+                }
+            }
+            .setNegativeButton(org.fossify.commons.R.string.cancel, null)
+            .show()
     }
 
     private fun setupExpandDayInMonthView() = binding.apply {

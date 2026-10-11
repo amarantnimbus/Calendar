@@ -30,10 +30,81 @@
         android:scrollbars="none"
         app:layout_behavior="@string/appbar_scrolling_view_behavior">
 
-        <RelativeLayout
-            android:id="@+id/task_holder"
+        <LinearLayout
             android:layout_width="match_parent"
-            android:layout_height="wrap_content">
+            android:layout_height="match_parent"
+            android:orientation="vertical">
+
+            <TextView
+                android:id="@+id/task_header_date"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="@dimen/activity_margin"
+                android:layout_marginTop="@dimen/activity_margin"
+                android:layout_marginEnd="@dimen/activity_margin"
+                android:textSize="26sp"
+                android:textStyle="bold" />
+
+            <TextView
+                android:id="@+id/task_header_time"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="@dimen/activity_margin"
+                android:layout_marginEnd="@dimen/activity_margin"
+                android:textSize="15sp" />
+
+            <LinearLayout
+                android:id="@+id/task_icon_row"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="@dimen/small_margin"
+                android:layout_marginEnd="@dimen/activity_margin"
+                android:gravity="center_vertical"
+                android:orientation="horizontal">
+
+                <ImageView
+                    android:id="@+id/task_icon_time"
+                    android:layout_width="48dp"
+                    android:layout_height="48dp"
+                    android:background="?attr/selectableItemBackgroundBorderless"
+                    android:contentDescription="@string/event_date_time"
+                    android:padding="12dp"
+                    android:src="@drawable/ic_clock_outline_vector" />
+
+                <ImageView
+                    android:id="@+id/task_icon_reminder"
+                    android:layout_width="48dp"
+                    android:layout_height="48dp"
+                    android:background="?attr/selectableItemBackgroundBorderless"
+                    android:contentDescription="@string/reminder"
+                    android:padding="12dp"
+                    android:src="@drawable/ic_bell_outline_vector" />
+
+                <ImageView
+                    android:id="@+id/task_icon_calendar"
+                    android:layout_width="48dp"
+                    android:layout_height="48dp"
+                    android:background="?attr/selectableItemBackgroundBorderless"
+                    android:padding="12dp"
+                    android:src="@drawable/ic_calendar_vector" />
+
+                <ImageView
+                    android:id="@+id/task_icon_color"
+                    android:layout_width="48dp"
+                    android:layout_height="48dp"
+                    android:background="?attr/selectableItemBackgroundBorderless"
+                    android:contentDescription="@string/color"
+                    android:padding="12dp"
+                    android:src="@drawable/ic_color_outline_vector" />
+
+
+            </LinearLayout>
+
+            <View
+                android:id="@+id/task_icon_divider"
+                android:layout_width="match_parent"
+                android:layout_height="1dp"
+                android:background="#000000" />
 
             <org.fossify.commons.views.MyEditText
                 android:id="@+id/task_title"
@@ -45,33 +116,51 @@
                 android:hint="@string/title"
                 android:inputType="textCapSentences"
                 android:maxLength="180"
-                android:minEms="20"
                 android:textCursorDrawable="@null"
-                android:textSize="@dimen/day_text_size" />
+                android:textSize="22sp" />
 
             <org.fossify.commons.views.MyEditText
                 android:id="@+id/task_description"
                 android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_below="@+id/task_title"
+                android:layout_height="0dp"
                 android:layout_marginStart="@dimen/activity_margin"
                 android:layout_marginTop="@dimen/activity_margin"
                 android:layout_marginEnd="@dimen/activity_margin"
+                android:layout_weight="1"
                 android:autoLink="all"
+                android:background="@null"
                 android:gravity="top"
-                android:hint="@string/description"
+                android:hint="@string/comment_hint"
                 android:inputType="textCapSentences|textMultiLine"
                 android:linksClickable="true"
-                android:minEms="20"
+                android:minHeight="200dp"
                 android:textCursorDrawable="@null"
                 android:textSize="@dimen/day_text_size" />
+
+            <android.widget.TextView
+                android:id="@+id/toggle_mark_complete"
+                style="@style/ColoredButtonStyle"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_gravity="center_horizontal"
+                android:layout_marginTop="@dimen/activity_margin"
+                android:layout_marginBottom="@dimen/activity_margin"
+                android:text="@string/mark_completed"
+                android:visibility="gone" />
+
+        <RelativeLayout
+            android:id="@+id/task_holder"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:visibility="gone">
+
+
 
             <ImageView
                 android:id="@+id/task_description_divider"
                 android:layout_width="match_parent"
                 android:layout_height="@dimen/divider_height"
-                android:layout_below="@+id/task_description"
-                android:layout_marginTop="@dimen/activity_margin"
+                                android:layout_marginTop="@dimen/activity_margin"
                 android:layout_marginBottom="@dimen/normal_margin"
                 android:background="@color/divider_grey"
                 android:importantForAccessibility="no" />
@@ -430,18 +519,9 @@
                 android:background="@color/divider_grey"
                 android:importantForAccessibility="no" />
 
-            <android.widget.TextView
-                android:id="@+id/toggle_mark_complete"
-                style="@style/ColoredButtonStyle"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_below="@+id/task_color_divider"
-                android:layout_centerHorizontal="true"
-                android:layout_marginTop="@dimen/activity_margin"
-                android:layout_marginBottom="@dimen/activity_margin"
-                android:text="@string/mark_completed"
-                android:visibility="gone" />
 
         </RelativeLayout>
+
+        </LinearLayout>
     </androidx.core.widget.NestedScrollView>
 </androidx.coordinatorlayout.widget.CoordinatorLayout>

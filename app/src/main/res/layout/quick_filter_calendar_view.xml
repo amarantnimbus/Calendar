@@ -5,6 +5,14 @@
     android:layout_height="@dimen/quick_filter_height"
     android:minWidth="@dimen/quick_filter_min_width">
 
+    <ImageView
+        android:id="@+id/quick_filter_calendar_color"
+        android:layout_width="30dp"
+        android:layout_height="30dp"
+        android:layout_centerInParent="true"
+        android:clickable="false"
+        android:importantForAccessibility="no" />
+
     <org.fossify.commons.views.MyButton
         android:id="@+id/quick_filter_calendar"
         android:layout_width="match_parent"
@@ -13,20 +21,12 @@
         android:layout_alignParentBottom="true"
         android:background="?attr/selectableItemBackground"
         android:checked="false"
-        android:ellipsize="end"
-        android:maxLines="2"
-        android:paddingStart="@dimen/small_margin"
-        android:paddingEnd="@dimen/small_margin"
+        android:gravity="center"
+        android:maxLines="1"
+        android:padding="0dp"
         android:text=""
-        android:textAllCaps="false" />
-
-    <ImageView
-        android:id="@+id/quick_filter_calendar_color"
-        android:layout_width="match_parent"
-        android:layout_height="@dimen/quick_filter_inactive_line_size"
-        android:layout_above="@id/quick_filter_calendar"
-        android:layout_alignParentBottom="true"
-        android:background="@color/color_primary"
-        android:clickable="false" />
+        android:textAllCaps="false"
+        android:textSize="15sp"
+        android:textStyle="bold" />
 
 </RelativeLayout>
