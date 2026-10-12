@@ -5,14 +5,14 @@
     android:orientation="vertical"
     android:padding="24dp">
 
-    <androidx.appcompat.widget.SwitchCompat
+    <org.fossify.commons.views.MyMaterialSwitch
         android:id="@+id/dt_all_day"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:text="@string/all_day"
         android:textSize="18sp" />
 
-    <androidx.appcompat.widget.SwitchCompat
+    <org.fossify.commons.views.MyMaterialSwitch
         android:id="@+id/dt_unscheduled"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"

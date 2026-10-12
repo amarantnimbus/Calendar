@@ -123,7 +123,8 @@ class MonthViewWrapper(
 
     private fun measureSizes() {
         dayWidth = (width - horizontalOffset) / COLUMN_COUNT.toFloat()
-        dayHeight = (height - weekDaysLetterHeight) / ROW_COUNT.toFloat()
+        val header = if (context.config.highlightWeekends) 0 else weekDaysLetterHeight
+        dayHeight = (height - header) / ROW_COUNT.toFloat()
     }
 
     private fun addClickableBackgrounds() {

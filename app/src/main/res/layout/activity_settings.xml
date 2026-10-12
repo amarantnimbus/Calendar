@@ -898,6 +898,50 @@
             </RelativeLayout>
 
             <RelativeLayout
+                android:id="@+id/settings_own_calendar_holder"
+                style="@style/SettingsHolderTextViewStyle"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content">
+
+                <org.fossify.commons.views.MyTextView
+                    android:id="@+id/settings_own_calendar_label"
+                    style="@style/SettingsTextLabelStyle"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="@string/own_calendar" />
+
+                <org.fossify.commons.views.MyTextView
+                    android:id="@+id/settings_own_calendar_value"
+                    style="@style/SettingsTextValueStyle"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_below="@+id/settings_own_calendar_label" />
+
+            </RelativeLayout>
+
+            <TextView
+                android:id="@+id/settings_app_info_label"
+                style="@style/SettingsSectionLabelStyle"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/app_info" />
+
+            <RelativeLayout
+                android:id="@+id/settings_app_changes_holder"
+                style="@style/SettingsHolderTextViewStyle"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content">
+
+                <org.fossify.commons.views.MyTextView
+                    android:id="@+id/settings_app_changes_label"
+                    style="@style/SettingsTextLabelStyle"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="@string/app_changes" />
+
+            </RelativeLayout>
+
+            <RelativeLayout
                 android:id="@+id/settings_expand_day_in_month_view_holder"
                 style="@style/SettingsHolderSwitchStyle"
                 android:layout_width="match_parent"

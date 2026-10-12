@@ -124,10 +124,28 @@
             android:focusable="true"
             android:visibility="gone">
 
+            <HorizontalScrollView
+                android:id="@+id/search_icons_scroll"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_alignParentTop="true"
+                android:scrollbars="none">
+
+                <LinearLayout
+                    android:id="@+id/search_icons"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:paddingStart="@dimen/small_margin"
+                    android:paddingEnd="@dimen/small_margin" />
+
+            </HorizontalScrollView>
+
             <org.fossify.commons.views.MyTextView
                 android:id="@+id/search_placeholder"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
+                android:layout_below="@+id/search_icons_scroll"
                 android:layout_centerHorizontal="true"
                 android:layout_marginTop="@dimen/activity_margin"
                 android:alpha="0.8"
@@ -158,6 +176,7 @@
                 android:id="@+id/search_results_list"
                 android:layout_width="match_parent"
                 android:layout_height="match_parent"
+                android:layout_below="@+id/search_icons_scroll"
                 android:clipToPadding="false"
                 android:overScrollMode="never"
                 android:scrollbars="vertical"

@@ -94,7 +94,7 @@ class EventListWidgetAdapter(val context: Context, val intent: Intent) : RemoteV
             setText(R.id.event_item_time, timeText)
 
             // we cannot change the event_item_color_bar rules dynamically, so do it like this
-            val descriptionText = if (replaceDescription) item.location else item.description.replace("\n", " ")
+            val descriptionText = if (replaceDescription) item.location else org.fossify.calendar.helpers.DayIcons.visibleText(item.description).replace("\n", " ")
             if (displayDescription && descriptionText.isNotEmpty()) {
                 setText(R.id.event_item_time, "$timeText\n$descriptionText")
             }

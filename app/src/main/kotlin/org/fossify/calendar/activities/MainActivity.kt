@@ -66,6 +66,8 @@ import org.fossify.calendar.helpers.IS_TASK
 import org.fossify.calendar.helpers.IcsImporter.ImportResult
 import org.fossify.calendar.helpers.LAST_VIEW
 import org.fossify.calendar.helpers.MAX_SEARCH_YEAR
+import org.fossify.calendar.helpers.showItemsDialog
+import org.fossify.calendar.helpers.DayIcons
 import org.fossify.calendar.helpers.MIN_EVENTS_TRESHOLD
 import org.fossify.calendar.helpers.MONTHLY_DAILY_VIEW
 import org.fossify.calendar.helpers.MONTHLY_VIEW
@@ -360,6 +362,7 @@ class MainActivity : SimpleActivity(), RefreshRecyclerViewListener {
     }
 
     private fun setupOptionsMenu() = binding.apply {
+        setupSearchIcons()
         mainMenu.requireToolbar().inflateMenu(R.menu.menu_main)
         mainMenu.toggleHideOnScroll(false)
         mainMenu.setupMenu()
@@ -456,7 +459,47 @@ class MainActivity : SimpleActivity(), RefreshRecyclerViewListener {
         }
     }
 
+    private var mIconFilterKey: String? = null
+
+    // icons next to the search: tap one to list every event marked with it, with its date
+    private fun setupSearchIcons() {
+        val container = binding.searchIcons
+        container.removeAllViews()
+        val density = resources.displayMetrics.density
+        val size = (44 * density).toInt()
+        val pad = (10 * density).toInt()
+        val textColor = getProperTextColor()
+        DayIcons.all.forEach { icon ->
+            val view = android.widget.ImageView(this).apply {
+                setImageResource(icon.drawable)
+                applyColorFilter(textColor)
+                setPadding(pad, pad, pad, pad)
+                contentDescription = getString(icon.labelRes)
+                layoutParams = android.widget.LinearLayout.LayoutParams(size, size)
+                setOnClickListener { searchByIcon(icon.key) }
+            }
+            container.addView(view)
+        }
+    }
+
+    private fun searchByIcon(key: String) {
+        mIconFilterKey = key
+        mLatestSearchQuery = DayIcons.marker(key)
+        minFetchedSearchTS = 0L
+        maxFetchedSearchTS = MAX_SEARCH_YEAR
+        eventsHelper.getEvents(
+            fromTS = minFetchedSearchTS,
+            toTS = maxFetchedSearchTS,
+            searchQuery = DayIcons.marker(key)
+        ) { events ->
+            if (mIconFilterKey == key) {
+                showSearchResultEvents(events, INITIAL_EVENTS)
+            }
+        }
+    }
+
     private fun closeSearch() {
+        mIconFilterKey = null
         binding.mainMenu.closeSearch()
         minFetchedSearchTS = 0L
         maxFetchedSearchTS = 0L
@@ -637,7 +680,7 @@ class MainActivity : SimpleActivity(), RefreshRecyclerViewListener {
                 if (mPinchFactor < 0.8f) {
                     changeViewWithPinch(zoomIn = false)
                 } else if (mPinchFactor > 1.25f) {
-                    changeViewWithPinch(zoomIn = true)
+                    changeViewWithPinch(zoomIn = true, focusX = detector.focusX, focusY = detector.focusY)
                 }
             }
         })
@@ -650,7 +693,7 @@ class MainActivity : SimpleActivity(), RefreshRecyclerViewListener {
         return super.dispatchTouchEvent(event)
     }
 
-    private fun changeViewWithPinch(zoomIn: Boolean) {
+    private fun changeViewWithPinch(zoomIn: Boolean, focusX: Float = -1f, focusY: Float = -1f) {
         val fragment = getCurrentFragment() ?: return
         val selectedDay = ViewSwitchState.selectedDayCode
         when (fragment.viewType) {
@@ -662,7 +705,20 @@ class MainActivity : SimpleActivity(), RefreshRecyclerViewListener {
                     switchViewWithPinch(YEARLY_VIEW)
                 }
             }
-            YEARLY_VIEW -> if (zoomIn) switchViewWithPinch(MONTHLY_VIEW)
+            YEARLY_VIEW -> if (zoomIn) {
+                // open the month under the center of the fingers
+                val month = ViewSwitchState.yearFocusResolvers.firstNotNullOfOrNull { it(focusX, focusY) }
+                if (month != null) {
+                    resetActionBarTitle()
+                    closeSearch()
+                    ViewSwitchState.selectedDayCode = null
+                    openMonthFromYearly(month)
+                    shouldGoToTodayBeVisible = false
+                    refreshMenuItems()
+                } else {
+                    switchViewWithPinch(MONTHLY_VIEW)
+                }
+            }
         }
     }
 
@@ -679,26 +735,37 @@ class MainActivity : SimpleActivity(), RefreshRecyclerViewListener {
         ensureBackgroundThread {
             val pending = eventsDB.getUnscheduledEvents().filter { !ShiftSync.isConfigEvent(it) }
             runOnUiThread {
-                val builder = androidx.appcompat.app.AlertDialog.Builder(this)
-                    .setTitle(R.string.pending_events)
-                    .setPositiveButton(R.string.new_pending) { _, _ ->
+                val lines = pending.map { event ->
+                    val title = event.title.ifEmpty { "-" }
+                    val comment = DayIcons.strip(FacturaScripts.stripMarker(event.description))
+                        .lineSequence().firstOrNull { it.isNotBlank() }?.trim().orEmpty().take(70)
+                    val text = android.text.SpannableStringBuilder(title)
+                    text.setSpan(
+                        android.text.style.StyleSpan(android.graphics.Typeface.BOLD),
+                        0, title.length, android.text.Spanned.SPAN_EXCLUSIVE_EXCLUSIVE
+                    )
+                    if (comment.isNotEmpty()) {
+                        text.append(" - ").append(comment)
+                    }
+                    text as CharSequence
+                }
+
+                showItemsDialog(
+                    titleId = R.string.pending_events,
+                    items = lines,
+                    emptyText = getString(R.string.no_pending),
+                    positiveTextId = R.string.new_pending,
+                    onPositive = {
                         val intent = Intent(this, EventActivity::class.java)
                         intent.putExtra(NEW_PENDING_EVENT, true)
                         intent.putExtra(NEW_EVENT_START_TS, getNewEventTimestampFromCode(Formatter.getTodayCode()))
                         startActivity(intent)
                     }
-                    .setNegativeButton(org.fossify.commons.R.string.cancel, null)
-
-                if (pending.isEmpty()) {
-                    builder.setMessage(R.string.no_pending)
-                } else {
-                    builder.setItems(pending.map { it.title.ifEmpty { "-" } }.toTypedArray()) { _, which ->
-                        val intent = Intent(this, EventActivity::class.java)
-                        intent.putExtra(EVENT_ID, pending[which].id)
-                        startActivity(intent)
-                    }
+                ) { which ->
+                    val intent = Intent(this, EventActivity::class.java)
+                    intent.putExtra(EVENT_ID, pending[which].id)
+                    startActivity(intent)
                 }
-                builder.show()
             }
         }
     }
@@ -1474,6 +1541,7 @@ class MainActivity : SimpleActivity(), RefreshRecyclerViewListener {
 
     private fun searchQueryChanged(text: String) {
         mLatestSearchQuery = text
+        mIconFilterKey = null
 
         if (text.isNotEmpty() && binding.searchHolder.isGone()) {
             binding.searchHolder.fadeIn()
@@ -1536,11 +1604,16 @@ class MainActivity : SimpleActivity(), RefreshRecyclerViewListener {
 
     private fun showSearchResultEvents(events: ArrayList<Event>, updateStatus: Int) {
         val currentSearchQuery = binding.mainMenu.getCurrentQuery()
+        val iconKey = mIconFilterKey
         val filtered = try {
             events.filter {
-                it.title.contains(currentSearchQuery, true)
-                        || it.location.contains(currentSearchQuery, true)
-                        || it.description.contains(currentSearchQuery, true)
+                if (iconKey != null) {
+                    it.description.contains(DayIcons.marker(iconKey))
+                } else {
+                    it.title.contains(currentSearchQuery, true)
+                            || it.location.contains(currentSearchQuery, true)
+                            || it.description.contains(currentSearchQuery, true)
+                }
             }
         } catch (e: ConcurrentModificationException) {
             return

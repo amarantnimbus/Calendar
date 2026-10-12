@@ -108,7 +108,7 @@ class DayEventsAdapter(activity: SimpleActivity, val events: ArrayList<Event>, r
                 }
             }
 
-            eventItemDescription.text = if (replaceDescriptionWithLocation) event.location else event.description.replace("\n", " ")
+            eventItemDescription.text = if (replaceDescriptionWithLocation) event.location else org.fossify.calendar.helpers.DayIcons.visibleText(event.description).replace("\n", " ")
             eventItemDescription.beVisibleIf(displayDescription && eventItemDescription.text.isNotEmpty())
             eventItemColorBar.background.applyColorFilter(event.color)
 

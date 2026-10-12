@@ -15,6 +15,7 @@ import org.fossify.calendar.extensions.getProperDayIndexInWeek
 import org.fossify.calendar.extensions.getViewBitmap
 import org.fossify.calendar.extensions.printBitmap
 import org.fossify.calendar.helpers.YEAR_LABEL
+import org.fossify.calendar.helpers.ViewSwitchState
 import org.fossify.calendar.helpers.YearlyCalendarImpl
 import org.fossify.calendar.interfaces.NavigationListener
 import org.fossify.calendar.interfaces.YearlyCalendar
@@ -74,13 +75,38 @@ class YearFragment : Fragment(), YearlyCalendar {
         return binding.root
     }
 
+    private val focusResolver: (Float, Float) -> DateTime? = { x, y -> monthAt(x, y) }
+
     override fun onPause() {
         super.onPause()
+        ViewSwitchState.yearFocusResolvers.remove(focusResolver)
         mFirstDayOfWeek = requireContext().config.firstDayOfWeek
+    }
+
+    // month under a screen point, used by the pinch to open the month where the fingers are
+    private fun monthAt(x: Float, y: Float): DateTime? {
+        if (!isAdded || !::monthHolders.isInitialized) {
+            return null
+        }
+
+        val location = IntArray(2)
+        monthHolders.forEachIndexed { index, holder ->
+            holder.root.getLocationOnScreen(location)
+            val left = location[0]
+            val top = location[1]
+            if (x >= left && x <= left + holder.root.width && y >= top && y <= top + holder.root.height) {
+                return DateTime().withDate(mYear, index + 1, 1)
+            }
+        }
+
+        return null
     }
 
     override fun onResume() {
         super.onResume()
+        if (!ViewSwitchState.yearFocusResolvers.contains(focusResolver)) {
+            ViewSwitchState.yearFocusResolvers.add(focusResolver)
+        }
         val firstDayOfWeek = requireContext().config.firstDayOfWeek
         if (firstDayOfWeek != mFirstDayOfWeek) {
             mFirstDayOfWeek = firstDayOfWeek
@@ -108,9 +134,12 @@ class YearFragment : Fragment(), YearlyCalendar {
             monthView.firstDay = requireContext().getProperDayIndexInWeek(firstDayOfMonth)
             val numberOfDays = dateTime.withMonthOfYear(monthOfYear).dayOfMonth().maximumValue
             monthView.setDays(numberOfDays)
-            monthView.setOnClickListener {
+            val openMonth = View.OnClickListener {
                 (activity as MainActivity).openMonthFromYearly(DateTime().withDate(mYear, monthOfYear, 1))
             }
+            monthView.setOnClickListener(openMonth)
+            monthHolder.monthLabel.setOnClickListener(openMonth)
+            monthHolder.root.setOnClickListener(openMonth)
         }
 
         if (!isPrintVersion) {

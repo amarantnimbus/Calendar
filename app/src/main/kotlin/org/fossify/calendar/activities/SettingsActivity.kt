@@ -214,6 +214,8 @@ class SettingsActivity : SimpleActivity() {
         setupWeekNumbers()
         setupExpandDayInMonthView()
         setupWorkFeatures()
+        setupOwnCalendar()
+        setupAppInfo()
         setupShowGrid()
         setupWeeklyStart()
         setupMidnightSpanEvents()
@@ -757,6 +759,43 @@ class SettingsActivity : SimpleActivity() {
         settingsStartWeekWithCurrentDayHolder.setOnClickListener {
             settingsStartWeekWithCurrentDay.toggle()
             config.startWeekWithCurrentDay = settingsStartWeekWithCurrentDay.isChecked
+        }
+    }
+
+    private fun setupOwnCalendar() = binding.apply {
+        updateOwnCalendarValue()
+        settingsOwnCalendarHolder.setOnClickListener {
+            ensureBackgroundThread {
+                val calendars = calendarsDB.getCalendars().filter { it.id != null }
+                runOnUiThread {
+                    val names = ArrayList<CharSequence>()
+                    names.add("-")
+                    calendars.forEach { names.add(it.getDisplayTitle()) }
+                    org.fossify.calendar.helpers.showItemsDialog(titleId = R.string.own_calendar, items = names) { which ->
+                        config.ownCalendarId = if (which == 0) -1L else calendars[which - 1].id ?: -1L
+                        updateOwnCalendarValue()
+                    }
+                }
+            }
+        }
+    }
+
+    private fun updateOwnCalendarValue() {
+        val id = config.ownCalendarId
+        if (id == -1L) {
+            binding.settingsOwnCalendarValue.text = "-"
+            return
+        }
+
+        ensureBackgroundThread {
+            val name = calendarsDB.getCalendarWithId(id)?.getDisplayTitle() ?: "-"
+            runOnUiThread { binding.settingsOwnCalendarValue.text = name }
+        }
+    }
+
+    private fun setupAppInfo() = binding.apply {
+        settingsAppChangesHolder.setOnClickListener {
+            org.fossify.calendar.helpers.showTextDialog(R.string.app_changes, getString(R.string.changelog_text))
         }
     }
 

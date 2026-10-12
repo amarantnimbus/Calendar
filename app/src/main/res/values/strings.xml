@@ -366,4 +366,25 @@
     <string name="fs_project">Project</string>
     <string name="fs_no_project">No project</string>
     <string name="fs_no_projects">No projects loaded. Set up FacturaScripts in Settings.</string>
+
+    <string name="icon_period">Period</string>
+    <string name="icon_doctor">Doctor</string>
+    <string name="icon_dentist">Dentist</string>
+    <string name="icon_trip">Trip</string>
+    <string name="icon_vacation">Vacation</string>
+    <string name="icon_vet">Vet</string>
+    <string name="icon_important">Important</string>
+    <string name="icon_flower">Flower</string>
+    <string name="no_icon">No icon</string>
+    <string name="day_icon">Day icon</string>
+    <string name="attachments">Attachments</string>
+    <string name="attach_file">Attach a file</string>
+    <string name="no_attachments">No attached files</string>
+    <string name="remove_attachment">Remove attachment</string>
+    <string name="attachment_unavailable">The file could not be opened</string>
+    <string name="attachment_not_synology">This file is not on the Synology. Attach it anyway?</string>
+    <string name="own_calendar">My calendar</string>
+    <string name="app_info">App information</string>
+    <string name="app_changes">Changes by version</string>
+    <string name="changelog_text">Version 5\n• Month view: smaller text, solid colored band and circles aligned with the cell edge\n• Icons next to the day number (period, doctor, dentist, trip, vacation, vet, important, flower)\n• The selected day circle is a shade darker than the shift color\n• Open day cards: time and title on the same line\n• Week day names hidden when weekends are colored\n• New icon row in events: project (house), attachments (clip), day icon and Together\n• Attachments with a warning if the file is not on the Synology\n• Year view: tapping a month or its title opens it; pinching opens the month under the fingers\n• Pending to plan: title and start of the comment\n• Settings: My calendar and this information\n• New app icon\n\nVersion 4\n• Pinch between views, new events all day, time visible with All day on\n• FacturaScripts connection and project diary\n\nVersion 3\n• Pending inbox, event without date, work features switch\n\nVersion 2\n• Clean top bar, bubbles with initial in the bottom bar, task screen like the event screen</string>
 </resources>

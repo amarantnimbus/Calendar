@@ -40,6 +40,14 @@ class Config(context: Context) : BaseConfig(context) {
         get() = prefs.getString(FS_PENDING_QUEUE, "")!!
         set(value) = prefs.edit().putString(FS_PENDING_QUEUE, value).apply()
 
+    var ownCalendarId: Long
+        get() = prefs.getLong(OWN_CALENDAR_ID, -1L)
+        set(value) = prefs.edit().putLong(OWN_CALENDAR_ID, value).apply()
+
+    var attachmentsJson: String
+        get() = prefs.getString(ATTACHMENTS_JSON, "{}") ?: "{}"
+        set(value) = prefs.edit().putString(ATTACHMENTS_JSON, value).apply()
+
     var workFeatures: Boolean
         get() = prefs.getBoolean(WORK_FEATURES, false)
         set(workFeatures) = prefs.edit().putBoolean(WORK_FEATURES, workFeatures).apply()

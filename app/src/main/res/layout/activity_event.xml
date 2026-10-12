@@ -64,50 +64,79 @@
 
                 <ImageView
                     android:id="@+id/event_icon_time"
-                    android:layout_width="48dp"
+                    android:layout_width="44dp"
                     android:layout_height="48dp"
                     android:background="?attr/selectableItemBackgroundBorderless"
                     android:contentDescription="@string/event_date_time"
-                    android:padding="12dp"
+                    android:padding="10dp"
                     android:src="@drawable/ic_clock_outline_vector" />
 
                 <ImageView
                     android:id="@+id/event_icon_reminder"
-                    android:layout_width="48dp"
+                    android:layout_width="44dp"
                     android:layout_height="48dp"
                     android:background="?attr/selectableItemBackgroundBorderless"
                     android:contentDescription="@string/reminder"
-                    android:padding="12dp"
+                    android:padding="10dp"
                     android:src="@drawable/ic_bell_outline_vector" />
 
                 <ImageView
                     android:id="@+id/event_icon_calendar"
-                    android:layout_width="48dp"
+                    android:layout_width="44dp"
                     android:layout_height="48dp"
                     android:background="?attr/selectableItemBackgroundBorderless"
-                    android:padding="12dp"
+                    android:padding="10dp"
                     android:src="@drawable/ic_calendar_vector" />
 
                 <ImageView
                     android:id="@+id/event_icon_color"
-                    android:layout_width="48dp"
+                    android:layout_width="44dp"
                     android:layout_height="48dp"
                     android:background="?attr/selectableItemBackgroundBorderless"
                     android:contentDescription="@string/color"
-                    android:padding="12dp"
+                    android:padding="10dp"
                     android:src="@drawable/ic_color_outline_vector" />
+
+                <ImageView
+                    android:id="@+id/event_icon_project"
+                    android:layout_width="44dp"
+                    android:layout_height="48dp"
+                    android:background="?attr/selectableItemBackgroundBorderless"
+                    android:contentDescription="@string/fs_project"
+                    android:padding="10dp"
+                    android:src="@drawable/ic_project_home" />
+
+                <ImageView
+                    android:id="@+id/event_icon_attach"
+                    android:layout_width="44dp"
+                    android:layout_height="48dp"
+                    android:background="?attr/selectableItemBackgroundBorderless"
+                    android:contentDescription="@string/attachments"
+                    android:padding="10dp"
+                    android:src="@drawable/ic_attach_clip" />
+
+                <ImageView
+                    android:id="@+id/event_icon_day"
+                    android:layout_width="44dp"
+                    android:layout_height="48dp"
+                    android:background="?attr/selectableItemBackgroundBorderless"
+                    android:contentDescription="@string/day_icon"
+                    android:padding="10dp"
+                    android:src="@drawable/ic_icon_pick" />
 
                 <View
                     android:layout_width="0dp"
                     android:layout_height="1dp"
                     android:layout_weight="1" />
 
-                <CheckBox
+                <ImageView
                     android:id="@+id/event_junts"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="@string/junts"
-                    android:textSize="@dimen/day_text_size" />
+                    android:layout_width="44dp"
+                    android:layout_height="48dp"
+                    android:background="?attr/selectableItemBackgroundBorderless"
+                    android:contentDescription="@string/junts"
+                    android:padding="10dp"
+                    android:src="@drawable/ic_junts_people" />
 
             </LinearLayout>
 
@@ -127,7 +156,7 @@
                 android:background="?attr/selectableItemBackground"
                 android:paddingTop="@dimen/small_margin"
                 android:paddingBottom="@dimen/small_margin"
-                android:textSize="@dimen/day_text_size"
+                android:textSize="14sp"
                 android:visibility="gone" />
 
             <org.fossify.commons.views.MyEditText
@@ -137,9 +166,13 @@
                 android:layout_marginStart="@dimen/activity_margin"
                 android:layout_marginTop="@dimen/activity_margin"
                 android:layout_marginEnd="@dimen/activity_margin"
+                android:background="@null"
+                android:gravity="start|top"
                 android:hint="@string/event_name_hint"
                 android:inputType="textCapSentences"
                 android:maxLength="180"
+                android:padding="0dp"
+                android:textAlignment="viewStart"
                 android:textCursorDrawable="@null"
                 android:textSize="22sp" />
 
@@ -158,6 +191,8 @@
                 android:inputType="textCapSentences|textMultiLine"
                 android:linksClickable="true"
                 android:minHeight="200dp"
+                android:padding="0dp"
+                android:textAlignment="viewStart"
                 android:textCursorDrawable="@null"
                 android:textSize="@dimen/day_text_size" />
 

@@ -311,4 +311,25 @@
     <string name="fs_project">Proyecto</string>
     <string name="fs_no_project">Ningún proyecto</string>
     <string name="fs_no_projects">No hay proyectos cargados. Configura FacturaScripts en Ajustes.</string>
+
+    <string name="icon_period">Regla</string>
+    <string name="icon_doctor">Médico</string>
+    <string name="icon_dentist">Dentista</string>
+    <string name="icon_trip">Viaje</string>
+    <string name="icon_vacation">Vacaciones</string>
+    <string name="icon_vet">Veterinario</string>
+    <string name="icon_important">Importante</string>
+    <string name="icon_flower">Flor</string>
+    <string name="no_icon">Sin icono</string>
+    <string name="day_icon">Icono del día</string>
+    <string name="attachments">Adjuntos</string>
+    <string name="attach_file">Adjuntar un archivo</string>
+    <string name="no_attachments">Ningún archivo adjunto</string>
+    <string name="remove_attachment">Quitar el adjunto</string>
+    <string name="attachment_unavailable">No se pudo abrir el archivo</string>
+    <string name="attachment_not_synology">Este archivo no está en el Synology. ¿Quieres adjuntarlo igualmente?</string>
+    <string name="own_calendar">Mi calendario</string>
+    <string name="app_info">Información de la app</string>
+    <string name="app_changes">Cambios por versión</string>
+    <string name="changelog_text">Versión 5\n• Vista mensual: letra más pequeña, franja de color sólida y círculos alineados con el borde de la casilla\n• Iconos junto al número del día (regla, médico, dentista, viaje, vacaciones, veterinario, importante, flor)\n• El círculo del día seleccionado es un tono más oscuro que el del turno\n• Tarjetas del día desplegado: hora y título en la misma línea\n• Nombres de los días de la semana ocultos si el fin de semana tiene color\n• Nueva fila de iconos en el evento: proyecto (casa), adjuntos (clip), icono del día y Juntos\n• Adjuntos con aviso si el archivo no está en el Synology\n• Vista anual: tocar el mes o su título abre el mes; el pellizco abre el mes donde están los dedos\n• Pendientes de planificar: título y comienzo del comentario\n• Configuración: Mi calendario y esta información\n• Icono nuevo de la app\n\nVersión 4\n• Pellizco entre vistas, eventos nuevos de todo el día, hora visible con Todo el día activado\n• Conexión con FacturaScripts y diario por proyecto\n\nVersión 3\n• Bandeja de pendientes, evento sin fecha, interruptor de funciones de trabajo\n\nVersión 2\n• Barra superior limpia, burbujas con inicial en la barra inferior, pantalla de tarea como la de evento</string>
 </resources>

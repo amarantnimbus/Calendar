@@ -311,4 +311,25 @@
     <string name="fs_project">Projecte</string>
     <string name="fs_no_project">Cap projecte</string>
     <string name="fs_no_projects">No hi ha projectes carregats. Configura FacturaScripts a Configuració.</string>
+
+    <string name="icon_period">Regla</string>
+    <string name="icon_doctor">Metge</string>
+    <string name="icon_dentist">Dentista</string>
+    <string name="icon_trip">Viatge</string>
+    <string name="icon_vacation">Vacances</string>
+    <string name="icon_vet">Veterinari</string>
+    <string name="icon_important">Important</string>
+    <string name="icon_flower">Flor</string>
+    <string name="no_icon">Sense icona</string>
+    <string name="day_icon">Icona del dia</string>
+    <string name="attachments">Adjunts</string>
+    <string name="attach_file">Adjuntar un fitxer</string>
+    <string name="no_attachments">Cap fitxer adjunt</string>
+    <string name="remove_attachment">Treure l\'adjunt</string>
+    <string name="attachment_unavailable">No s\'ha pogut obrir el fitxer</string>
+    <string name="attachment_not_synology">Aquest arxiu no és al Synology. Vols adjuntar-lo igualment?</string>
+    <string name="own_calendar">El meu calendari</string>
+    <string name="app_info">Informació de l\'app</string>
+    <string name="app_changes">Canvis per versió</string>
+    <string name="changelog_text">Versió 5\n• Vista mensual: lletra més petita, franja de color sòlida i cercles alineats amb la vora de la casella\n• Icones al costat del número del dia (regla, metge, dentista, viatge, vacances, veterinari, important, flor)\n• El cercle del dia seleccionat és un to més fosc que el del torn\n• Targetes del dia desplegat: hora i títol a la mateixa línia\n• Noms dels dies de la setmana amagats si el cap de setmana té color\n• Nova fila d\'icones a l\'esdeveniment: projecte (casa), adjunts (clip), icona del dia i Junts\n• Adjunts amb avís si l\'arxiu no és al Synology\n• Vista anual: tocar el mes o el seu títol obre el mes; la pinça obre el mes on són els dits\n• Pendents de planificar: títol i començament del comentari\n• Configuració: El meu calendari i aquesta informació\n• Icona nova de l\'app\n\nVersió 4\n• Pinça entre vistes, esdeveniments nous de tot el dia, hora visible amb Tot el dia activat\n• Connexió amb FacturaScripts i diari per projecte\n\nVersió 3\n• Bústia de pendents, esdeveniment sense data, interruptor de funcions de feina\n\nVersió 2\n• Barra superior neta, bombolles amb inicial a la barra inferior, pantalla de tasca com la d\'esdeveniment</string>
 </resources>

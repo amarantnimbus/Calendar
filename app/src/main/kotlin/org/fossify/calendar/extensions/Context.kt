@@ -483,7 +483,7 @@ fun Context.notifyEvent(originalEvent: Event) {
         startTime,
         endTime
     )
-    val descriptionOrLocation = if (config.replaceDescription) event.location else event.description
+    val descriptionOrLocation = if (config.replaceDescription) event.location else org.fossify.calendar.helpers.DayIcons.visibleText(event.description)
     val content = "$displayedStartDate $timeRange $descriptionOrLocation".trim()
     ensureBackgroundThread {
         if (event.isTask()) eventsHelper.updateIsTaskCompleted(event)

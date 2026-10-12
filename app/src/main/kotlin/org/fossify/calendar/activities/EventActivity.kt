@@ -3,6 +3,9 @@ package org.fossify.calendar.activities
 import android.app.DatePickerDialog
 import android.app.TimePickerDialog
 import android.content.Intent
+import org.fossify.calendar.helpers.AttachmentStore
+import org.fossify.calendar.helpers.DayIcons
+import org.fossify.calendar.helpers.showItemsDialog
 import android.graphics.drawable.Drawable
 import android.graphics.drawable.LayerDrawable
 import android.net.Uri
@@ -399,6 +402,9 @@ class EventActivity : SimpleActivity() {
     }
 
     override fun onActivityResult(requestCode: Int, resultCode: Int, resultData: Intent?) {
+        if (requestCode == ATTACH_REQUEST && resultCode == RESULT_OK) {
+            resultData?.data?.let { handleAttachmentPicked(it) }
+        }
         if (
             requestCode == SELECT_TIME_ZONE_INTENT
             && resultCode == RESULT_OK && resultData?.hasExtra(TIME_ZONE) == true
@@ -668,7 +674,7 @@ class EventActivity : SimpleActivity() {
         val reminders = getReminders()
         return binding.eventTitle.text.toString() != mEvent.title ||
                 binding.eventLocation.text.toString() != mEvent.location ||
-                FacturaScripts.withMarker(binding.eventDescription.text.toString(), mProject) != mEvent.description ||
+                FacturaScripts.withMarker(DayIcons.withIcon(binding.eventDescription.text.toString(), mDayIconKey), mProject) != mEvent.description ||
                 binding.eventTimeZone.text != mEvent.getTimeZoneString() ||
                 reminders != mEvent.getReminders() ||
                 mRepeatInterval != mEvent.repeatInterval ||
@@ -744,8 +750,12 @@ class EventActivity : SimpleActivity() {
 
         binding.eventTitle.setText(mEvent.title)
         binding.eventLocation.setText(mEvent.location)
-        binding.eventDescription.setText(FacturaScripts.stripMarker(mEvent.description))
+        binding.eventDescription.setText(DayIcons.strip(FacturaScripts.stripMarker(mEvent.description)))
         mProject = FacturaScripts.markerProject(mEvent.description)
+        mDayIconKey = DayIcons.keyOf(mEvent.description)
+        updateProjectRow()
+        updateDayIcon()
+        updateAttachIcon()
 
         mReminder1Minutes = mEvent.reminder1Minutes
         mReminder2Minutes = mEvent.reminder2Minutes
@@ -1656,7 +1666,7 @@ class EventActivity : SimpleActivity() {
         val newImportId = if (mEvent.id != null) {
             mEvent.importId
         } else {
-            generateImportId()
+            mPreImportId ?: generateImportId()
         }
 
         val selectedCalendar = calendarsDB.getCalendarWithId(mCalendarId) ?: run {
@@ -1720,7 +1730,7 @@ class EventActivity : SimpleActivity() {
             startTS = newStartTS
             endTS = newEndTS
             title = newTitle
-            description = FacturaScripts.withMarker(binding.eventDescription.value, mProject)
+            description = FacturaScripts.withMarker(DayIcons.withIcon(binding.eventDescription.value, mDayIconKey), mProject)
             reminder1Minutes = reminder1.minutes
             reminder2Minutes = reminder2.minutes
             reminder3Minutes = reminder3.minutes
@@ -1753,7 +1763,7 @@ class EventActivity : SimpleActivity() {
                 projectId = diaryProject.id,
                 date = mEventStartDateTime.toString("yyyy-MM-dd"),
                 title = newTitle,
-                text = FacturaScripts.stripMarker(mEvent.description)
+                text = DayIcons.strip(FacturaScripts.stripMarker(mEvent.description))
             )
             ensureBackgroundThread { FacturaScripts.push(this, entry) }
         }
@@ -2489,6 +2499,9 @@ class EventActivity : SimpleActivity() {
 
     private var mIsUnscheduled = false
     private var mProject: FacturaScripts.Project? = null
+    private var mDayIconKey: String? = null
+    private var mPreImportId: String? = null
+    private val ATTACH_REQUEST = 7311
     private var mDateTimeRefresh: (() -> Unit)? = null
     private var mCalendarBeforeJunts: CalendarEntity? = null
 
@@ -2497,12 +2510,18 @@ class EventActivity : SimpleActivity() {
         eventIconReminder.setOnClickListener { eventReminder1.performClick() }
         eventIconCalendar.setOnClickListener { showCalendarDialog() }
         eventIconColor.setOnClickListener { showEventColorDialog() }
+        eventIconProject.setOnClickListener { showProjectDialog() }
+        eventProject.setOnClickListener { showProjectDialog() }
+        eventIconAttach.setOnClickListener { showAttachmentsDialog() }
+        eventIconDay.setOnClickListener { showDayIconDialog() }
         val textColor = getProperTextColor()
         eventHeaderDate.setTextColor(textColor)
         eventHeaderTime.setTextColor(textColor)
-        eventJunts.setTextColor(textColor)
         eventIconDivider.setBackgroundColor(textColor)
         updateHeader()
+        updateProjectRow()
+        updateDayIcon()
+        updateAttachIcon()
     }
 
     private fun updateHeader() {
@@ -2520,6 +2539,7 @@ class EventActivity : SimpleActivity() {
         val pattern = org.joda.time.format.DateTimeFormat.forPattern("EEEE, d MMMM")
             .withLocale(java.util.Locale.getDefault())
         binding.eventHeaderDate.text = pattern.print(mEventStartDateTime)
+            .replaceFirstChar { it.uppercase() }
         binding.eventHeaderTime.text = if (binding.eventAllDay.isChecked) {
             getString(R.string.all_day)
         } else {
@@ -2531,13 +2551,18 @@ class EventActivity : SimpleActivity() {
     private fun showDateTimeDialog() {
         hideKeyboard()
         val view = layoutInflater.inflate(R.layout.dialog_event_datetime, null)
-        val allDay = view.findViewById<androidx.appcompat.widget.SwitchCompat>(R.id.dt_all_day)
+        val allDay = view.findViewById<org.fossify.commons.views.MyMaterialSwitch>(R.id.dt_all_day)
         val startDate = view.findViewById<android.widget.TextView>(R.id.dt_start_date)
         val startTime = view.findViewById<android.widget.TextView>(R.id.dt_start_time)
         val endDate = view.findViewById<android.widget.TextView>(R.id.dt_end_date)
         val endTime = view.findViewById<android.widget.TextView>(R.id.dt_end_time)
         val timeZone = view.findViewById<android.widget.TextView>(R.id.dt_time_zone)
-        val unscheduled = view.findViewById<androidx.appcompat.widget.SwitchCompat>(R.id.dt_unscheduled)
+        val unscheduled = view.findViewById<org.fossify.commons.views.MyMaterialSwitch>(R.id.dt_unscheduled)
+        val dialogTextColor = getProperTextColor()
+        listOf<android.widget.TextView>(
+            allDay, unscheduled, startDate, startTime, endDate, endTime, timeZone,
+            view.findViewById(R.id.dt_start_label), view.findViewById(R.id.dt_end_label)
+        ).forEach { it.setTextColor(dialogTextColor) }
         val rowsToHide = listOf<android.view.View>(
             allDay,
             view.findViewById(R.id.dt_start_label),
@@ -2551,20 +2576,27 @@ class EventActivity : SimpleActivity() {
         val savedEnd = mEventEndDateTime
         val savedAllDay = binding.eventAllDay.isChecked
 
+        val allDayListener = android.widget.CompoundButton.OnCheckedChangeListener { _, isChecked ->
+            binding.eventAllDay.isChecked = isChecked
+        }
+
         val refresh: () -> Unit = {
             startDate.text = Formatter.getDate(this, mEventStartDateTime)
             startTime.text = Formatter.getTime(this, mEventStartDateTime)
             endDate.text = Formatter.getDate(this, mEventEndDateTime)
             endTime.text = Formatter.getTime(this, mEventEndDateTime)
             val isAllDay = binding.eventAllDay.isChecked
-            startTime.beGoneIf(isAllDay)
-            endTime.beGoneIf(isAllDay)
+            // times stay visible (dimmed) while all-day; touching one makes the event timed
+            val timeAlpha = if (isAllDay) 0.4f else 1f
+            startTime.alpha = timeAlpha
+            endTime.alpha = timeAlpha
             timeZone.text = mEvent.getTimeZoneString()
             timeZone.beVisibleIf(config.allowChangingTimeZones && !isAllDay && !mIsUnscheduled)
             rowsToHide.forEach { it.beGoneIf(mIsUnscheduled) }
-            if (!mIsUnscheduled) {
-                startTime.beGoneIf(isAllDay)
-                endTime.beGoneIf(isAllDay)
+            if (allDay.isChecked != isAllDay) {
+                allDay.setOnCheckedChangeListener(null)
+                allDay.isChecked = isAllDay
+                allDay.setOnCheckedChangeListener(allDayListener)
             }
         }
 
@@ -2576,13 +2608,21 @@ class EventActivity : SimpleActivity() {
         }
 
         allDay.isChecked = savedAllDay
-        allDay.setOnCheckedChangeListener { _, isChecked ->
-            binding.eventAllDay.isChecked = isChecked
-        }
+        allDay.setOnCheckedChangeListener(allDayListener)
         startDate.setOnClickListener { setupStartDate() }
-        startTime.setOnClickListener { setupStartTime() }
+        startTime.setOnClickListener {
+            if (binding.eventAllDay.isChecked) {
+                binding.eventAllDay.isChecked = false
+            }
+            setupStartTime()
+        }
         endDate.setOnClickListener { setupEndDate() }
-        endTime.setOnClickListener { setupEndTime() }
+        endTime.setOnClickListener {
+            if (binding.eventAllDay.isChecked) {
+                binding.eventAllDay.isChecked = false
+            }
+            setupEndTime()
+        }
         timeZone.setOnClickListener { setupTimeZone() }
 
         mDateTimeRefresh = refresh
@@ -2619,14 +2659,222 @@ class EventActivity : SimpleActivity() {
     private fun mIsNewOrUnscheduledEditable() = mIsNewEvent || mIsUnscheduled || mEvent.startTS == 0L
 
     private fun updateProjectRow() {
-        binding.eventProject.beVisibleIf(config.workFeatures)
+        val primary = getProperPrimaryColor()
+        val textColor = getProperTextColor()
+        binding.eventIconProject.beVisibleIf(config.workFeatures)
+        binding.eventIconProject.applyColorFilter(if (mProject != null) primary else textColor)
         val name = mProject?.name
-        binding.eventProject.text = if (name == null) {
-            getString(R.string.fs_project) + " ▾"
-        } else {
-            getString(R.string.fs_project) + ": " + name + " ▾"
+        binding.eventProject.beVisibleIf(config.workFeatures && name != null)
+        binding.eventProject.text = if (name == null) "" else getString(R.string.fs_project) + ": " + name
+        binding.eventProject.setTextColor(textColor)
+    }
+
+    private fun updateDayIcon() {
+        val icon = DayIcons.byKey(mDayIconKey)
+        binding.eventIconDay.setImageResource(icon?.drawable ?: R.drawable.ic_icon_pick)
+        binding.eventIconDay.applyColorFilter(if (icon != null) getProperPrimaryColor() else getProperTextColor())
+    }
+
+    private fun dp(value: Int) = (value * resources.displayMetrics.density).toInt()
+
+    private fun showDayIconDialog() {
+        hideKeyboard()
+        val textColor = getProperTextColor()
+        val primary = getProperPrimaryColor()
+        val grid = android.widget.GridLayout(this).apply {
+            columnCount = 4
+            setPadding(dp(16), dp(8), dp(16), dp(8))
         }
-        binding.eventProject.setTextColor(getProperTextColor())
+
+        var dialog: androidx.appcompat.app.AlertDialog? = null
+        val add = { drawable: Int, key: String?, label: Int ->
+            val view = android.widget.ImageView(this).apply {
+                setImageResource(drawable)
+                applyColorFilter(if (key == mDayIconKey) primary else textColor)
+                setPadding(dp(14), dp(14), dp(14), dp(14))
+                contentDescription = getString(label)
+                background = obtainStyledAttributes(intArrayOf(android.R.attr.selectableItemBackgroundBorderless)).let {
+                    val d = it.getDrawable(0)
+                    it.recycle()
+                    d
+                }
+                layoutParams = android.widget.GridLayout.LayoutParams().apply {
+                    width = dp(64)
+                    height = dp(64)
+                }
+                setOnClickListener {
+                    mDayIconKey = key
+                    updateDayIcon()
+                    dialog?.dismiss()
+                }
+            }
+            grid.addView(view)
+        }
+
+        DayIcons.all.forEach { add(it.drawable, it.key, it.labelRes) }
+        add(R.drawable.ic_icon_clear, null, R.string.no_icon)
+
+        getAlertDialogBuilder().apply {
+            setupDialogStuff(view = grid, dialog = this, titleId = R.string.day_icon) { alertDialog ->
+                dialog = alertDialog
+            }
+        }
+    }
+
+    // ---- attachments: references to files chosen with the system file picker (local only) ----
+
+    private fun attachmentKey(): String {
+        if (mEvent.id != null && mEvent.importId.isNotEmpty()) {
+            return mEvent.importId
+        }
+
+        if (mPreImportId == null) {
+            mPreImportId = mEvent.importId.ifEmpty { generateImportId() }
+        }
+
+        return mPreImportId!!
+    }
+
+    private fun updateAttachIcon() {
+        if (!::mEvent.isInitialized) {
+            return
+        }
+
+        val key = if (mEvent.id != null && mEvent.importId.isNotEmpty()) mEvent.importId else mPreImportId
+        val has = key != null && AttachmentStore.list(config, key).isNotEmpty()
+        binding.eventIconAttach.applyColorFilter(if (has) getProperPrimaryColor() else getProperTextColor())
+    }
+
+    private fun showAttachmentsDialog() {
+        hideKeyboard()
+        val key = attachmentKey()
+        val textColor = getProperTextColor()
+        val holder = android.widget.LinearLayout(this).apply {
+            orientation = android.widget.LinearLayout.VERTICAL
+            setPadding(dp(24), dp(8), dp(24), dp(8))
+        }
+
+        var dialog: androidx.appcompat.app.AlertDialog? = null
+        lateinit var refresh: () -> Unit
+        refresh = {
+            holder.removeAllViews()
+            val addButton = android.widget.TextView(this).apply {
+                text = getString(R.string.attach_file)
+                setTextColor(getProperPrimaryColor())
+                textSize = 18f
+                setPadding(0, dp(12), 0, dp(12))
+                setOnClickListener {
+                    val intent = Intent(Intent.ACTION_OPEN_DOCUMENT).apply {
+                        addCategory(Intent.CATEGORY_OPENABLE)
+                        type = "*/*"
+                        addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_PERSISTABLE_URI_PERMISSION)
+                    }
+                    try {
+                        startActivityForResult(intent, ATTACH_REQUEST)
+                        dialog?.dismiss()
+                    } catch (e: Exception) {
+                        toast(org.fossify.commons.R.string.unknown_error_occurred)
+                    }
+                }
+            }
+            holder.addView(addButton)
+
+            val items = AttachmentStore.list(config, key)
+            if (items.isEmpty()) {
+                holder.addView(android.widget.TextView(this).apply {
+                    text = getString(R.string.no_attachments)
+                    setTextColor(textColor)
+                    alpha = 0.6f
+                    setPadding(0, dp(8), 0, dp(8))
+                })
+            }
+
+            items.forEach { item ->
+                val row = android.widget.LinearLayout(this).apply {
+                    orientation = android.widget.LinearLayout.HORIZONTAL
+                    gravity = android.view.Gravity.CENTER_VERTICAL
+                }
+                row.addView(android.widget.TextView(this).apply {
+                    text = item.name
+                    setTextColor(textColor)
+                    textSize = 16f
+                    maxLines = 2
+                    ellipsize = android.text.TextUtils.TruncateAt.END
+                    setPadding(0, dp(10), dp(8), dp(10))
+                    layoutParams = android.widget.LinearLayout.LayoutParams(0, android.view.ViewGroup.LayoutParams.WRAP_CONTENT, 1f)
+                    setOnClickListener { openAttachment(item) }
+                })
+                row.addView(android.widget.ImageView(this).apply {
+                    setImageResource(R.drawable.ic_icon_clear)
+                    applyColorFilter(textColor)
+                    setPadding(dp(10), dp(10), dp(10), dp(10))
+                    contentDescription = getString(R.string.remove_attachment)
+                    layoutParams = android.widget.LinearLayout.LayoutParams(dp(44), dp(44))
+                    setOnClickListener {
+                        AttachmentStore.remove(config, key, item.uri)
+                        refresh()
+                        updateAttachIcon()
+                    }
+                })
+                holder.addView(row)
+            }
+        }
+        refresh()
+
+        getAlertDialogBuilder().apply {
+            setupDialogStuff(view = holder, dialog = this, titleId = R.string.attachments) { alertDialog ->
+                dialog = alertDialog
+            }
+        }
+    }
+
+    private fun openAttachment(item: AttachmentStore.Attachment) {
+        try {
+            val uri = android.net.Uri.parse(item.uri)
+            val intent = Intent(Intent.ACTION_VIEW).apply {
+                setDataAndType(uri, contentResolver.getType(uri) ?: "*/*")
+                addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+            }
+            startActivity(intent)
+        } catch (e: Exception) {
+            toast(R.string.attachment_unavailable)
+        }
+    }
+
+    private fun handleAttachmentPicked(uri: android.net.Uri) {
+        try {
+            contentResolver.takePersistableUriPermission(uri, Intent.FLAG_GRANT_READ_URI_PERMISSION)
+        } catch (ignored: Exception) {
+        }
+
+        var name = uri.lastPathSegment ?: uri.toString()
+        try {
+            contentResolver.query(uri, null, null, null, null)?.use { cursor ->
+                val index = cursor.getColumnIndex(android.provider.OpenableColumns.DISPLAY_NAME)
+                if (index >= 0 && cursor.moveToFirst()) {
+                    name = cursor.getString(index) ?: name
+                }
+            }
+        } catch (ignored: Exception) {
+        }
+
+        val key = attachmentKey()
+        val add = {
+            AttachmentStore.add(config, key, AttachmentStore.Attachment(uri.toString(), name))
+            updateAttachIcon()
+            showAttachmentsDialog()
+        }
+
+        val authority = uri.authority.orEmpty()
+        if (authority.contains("synology", true)) {
+            add()
+        } else {
+            androidx.appcompat.app.AlertDialog.Builder(this)
+                .setMessage(R.string.attachment_not_synology)
+                .setPositiveButton(org.fossify.commons.R.string.yes) { _, _ -> add() }
+                .setNegativeButton(org.fossify.commons.R.string.no, null)
+                .show()
+        }
     }
 
     private fun showProjectDialog() {
@@ -2643,16 +2891,13 @@ class EventActivity : SimpleActivity() {
                     return@runOnUiThread
                 }
 
-                val names = ArrayList<String>()
+                val names = ArrayList<CharSequence>()
                 names.add(getString(R.string.fs_no_project))
                 projects.forEach { names.add(it.name) }
-                androidx.appcompat.app.AlertDialog.Builder(this)
-                    .setTitle(R.string.fs_project)
-                    .setItems(names.toTypedArray()) { _, which ->
-                        mProject = if (which == 0) null else projects[which - 1]
-                        updateProjectRow()
-                    }
-                    .show()
+                showItemsDialog(titleId = R.string.fs_project, items = names) { which ->
+                    mProject = if (which == 0) null else projects[which - 1]
+                    updateProjectRow()
+                }
             }
 
             // keep the list fresh for next time
@@ -2670,23 +2915,22 @@ class EventActivity : SimpleActivity() {
 
     private fun updateJuntsCheckbox(current: CalendarEntity) {
         val junts = findJuntsCalendar()
-        val checkbox = binding.eventJunts
-        checkbox.setOnCheckedChangeListener(null)
-        checkbox.beVisibleIf(junts != null)
+        val icon = binding.eventJunts
+        icon.beVisibleIf(junts != null)
         if (junts != null) {
-            checkbox.isChecked = current.id == junts.id
-            checkbox.setOnCheckedChangeListener { _, isChecked ->
-                if (isChecked) {
-                    mCalendarBeforeJunts = mStoredCalendars.firstOrNull { it.id == mCalendarId }
-                    config.juntsCalendarId = junts.id ?: -1L
-                    applyCalendarSelection(junts)
-                } else {
+            icon.applyColorFilter(if (current.id == junts.id) getProperPrimaryColor() else getProperTextColor())
+            icon.setOnClickListener {
+                if (mCalendarId == junts.id) {
                     val previous = mCalendarBeforeJunts
                         ?: mStoredCalendars.firstOrNull { it.id == config.lastUsedLocalCalendarId && it.id != junts.id }
                         ?: mStoredCalendars.firstOrNull { it.id != junts.id }
                     if (previous != null) {
                         applyCalendarSelection(previous)
                     }
+                } else {
+                    mCalendarBeforeJunts = mStoredCalendars.firstOrNull { it.id == mCalendarId }
+                    config.juntsCalendarId = junts.id ?: -1L
+                    applyCalendarSelection(junts)
                 }
             }
         }

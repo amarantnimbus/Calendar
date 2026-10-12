@@ -464,6 +464,11 @@ class TaskActivity : SimpleActivity() {
         val dateTime = Formatter.getDateTimeFromTS(startTS)
         mTaskDateTime = dateTime
 
+        // new tasks are all-day unless the time is changed by hand
+        mTask.flags = mTask.flags or FLAG_ALL_DAY
+        mIsAllDayTask = true
+        binding.taskAllDay.isChecked = true
+
         window.setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_STATE_ALWAYS_VISIBLE)
         binding.taskTitle.requestFocus()
         binding.taskToolbar.title = getString(R.string.new_task)
@@ -1288,7 +1293,7 @@ class TaskActivity : SimpleActivity() {
 
         val pattern = org.joda.time.format.DateTimeFormat.forPattern("EEEE, d MMMM")
             .withLocale(java.util.Locale.getDefault())
-        binding.taskHeaderDate.text = pattern.print(mTaskDateTime)
+        binding.taskHeaderDate.text = pattern.print(mTaskDateTime).replaceFirstChar { it.uppercase() }
         binding.taskHeaderTime.text = if (binding.taskAllDay.isChecked) {
             getString(R.string.all_day)
         } else {
@@ -1300,9 +1305,15 @@ class TaskActivity : SimpleActivity() {
     private fun showDateTimeDialog() {
         hideKeyboard()
         val view = layoutInflater.inflate(R.layout.dialog_event_datetime, null)
-        val allDay = view.findViewById<androidx.appcompat.widget.SwitchCompat>(R.id.dt_all_day)
+        val allDay = view.findViewById<org.fossify.commons.views.MyMaterialSwitch>(R.id.dt_all_day)
         val startDate = view.findViewById<android.widget.TextView>(R.id.dt_start_date)
         val startTime = view.findViewById<android.widget.TextView>(R.id.dt_start_time)
+        val dialogTextColor = getProperTextColor()
+        listOf<android.widget.TextView>(
+            allDay, startDate, startTime,
+            view.findViewById(R.id.dt_start_label)
+        ).forEach { it.setTextColor(dialogTextColor) }
+        view.findViewById<android.view.View>(R.id.dt_unscheduled).visibility = android.view.View.GONE
         view.findViewById<android.view.View>(R.id.dt_end_label).visibility = android.view.View.GONE
         view.findViewById<android.view.View>(R.id.dt_end_row).visibility = android.view.View.GONE
         view.findViewById<android.view.View>(R.id.dt_time_zone).visibility = android.view.View.GONE
@@ -1310,18 +1321,31 @@ class TaskActivity : SimpleActivity() {
         val savedDateTime = mTaskDateTime
         val savedAllDay = binding.taskAllDay.isChecked
 
+        val allDayListener = android.widget.CompoundButton.OnCheckedChangeListener { _, isChecked ->
+            binding.taskAllDay.isChecked = isChecked
+        }
+
         val refresh: () -> Unit = {
             startDate.text = Formatter.getDate(this, mTaskDateTime)
             startTime.text = Formatter.getTime(this, mTaskDateTime)
-            startTime.beGoneIf(binding.taskAllDay.isChecked)
+            val isAllDay = binding.taskAllDay.isChecked
+            startTime.alpha = if (isAllDay) 0.4f else 1f
+            if (allDay.isChecked != isAllDay) {
+                allDay.setOnCheckedChangeListener(null)
+                allDay.isChecked = isAllDay
+                allDay.setOnCheckedChangeListener(allDayListener)
+            }
         }
 
         allDay.isChecked = savedAllDay
-        allDay.setOnCheckedChangeListener { _, isChecked ->
-            binding.taskAllDay.isChecked = isChecked
-        }
+        allDay.setOnCheckedChangeListener(allDayListener)
         startDate.setOnClickListener { setupDate() }
-        startTime.setOnClickListener { setupTime() }
+        startTime.setOnClickListener {
+            if (binding.taskAllDay.isChecked) {
+                binding.taskAllDay.isChecked = false
+            }
+            setupTime()
+        }
 
         mDateTimeRefresh = refresh
         refresh()
