@@ -184,6 +184,7 @@
     <string name="highlight_weekends">Ressalta els caps de setmana en algunes vistes</string>
     <string name="highlight_weekends_color">Color dels caps de setmana ressaltats</string>
     <string name="weekend_background">Fons gris als caps de setmana (vista mensual)</string>
+    <string name="event_transparency">Transparència dels esdeveniments (píndoles i targetes)</string>
     <string name="allow_changing_time_zones">Permet canviar els fusos horaris dels esdeveniments</string>
     <string name="manage_quick_filter_event_types">Gestiona els calendaris de filtre ràpid</string>
     <string name="allow_creating_tasks">Permet crear tasques</string>
@@ -342,4 +343,12 @@
     <string name="app_info">Informació de l\'app</string>
     <string name="app_changes">Canvis per versió</string>
     <string name="changelog_text">Versió 5\n• Vista mensual: lletra més petita, franja de color sòlida i cercles alineats amb la vora de la casella\n• Icones al costat del número del dia (regla, metge, dentista, viatge, vacances, veterinari, important, flor)\n• El cercle del dia seleccionat és un to més fosc que el del torn\n• Targetes del dia desplegat: hora i títol a la mateixa línia\n• Noms dels dies de la setmana amagats si el cap de setmana té color\n• Nova fila d\'icones a l\'esdeveniment: projecte (casa), adjunts (clip), icona del dia i Junts\n• Adjunts amb avís si l\'arxiu no és al Synology\n• Vista anual: tocar el mes o el seu títol obre el mes; la pinça obre el mes on són els dits\n• Pendents de planificar: títol i començament del comentari\n• Configuració: El meu calendari i aquesta informació\n• Icona nova de l\'app\n\nVersió 4\n• Pinça entre vistes, esdeveniments nous de tot el dia, hora visible amb Tot el dia activat\n• Connexió amb FacturaScripts i diari per projecte\n\nVersió 3\n• Bústia de pendents, esdeveniment sense data, interruptor de funcions de feina\n\nVersió 2\n• Barra superior neta, bombolles amb inicial a la barra inferior, pantalla de tasca com la d\'esdeveniment</string>
+    <string name="tailscale">Tailscale</string>
+    <string name="tailscale_not_installed">Tailscale no està instal·lat en aquest mòbil</string>
+    <string name="tailscale_connecting">Activant Tailscale…</string>
+    <string name="tailscale_connect_failed">Tailscale no s\'ha connectat, no s\'ha sincronitzat res</string>
+    <string name="tailscale_sync_done">Sincronitzat, Tailscale desactivat</string>
+    <string name="tailscale_turned_on">Tailscale activat</string>
+    <string name="tailscale_turned_off">Tailscale desactivat</string>
+    <string name="tailscale_auto_sync">Activar Tailscale en actualitzar i desactivar-lo en acabar</string>
 </resources>

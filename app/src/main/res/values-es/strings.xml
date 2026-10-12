@@ -184,6 +184,7 @@
     <string name="highlight_weekends">Resaltar los fines de semana en algunas vistas</string>
     <string name="highlight_weekends_color">Color de los fines de semana resaltados</string>
     <string name="weekend_background">Fondo gris en los fines de semana (vista mensual)</string>
+    <string name="event_transparency">Transparencia de los eventos (píldoras y tarjetas)</string>
     <string name="allow_changing_time_zones">Permitir cambiar las zonas horarias de los eventos</string>
     <string name="manage_quick_filter_event_types">Administrar calendarios de filtro rápido</string>
     <string name="allow_creating_tasks">Permitir crear tareas</string>
@@ -342,4 +343,12 @@
     <string name="app_info">Información de la app</string>
     <string name="app_changes">Cambios por versión</string>
     <string name="changelog_text">Versión 5\n• Vista mensual: letra más pequeña, franja de color sólida y círculos alineados con el borde de la casilla\n• Iconos junto al número del día (regla, médico, dentista, viaje, vacaciones, veterinario, importante, flor)\n• El círculo del día seleccionado es un tono más oscuro que el del turno\n• Tarjetas del día desplegado: hora y título en la misma línea\n• Nombres de los días de la semana ocultos si el fin de semana tiene color\n• Nueva fila de iconos en el evento: proyecto (casa), adjuntos (clip), icono del día y Juntos\n• Adjuntos con aviso si el archivo no está en el Synology\n• Vista anual: tocar el mes o su título abre el mes; el pellizco abre el mes donde están los dedos\n• Pendientes de planificar: título y comienzo del comentario\n• Configuración: Mi calendario y esta información\n• Icono nuevo de la app\n\nVersión 4\n• Pellizco entre vistas, eventos nuevos de todo el día, hora visible con Todo el día activado\n• Conexión con FacturaScripts y diario por proyecto\n\nVersión 3\n• Bandeja de pendientes, evento sin fecha, interruptor de funciones de trabajo\n\nVersión 2\n• Barra superior limpia, burbujas con inicial en la barra inferior, pantalla de tarea como la de evento</string>
+    <string name="tailscale">Tailscale</string>
+    <string name="tailscale_not_installed">Tailscale no está instalado en este móvil</string>
+    <string name="tailscale_connecting">Activando Tailscale…</string>
+    <string name="tailscale_connect_failed">Tailscale no se ha conectado, no se ha sincronizado nada</string>
+    <string name="tailscale_sync_done">Sincronizado, Tailscale desactivado</string>
+    <string name="tailscale_turned_on">Tailscale activado</string>
+    <string name="tailscale_turned_off">Tailscale desactivado</string>
+    <string name="tailscale_auto_sync">Activar Tailscale al actualizar y desactivarlo al terminar</string>
 </resources>

@@ -524,10 +524,16 @@ class CalDAVHelper(val context: Context) {
 
             if (event.color == 0) {
                 put(Events.EVENT_COLOR_KEY, "")
+                putNull(Events.EVENT_COLOR)
             } else {
                 val calendar = eventsHelper.getCalendarWithCalDAVCalendarId(calendarId)!!
                 val colors = getAvailableCalDAVCalendarColors(calendar, Colors.TYPE_EVENT)
-                put(Events.EVENT_COLOR_KEY, colors[event.color])
+                val colorKey = colors[event.color]
+                if (colorKey != null) {
+                    put(Events.EVENT_COLOR_KEY, colorKey)
+                } else {
+                    put(Events.EVENT_COLOR, event.color or 0xFF000000.toInt())
+                }
             }
 
             val repeatRule = Parser().getRepeatCode(event)

@@ -368,6 +368,15 @@ class Config(context: Context) : BaseConfig(context) {
         set(highlightWeekendsColor) = prefs.edit()
             .putInt(HIGHLIGHT_WEEKENDS_COLOR, highlightWeekendsColor).apply()
 
+    var tailscaleAutoSync: Boolean
+        get() = prefs.getBoolean(TAILSCALE_AUTO_SYNC, true)
+        set(tailscaleAutoSync) = prefs.edit().putBoolean(TAILSCALE_AUTO_SYNC, tailscaleAutoSync).apply()
+
+    /** 0 = solid pills and cards, 100 = fully transparent. */
+    var eventTransparency: Int
+        get() = prefs.getInt(EVENT_TRANSPARENCY, 0)
+        set(eventTransparency) = prefs.edit().putInt(EVENT_TRANSPARENCY, eventTransparency).apply()
+
     var weekendBackground: Boolean
         get() = prefs.getBoolean(WEEKEND_BACKGROUND, false)
         set(weekendBackground) = prefs.edit().putBoolean(WEEKEND_BACKGROUND, weekendBackground).apply()

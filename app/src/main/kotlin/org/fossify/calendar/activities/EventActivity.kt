@@ -442,6 +442,16 @@ class EventActivity : SimpleActivity() {
                 ?: config.lastUsedLocalCalendarId
         }
 
+        if (event == null) {
+            val juntsCal = findJuntsCalendar()
+            if (juntsCal != null && mCalendarId == juntsCal.id) {
+                mCalendarId = mStoredCalendars.firstOrNull { it.id == config.ownCalendarId && it.id != juntsCal.id }?.id
+                    ?: mStoredCalendars.firstOrNull { it.id == config.lastUsedLocalCalendarId && it.id != juntsCal.id }?.id
+                    ?: mStoredCalendars.firstOrNull { it.id != juntsCal.id }?.id
+                    ?: mCalendarId
+            }
+        }
+
         if (event != null) {
             mEvent = event
             mEventOccurrenceTS = intent.getLongExtra(EVENT_OCCURRENCE_TS, 0L)
@@ -1224,7 +1234,8 @@ class EventActivity : SimpleActivity() {
         hideKeyboard()
         ensureBackgroundThread {
             val isLocalEvent = mEventCalendarId == STORED_LOCALLY_ONLY
-            if (isLocalEvent) {
+            val colorCalendar = calendarsDB.getCalendarWithId(mCalendarId)
+            if (isLocalEvent || colorCalendar == null || getEventColors(colorCalendar).isEmpty()) {
                 showCustomEventColorDialog()
             } else {
                 showCalDAVEventColorDialog()
@@ -1474,11 +1485,7 @@ class EventActivity : SimpleActivity() {
             eventCalendarSubtitle.text = getString(R.string.offline_never_synced)
         }
 
-        val canCustomizeColors = if (isCaldav) {
-            getEventColors(calendar).isNotEmpty()
-        } else {
-            true
-        }
+        val canCustomizeColors = true
 
         eventIconColor.beVisibleIf(canCustomizeColors)
         updateJuntsCheckbox(calendar)
@@ -2518,6 +2525,9 @@ class EventActivity : SimpleActivity() {
 
     private fun setupNewHeader() = binding.apply {
         eventIconTime.setOnClickListener { showDateTimeDialog() }
+        eventHeaderTime.setOnClickListener { showDateTimeDialog() }
+        eventHeaderDate.setOnClickListener { showDateTimeDialog() }
+        eventTimeRow.setOnClickListener { showDateTimeDialog() }
         eventIconReminder.setOnClickListener { eventReminder1.performClick() }
         eventIconCalendar.setOnClickListener { showCalendarDialog() }
         eventIconColor.setOnClickListener { showEventColorDialog() }

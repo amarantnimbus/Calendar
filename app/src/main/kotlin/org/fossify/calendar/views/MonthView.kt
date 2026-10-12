@@ -30,6 +30,7 @@ import org.fossify.commons.helpers.FontHelper
 import org.fossify.commons.helpers.HIGHER_ALPHA
 import org.fossify.commons.helpers.LOWER_ALPHA
 import org.fossify.commons.helpers.MEDIUM_ALPHA
+import org.fossify.commons.helpers.ensureBackgroundThread
 import org.joda.time.DateTime
 import org.joda.time.Days
 import kotlin.math.max
@@ -84,6 +85,7 @@ class MonthView(context: Context, attrs: AttributeSet, defStyle: Int) : View(con
     private var panelHeight = 0f
     private var panelEvents = ArrayList<Event>()
     private var panelHiddenCount = 0
+    private var calendarInfo = HashMap<Long, Pair<String, Int>>()
     private val panelPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply { style = Paint.Style.FILL }
     private val panelRect = RectF()
     private val panelFramePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply { style = Paint.Style.STROKE }
@@ -151,6 +153,22 @@ class MonthView(context: Context, attrs: AttributeSet, defStyle: Int) : View(con
 
         initWeekDayLetters()
         setupCurrentDayOfWeekIndex()
+        loadCalendarInfo()
+    }
+
+    private fun loadCalendarInfo() {
+        ensureBackgroundThread {
+            val info = HashMap<Long, Pair<String, Int>>()
+            context.calendarsDB.getCalendars().forEach { cal ->
+                val id = cal.id ?: return@forEach
+                val name = cal.caldavDisplayName.ifEmpty { cal.title }
+                info[id] = Pair(name, cal.color)
+            }
+            post {
+                calendarInfo = info
+                invalidate()
+            }
+        }
     }
 
     fun updateDays(newDays: ArrayList<DayMonthly>, isMonthDayView: Boolean) {
@@ -220,7 +238,8 @@ class MonthView(context: Context, attrs: AttributeSet, defStyle: Int) : View(con
                         isTask = event.isTask(),
                         isTaskCompleted = event.isTaskCompleted(),
                         isAttendeeInviteDeclined = event.isAttendeeInviteDeclined(),
-                        isEventCanceled = event.isEventCanceled()
+                        isEventCanceled = event.isEventCanceled(),
+                        calendarId = event.calendarId
                     )
                     allEvents.add(monthViewEvent)
                 }
@@ -284,7 +303,7 @@ class MonthView(context: Context, attrs: AttributeSet, defStyle: Int) : View(con
                         numberBaseline = centerY + dayTextRect.height() / 2f
                         textPaint.color = when {
                             shiftColor != null -> {
-                                val base = shiftColor.getContrastColor()
+                                val base = if (highlightWeekends && day.isWeekend) weekendsTextColor else shiftColor.getContrastColor()
                                 if (day.isThisMonth) base else base.adjustAlpha(MEDIUM_ALPHA)
                             }
                             else -> textPaint.color
@@ -447,6 +466,38 @@ class MonthView(context: Context, attrs: AttributeSet, defStyle: Int) : View(con
         return ColorUtils.blendARGB(color or 0xFF000000.toInt(), config.backgroundColor or 0xFF000000.toInt(), 0.45f)
     }
 
+    // how much of the event color shows (1 = solid), from the transparency setting
+    private fun opacity() = (100 - config.eventTransparency.coerceIn(0, 100)) / 100f
+
+    // the color the eye sees for a fill painted with the current opacity
+    private fun shownColor(fill: Int): Int {
+        return ColorUtils.blendARGB(config.backgroundColor or 0xFF000000.toInt(), fill or 0xFF000000.toInt(), opacity())
+    }
+
+    private fun withOpacity(fill: Int): Int {
+        return (fill and 0x00FFFFFF) or ((opacity() * 255).toInt() shl 24)
+    }
+
+    // color of the calendar initial: the calendar color, adjusted when it would vanish on the pill
+    private fun initialColor(calendarColor: Int, pill: Int): Int {
+        val cal = calendarColor or 0xFF000000.toInt()
+        if (ColorUtils.calculateContrast(cal, pill or 0xFF000000.toInt()) >= 2.2) {
+            return cal
+        }
+        val hsl = FloatArray(3)
+        ColorUtils.colorToHSL(cal, hsl)
+        hsl[2] = if (ColorUtils.calculateLuminance(pill) > 0.5) 0.22f else 0.88f
+        return ColorUtils.HSLToColor(hsl) or 0xFF000000.toInt()
+    }
+
+    private fun pillBaseColor(event: MonthViewEvent): Int {
+        val dim = when {
+            event.isTask -> dimCompletedTasks && event.isTaskCompleted
+            else -> dimPastEvents && event.isPastEvent && !isPrintVersion
+        }
+        return if (dim) solidDim(event.color) else event.color or 0xFF000000.toInt()
+    }
+
     /** What is drawn at the right of the day number: together, own calendar icon, other calendar icon. */
     private class DayMarks(val junts: Boolean, val own: Int?, val other: Int?)
 
@@ -557,16 +608,7 @@ class MonthView(context: Context, attrs: AttributeSet, defStyle: Int) : View(con
     }
 
     private fun drawGrid(canvas: Canvas) {
-        // vertical lines
-        for (i in 0 until COLUMN_COUNT) {
-            var lineX = i * dayWidth
-            if (showWeekNumbers) {
-                lineX += horizontalOffset
-            }
-            canvas.drawLine(lineX, 0f, lineX, canvas.height.toFloat(), gridPaint)
-        }
-
-        // horizontal lines
+        // only horizontal lines: they divide the weeks
         canvas.drawLine(0f, 0f, canvas.width.toFloat(), 0f, gridPaint)
         for (i in 0 until ROW_COUNT) {
             if (!isRowVisible(i)) {
@@ -741,11 +783,11 @@ class MonthView(context: Context, attrs: AttributeSet, defStyle: Int) : View(con
             val top = cardTop(index)
             // solid card in the color of the event, a bit less saturated, no outline
             val fill = desaturate(ev.color)
-            panelPaint.color = fill
+            panelPaint.color = withOpacity(fill)
             panelRect.set(left, top, right, top + cardH)
             canvas.drawRoundRect(panelRect, BG_CORNER_RADIUS * 2, BG_CORNER_RADIUS * 2, panelPaint)
 
-            val textColorOnCard = fill.getContrastColor()
+            val textColorOnCard = shownColor(fill).getContrastColor()
             timePaint.color = textColorOnCard
             titlePaint.color = textColorOnCard
 
@@ -846,8 +888,25 @@ class MonthView(context: Context, attrs: AttributeSet, defStyle: Int) : View(con
     }
 
     private fun drawEventTitle(event: MonthViewEvent, canvas: Canvas, x: Float, y: Float, availableWidth: Float, paint: Paint) {
-        val ellipsized = TextUtils.ellipsize(event.title, eventTitlePaint, availableWidth - smallPadding, TextUtils.TruncateAt.END)
-        canvas.drawText(event.title, 0, ellipsized.length, x + smallPadding * 2, y, paint)
+        var startX = x + smallPadding * 2
+        var available = availableWidth - smallPadding
+
+        // the initial of the calendar, in bold and in the color of that calendar
+        val info = calendarInfo[event.calendarId]
+        if (info != null && info.first.isNotEmpty()) {
+            val initial = info.first.substring(0, 1).uppercase()
+            val initialPaint = Paint(paint).apply {
+                typeface = Typeface.create(paint.typeface, Typeface.BOLD)
+                color = initialColor(info.second, shownColor(pillBaseColor(event)))
+            }
+            canvas.drawText(initial, startX, y, initialPaint)
+            val used = initialPaint.measureText("$initial ")
+            startX += used
+            available -= used
+        }
+
+        val ellipsized = TextUtils.ellipsize(event.title, eventTitlePaint, max(0f, available), TextUtils.TruncateAt.END)
+        canvas.drawText(ellipsized, 0, ellipsized.length, startX, y, paint)
     }
 
     private fun getTextPaint(startDay: DayMonthly): Paint {
@@ -871,28 +930,11 @@ class MonthView(context: Context, attrs: AttributeSet, defStyle: Int) : View(con
     }
 
     private fun getEventBackgroundColor(event: MonthViewEvent): Paint {
-        var paintColor = event.color or 0xFF000000.toInt()
-
-        val dim = when {
-            event.isTask -> dimCompletedTasks && event.isTaskCompleted
-            else -> dimPastEvents && event.isPastEvent && !isPrintVersion
-        }
-
-        // solid colors only, a dimmed event is a lighter solid color
-        if (dim) {
-            paintColor = solidDim(paintColor)
-        }
-
-        return getColoredPaint(paintColor)
+        return getColoredPaint(withOpacity(pillBaseColor(event)))
     }
 
     private fun getEventTitlePaint(event: MonthViewEvent): Paint {
-        val dim = when {
-            event.isTask -> dimCompletedTasks && event.isTaskCompleted
-            else -> dimPastEvents && event.isPastEvent && !isPrintVersion
-        }
-        val base = if (dim) solidDim(event.color) else event.color or 0xFF000000.toInt()
-        val paintColor = base.getContrastColor()
+        val paintColor = shownColor(pillBaseColor(event)).getContrastColor()
 
         val curPaint = Paint(eventTitlePaint)
         curPaint.color = paintColor

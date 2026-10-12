@@ -227,6 +227,7 @@
     <string name="highlight_weekends">Highlight weekends on some views</string>
     <string name="highlight_weekends_color">Color of highlighted weekends</string>
     <string name="weekend_background">Grey background on weekends (monthly view)</string>
+    <string name="event_transparency">Event transparency (month view pills and day cards)</string>
     <string name="allow_changing_time_zones">Allow changing event time zones</string>
     <string name="manage_quick_filter_event_types">Manage quick filter calendars</string>
     <string name="allow_creating_tasks">Allow creating tasks</string>
@@ -397,4 +398,12 @@
     <string name="app_info">App information</string>
     <string name="app_changes">Changes by version</string>
     <string name="changelog_text">Version 5\n• Month view: smaller text, solid colored band and circles aligned with the cell edge\n• Icons next to the day number (period, doctor, dentist, trip, vacation, vet, important, flower)\n• The selected day circle is a shade darker than the shift color\n• Open day cards: time and title on the same line\n• Week day names hidden when weekends are colored\n• New icon row in events: project (house), attachments (clip), day icon and Together\n• Attachments with a warning if the file is not on the Synology\n• Year view: tapping a month or its title opens it; pinching opens the month under the fingers\n• Pending to plan: title and start of the comment\n• Settings: My calendar and this information\n• New app icon\n\nVersion 4\n• Pinch between views, new events all day, time visible with All day on\n• FacturaScripts connection and project diary\n\nVersion 3\n• Pending inbox, event without date, work features switch\n\nVersion 2\n• Clean top bar, bubbles with initial in the bottom bar, task screen like the event screen</string>
+    <string name="tailscale">Tailscale</string>
+    <string name="tailscale_not_installed">Tailscale is not installed on this phone</string>
+    <string name="tailscale_connecting">Turning Tailscale on…</string>
+    <string name="tailscale_connect_failed">Tailscale did not connect, nothing was synchronized</string>
+    <string name="tailscale_sync_done">Synchronized, Tailscale turned off</string>
+    <string name="tailscale_turned_on">Tailscale on</string>
+    <string name="tailscale_turned_off">Tailscale off</string>
+    <string name="tailscale_auto_sync">Turn Tailscale on when refreshing and off when done</string>
 </resources>

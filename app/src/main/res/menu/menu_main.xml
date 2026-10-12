@@ -54,6 +54,11 @@
         android:title="@string/add_anniversaries"
         app:showAsAction="never" />
     <item
+        android:id="@+id/tailscale"
+        android:icon="@drawable/ic_tailscale_vector"
+        android:title="@string/tailscale"
+        app:showAsAction="always" />
+    <item
         android:id="@+id/settings"
         android:icon="@drawable/ic_settings_cog_vector"
         android:title="@string/settings"

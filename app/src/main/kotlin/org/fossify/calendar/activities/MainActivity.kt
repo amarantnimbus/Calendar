@@ -1,7 +1,11 @@
 package org.fossify.calendar.activities
 
 import android.annotation.SuppressLint
+import android.content.Context
 import android.content.Intent
+import android.net.ConnectivityManager
+import android.net.Network
+import android.net.NetworkCapabilities
 import android.content.pm.ShortcutInfo
 import android.graphics.drawable.Icon
 import android.graphics.drawable.LayerDrawable
@@ -51,6 +55,7 @@ import org.fossify.calendar.helpers.EVENTS_LIST_VIEW
 import org.fossify.calendar.extensions.getNewEventTimestampFromCode
 import org.fossify.calendar.helpers.EVENT_ID
 import org.fossify.calendar.helpers.FacturaScripts
+import org.fossify.calendar.helpers.TailscaleSync
 import org.fossify.calendar.helpers.NEW_EVENT_START_TS
 import org.fossify.calendar.helpers.NEW_PENDING_EVENT
 import org.fossify.calendar.helpers.EVENT_OCCURRENCE_TS
@@ -232,7 +237,7 @@ class MainActivity : SimpleActivity(), RefreshRecyclerViewListener {
         }
 
         binding.swipeRefreshLayout.setOnRefreshListener {
-            refreshCalDAVCalendars(true)
+            refreshWithTailscale()
         }
 
         checkIsViewIntent()
@@ -263,6 +268,8 @@ class MainActivity : SimpleActivity(), RefreshRecyclerViewListener {
 
     override fun onResume() {
         super.onResume()
+        watchNetworkForTailscaleIcon()
+        updateTailscaleIcon()
         if (mStoredTextColor != getProperTextColor() || mStoredBackgroundColor != getProperBackgroundColor() || mStoredPrimaryColor != getProperPrimaryColor()
             || mStoredDayCode != Formatter.getTodayCode() || mStoredDimPastEvents != config.dimPastEvents || mStoredDimCompletedTasks != config.dimCompletedTasks
             || mStoredHighlightWeekends != config.highlightWeekends || mStoredHighlightWeekendsColor != config.highlightWeekendsColor
@@ -329,6 +336,7 @@ class MainActivity : SimpleActivity(), RefreshRecyclerViewListener {
 
     override fun onPause() {
         super.onPause()
+        stopWatchingNetwork()
         storeStateVariables()
     }
 
@@ -359,6 +367,108 @@ class MainActivity : SimpleActivity(), RefreshRecyclerViewListener {
             findItem(R.id.more_apps_from_us).isVisible =
                 resources.getBoolean(org.fossify.commons.R.bool.is_google_play_build)
         }
+        updateTailscaleIcon()
+    }
+
+    private var mTailscaleCallback: ConnectivityManager.NetworkCallback? = null
+
+    // green when Tailscale is on, dim when it is off; hidden if the Tailscale app is not installed
+    private fun updateTailscaleIcon() {
+        val item = binding.mainMenu.requireToolbar().menu.findItem(R.id.tailscale) ?: return
+        item.isVisible = TailscaleSync.isInstalled(this)
+        val color = if (TailscaleSync.isActive(this)) 0xFF43A047.toInt() else getProperTextColor().adjustAlpha(0.6f)
+        val drawable = item.icon?.mutate() ?: return
+        drawable.applyColorFilter(color)
+        item.icon = drawable
+    }
+
+    private fun toggleTailscale() {
+        if (!TailscaleSync.isInstalled(this)) {
+            toast(R.string.tailscale_not_installed)
+            return
+        }
+        if (TailscaleSync.isActive(this)) {
+            TailscaleSync.disconnect(this)
+            toast(R.string.tailscale_turned_off)
+        } else {
+            TailscaleSync.connect(this)
+            toast(R.string.tailscale_turned_on)
+        }
+    }
+
+    private fun watchNetworkForTailscaleIcon() {
+        try {
+            val manager = getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
+            val callback = object : ConnectivityManager.NetworkCallback() {
+                override fun onCapabilitiesChanged(network: Network, capabilities: NetworkCapabilities) {
+                    runOnUiThread { updateTailscaleIcon() }
+                }
+
+                override fun onLost(network: Network) {
+                    runOnUiThread { updateTailscaleIcon() }
+                }
+            }
+            manager.registerDefaultNetworkCallback(callback)
+            mTailscaleCallback = callback
+        } catch (ignored: Exception) {
+        }
+    }
+
+    private fun stopWatchingNetwork() {
+        try {
+            mTailscaleCallback?.let {
+                (getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager).unregisterNetworkCallback(it)
+            }
+        } catch (ignored: Exception) {
+        }
+        mTailscaleCallback = null
+    }
+
+    /**
+     * Refresh: turns Tailscale on if needed, waits for the calendar synchronization to finish
+     * and turns Tailscale off again if this refresh was the one that turned it on.
+     */
+    private fun refreshWithTailscale() {
+        if (!config.tailscaleAutoSync || !TailscaleSync.isInstalled(this)) {
+            refreshCalDAVCalendars(true)
+            return
+        }
+
+        val activity = this
+        ensureBackgroundThread {
+            val wasActive = TailscaleSync.isActive(activity)
+            if (!wasActive) {
+                runOnUiThread { toast(R.string.tailscale_connecting) }
+                TailscaleSync.connect(activity)
+                val connected = TailscaleSync.waitUntil(25_000L) { TailscaleSync.isActive(activity) }
+                if (!connected) {
+                    runOnUiThread {
+                        toast(R.string.tailscale_connect_failed)
+                        binding.swipeRefreshLayout.isRefreshing = false
+                        updateTailscaleIcon()
+                    }
+                    return@ensureBackgroundThread
+                }
+                // let the routes settle
+                Thread.sleep(2000)
+            }
+
+            runOnUiThread { refreshCalDAVCalendars(true) }
+            TailscaleSync.waitForCalendarSync()
+
+            if (!wasActive) {
+                TailscaleSync.disconnect(activity)
+            }
+
+            runOnUiThread {
+                binding.swipeRefreshLayout.isRefreshing = false
+                if (!wasActive) {
+                    toast(R.string.tailscale_sync_done)
+                }
+                updateTailscaleIcon()
+            }
+            updateCalDAVEvents()
+        }
     }
 
     private fun setupOptionsMenu() = binding.apply {
@@ -383,7 +493,8 @@ class MainActivity : SimpleActivity(), RefreshRecyclerViewListener {
                 R.id.go_to_date -> showGoToDateDialog()
                 R.id.print -> printView()
                 R.id.filter -> showFilterDialog()
-                R.id.refresh_caldav_calendars -> refreshCalDAVCalendars(true)
+                R.id.refresh_caldav_calendars -> refreshWithTailscale()
+                R.id.tailscale -> toggleTailscale()
                 R.id.manage_holidays -> manageHolidays()
                 R.id.add_birthdays -> tryAddBirthdays()
                 R.id.add_anniversaries -> tryAddAnniversaries()

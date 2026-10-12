@@ -210,6 +210,8 @@ class SettingsActivity : SimpleActivity() {
         setupHighlightWeekends()
         setupHighlightWeekendsColor()
         setupWeekendBackground()
+        setupEventTransparency()
+        setupTailscaleAuto()
         setupShifts()
         setupDeleteAllEvents()
         setupDisplayDescription()
@@ -545,6 +547,25 @@ class SettingsActivity : SimpleActivity() {
             settingsHighlightWeekends.toggle()
             config.highlightWeekends = settingsHighlightWeekends.isChecked
             settingsHighlightWeekendsColorHolder.beVisibleIf(config.highlightWeekends)
+        }
+    }
+
+    private fun setupTailscaleAuto() = binding.apply {
+        settingsTailscaleAuto.isChecked = config.tailscaleAutoSync
+        settingsTailscaleAutoHolder.setOnClickListener {
+            settingsTailscaleAuto.toggle()
+            config.tailscaleAutoSync = settingsTailscaleAuto.isChecked
+        }
+    }
+
+    private fun setupEventTransparency() = binding.apply {
+        settingsEventTransparency.text = "${config.eventTransparency} %"
+        settingsEventTransparencyHolder.setOnClickListener {
+            val values = (0..80 step 10).toList()
+            showItemsDialog(R.string.event_transparency, values.map { "$it %" }) { index ->
+                config.eventTransparency = values[index]
+                settingsEventTransparency.text = "${values[index]} %"
+            }
         }
     }
 
