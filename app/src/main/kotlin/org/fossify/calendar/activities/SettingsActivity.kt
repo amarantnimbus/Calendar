@@ -33,6 +33,8 @@ import org.fossify.calendar.extensions.scheduleNextAutomaticBackup
 import org.fossify.calendar.extensions.showImportEventsDialog
 import org.fossify.calendar.extensions.tryImportEventsFromFile
 import org.fossify.calendar.extensions.updateWidgets
+import org.fossify.calendar.helpers.showItemsDialog
+import org.fossify.calendar.helpers.showTextDialog
 import org.fossify.calendar.helpers.ALLOW_CHANGING_TIME_ZONES
 import org.fossify.calendar.helpers.ALLOW_CREATING_TASKS
 import org.fossify.calendar.helpers.ALLOW_CUSTOMIZE_DAY_COUNT
@@ -771,7 +773,7 @@ class SettingsActivity : SimpleActivity() {
                     val names = ArrayList<CharSequence>()
                     names.add("-")
                     calendars.forEach { names.add(it.getDisplayTitle()) }
-                    org.fossify.calendar.helpers.showItemsDialog(titleId = R.string.own_calendar, items = names) { which ->
+                    showItemsDialog(titleId = R.string.own_calendar, items = names) { which ->
                         config.ownCalendarId = if (which == 0) -1L else calendars[which - 1].id ?: -1L
                         updateOwnCalendarValue()
                     }
@@ -795,7 +797,7 @@ class SettingsActivity : SimpleActivity() {
 
     private fun setupAppInfo() = binding.apply {
         settingsAppChangesHolder.setOnClickListener {
-            org.fossify.calendar.helpers.showTextDialog(R.string.app_changes, getString(R.string.changelog_text))
+            showTextDialog(R.string.app_changes, getString(R.string.changelog_text))
         }
     }
 
