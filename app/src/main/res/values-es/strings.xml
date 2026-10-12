@@ -183,6 +183,7 @@
     <string name="other_time">Otro momento</string>
     <string name="highlight_weekends">Resaltar los fines de semana en algunas vistas</string>
     <string name="highlight_weekends_color">Color de los fines de semana resaltados</string>
+    <string name="weekend_background">Fondo gris en los fines de semana (vista mensual)</string>
     <string name="allow_changing_time_zones">Permitir cambiar las zonas horarias de los eventos</string>
     <string name="manage_quick_filter_event_types">Administrar calendarios de filtro rápido</string>
     <string name="allow_creating_tasks">Permitir crear tareas</string>
@@ -311,6 +312,15 @@
     <string name="fs_project">Proyecto</string>
     <string name="fs_no_project">Ningún proyecto</string>
     <string name="fs_no_projects">No hay proyectos cargados. Configura FacturaScripts en Ajustes.</string>
+    <string name="fs_type">Tipo</string>
+    <string name="fs_type_required">Elige el tipo de la entrada del diario</string>
+    <string name="fs_type_client">Cliente</string>
+    <string name="fs_type_ajuntament">Ayuntamiento</string>
+    <string name="fs_type_obra">Obra</string>
+    <string name="fs_type_coaib">Coaib</string>
+    <string name="fs_type_admin">Otras administraciones</string>
+    <string name="fs_type_tecnics">Técnicos colaboradores</string>
+    <string name="fs_type_altres">Otros</string>
 
     <string name="icon_period">Regla</string>
     <string name="icon_doctor">Médico</string>

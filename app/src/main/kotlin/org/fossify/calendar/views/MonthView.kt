@@ -42,6 +42,7 @@ class MonthView(context: Context, attrs: AttributeSet, defStyle: Int) : View(con
         private const val EVENT_DOT_COLUMN_COUNT = 3
         private const val EVENT_DOT_ROW_COUNT = 1
         private const val TEXT_SCALE = 0.8f
+        private const val VISIBLE_ROWS = 5
     }
 
     private var textPaint: Paint
@@ -77,6 +78,9 @@ class MonthView(context: Context, attrs: AttributeSet, defStyle: Int) : View(con
     private var dayVerticalOffsets = SparseIntArray()
     private var selectedDayCoords = Point(-1, -1)
     private var selectedDayIndex = -1
+    private var rowShift = 0
+    private var wantShift = false
+    private var userMovedRows = false
     private var panelHeight = 0f
     private var panelEvents = ArrayList<Event>()
     private var panelHiddenCount = 0
@@ -93,11 +97,6 @@ class MonthView(context: Context, attrs: AttributeSet, defStyle: Int) : View(con
         color = 0xFFD32F2F.toInt()
     }
     private val shiftPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply { style = Paint.Style.FILL }
-    private val juntsStroke = max(1f, 1.2f * context.resources.displayMetrics.density)
-    private val juntsPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        style = Paint.Style.STROKE
-        strokeWidth = juntsStroke
-    }
 
     constructor(context: Context, attrs: AttributeSet) : this(context, attrs, 0)
 
@@ -157,6 +156,12 @@ class MonthView(context: Context, attrs: AttributeSet, defStyle: Int) : View(con
     fun updateDays(newDays: ArrayList<DayMonthly>, isMonthDayView: Boolean) {
         this.isMonthDayView = isMonthDayView
         days = newDays
+        if (!userMovedRows && canShiftRows()) {
+            // when today is in the sixth week, start with that week in view
+            val todayIndex = days.indexOfFirst { it.isToday && it.isThisMonth }
+            wantShift = todayIndex >= VISIBLE_ROWS * 7
+        }
+        rowShift = if (wantShift && canShiftRows()) 1 else 0
         showWeekNumbers = config.showWeekNumbers
         highlightWeekends = config.highlightWeekends
         weekDaysLetterHeight = if (highlightWeekends) 0 else headerHeightFull
@@ -168,7 +173,14 @@ class MonthView(context: Context, attrs: AttributeSet, defStyle: Int) : View(con
     }
 
     private fun groupAllEvents() {
+        allEvents = ArrayList()
+        val lastMonthIndex = days.indexOfLast { it.isThisMonth }
         days.forEach { day ->
+            // days of other months stay empty in the month view
+            if (!isMonthDayView && !day.isThisMonth) {
+                return@forEach
+            }
+
             val dayIndexOnMonthView = day.indexOnMonthView
 
             day.dayEvents.forEach { event ->
@@ -182,7 +194,17 @@ class MonthView(context: Context, attrs: AttributeSet, defStyle: Int) : View(con
                 val shouldAddEvent = notYetAddedOrIsRepeatingEvent || canOverlap && (lastEvent.startTS < event.startTS)
 
                 if (shouldAddEvent && !validDayEvent) {
-                    val daysCnt = getEventLastingDaysCount(event)
+                    var daysCnt = getEventLastingDaysCount(event)
+                    if (!isMonthDayView) {
+                        // the event may have started on a hidden day of the previous month
+                        val screenStart = Formatter.getDateTimeFromCode(days.first().code).toLocalDate()
+                        val eventStart = Formatter.getDateTimeFromTS(event.startTS).toLocalDate()
+                        val startIndex = max(0, Days.daysBetween(screenStart, eventStart).days)
+                        daysCnt = max(1, daysCnt - max(0, dayIndexOnMonthView - startIndex))
+                        if (lastMonthIndex >= 0) {
+                            daysCnt = min(daysCnt, lastMonthIndex - dayIndexOnMonthView + 1)
+                        }
+                    }
 
                     val monthViewEvent = MonthViewEvent(
                         id = event.id!!,
@@ -216,6 +238,7 @@ class MonthView(context: Context, attrs: AttributeSet, defStyle: Int) : View(con
         measureDaySize(canvas)
 
         val schedule = ShiftHelper.load(config)
+        drawWeekendBackgrounds(canvas)
         drawShiftBackgrounds(canvas, schedule)
 
         if (config.showGrid && !isMonthDayView) {
@@ -233,7 +256,7 @@ class MonthView(context: Context, attrs: AttributeSet, defStyle: Int) : View(con
         for (y in 0 until ROW_COUNT) {
             for (x in 0 until COLUMN_COUNT) {
                 val day = days.getOrNull(curId)
-                if (day != null) {
+                if (day != null && (isMonthDayView || (isRowVisible(y) && day.isThisMonth))) {
                     val dayNumber = day.value.toString()
                     val textPaint = getTextPaint(day)
                     textPaint.getTextBounds(dayNumber, 0, dayNumber.length, dayTextRect)
@@ -246,73 +269,59 @@ class MonthView(context: Context, attrs: AttributeSet, defStyle: Int) : View(con
 
                     val isDaySelected = selectedDayCoords.x != -1 && x == selectedDayCoords.x && y == selectedDayCoords.y
                     val isExpandedDay = isExpandEnabled() && selectedDayIndex == curId
-                    var openCircleBottom = 0f
                     var numberCenterX = xPosCenter
                     var numberBaseline = textY
                     if (!isMonthDayView) {
                         val ts = textPaint.textSize
-                        val inset = if (isJuntsDay(day)) juntsStroke else 0f
-                        val band = bandHeight() + 2 * inset
-                        val isTodayMarked = day.isToday && !isPrintVersion
-                        val isOpenDay = isExpandedDay
+                        val band = bandHeight()
                         val shiftColor = schedule?.let { sch -> sch.shiftFor(day.code)?.let { sch.colorFor(it) } }
-                        val hasCircle = isTodayMarked || isOpenDay
-                        val openR = openRadius()
-                        val circleRadius = if (isOpenDay) openR else bandHeight() / 2
-                        val leftWidth = if (hasCircle) circleRadius * 2 else textPaint.measureText(dayNumber)
+                        val sidePad = smallPadding * 3f
 
-                        // optional icon of the day, placed to the right of the number
-                        val dayIcon = dayIconFor(day)
-                        val iconSize = ts * 0.95f
-                        val gap = ts * 0.2f
-                        val plusWidth = if (dayIcon?.second == true) ts * 0.7f else 0f
-                        val groupWidth = leftWidth + if (dayIcon != null) gap + iconSize + plusWidth else 0f
-                        val groupStart = xPosCenter - groupWidth / 2
-                        numberCenterX = groupStart + leftWidth / 2
-
-                        val centerY = if (isOpenDay) yPos + inset + openR else yPos + band / 2
+                        // the number sits at the far left of the cell
+                        textPaint.textAlign = Paint.Align.LEFT
+                        numberCenterX = xPos + sidePad
+                        val centerY = yPos + (band - lineThickness()) / 2
                         numberBaseline = centerY + dayTextRect.height() / 2f
-
-                        if (hasCircle) {
-                            if (isOpenDay) {
-                                // open day: bigger circle, a bit darker than the shift color,
-                                // red when the open day is today. Top edge flush with the cell.
-                                val fillColor = if (isTodayMarked) {
-                                    0xFFD32F2F.toInt()
-                                } else {
-                                    shiftColor?.let { darken(it) } ?: Color.WHITE
-                                }
-                                val isFreeDay = shiftColor == null && !isTodayMarked && schedule != null
-                                shiftPaint.color = fillColor
-                                canvas.drawCircle(numberCenterX, centerY, openR, shiftPaint)
-                                markPaint.color = if (isFreeDay) Color.BLACK else outlineColor()
-                                canvas.drawCircle(numberCenterX, centerY, openR, markPaint)
-                                textPaint.color = if (isTodayMarked) Color.WHITE else fillColor.getContrastColor()
-                                openCircleBottom = inset + openR * 2
-                            } else {
-                                // today, not open: red circle as tall as the day band
-                                canvas.drawCircle(numberCenterX, centerY, circleRadius, todayPaint)
-                                textPaint.color = Color.WHITE
+                        textPaint.color = when {
+                            shiftColor != null -> {
+                                val base = shiftColor.getContrastColor()
+                                if (day.isThisMonth) base else base.adjustAlpha(MEDIUM_ALPHA)
                             }
-                        } else if (shiftColor != null) {
-                            val base = shiftColor.getContrastColor()
-                            textPaint.color = if (day.isThisMonth) base else base.adjustAlpha(MEDIUM_ALPHA)
+                            else -> textPaint.color
+                        }
+                        if (day.isToday && !isPrintVersion && shiftColor == null) {
+                            textPaint.color = textColor
                         }
 
-                        if (dayIcon != null) {
-                            val iconColor = shiftColor?.getContrastColor() ?: textColor
-                            val icon = resources.getColoredDrawableWithColor(dayIcon.first.drawable, iconColor).mutate()
-                            val iconLeft = (groupStart + leftWidth + gap).toInt()
-                            val iconTop = (centerY - iconSize / 2f).toInt()
-                            icon.setBounds(iconLeft, iconTop, iconLeft + iconSize.toInt(), iconTop + iconSize.toInt())
-                            icon.draw(canvas)
-                            if (dayIcon.second) {
-                                plusTextPaint.textSize = ts * 0.9f
-                                plusTextPaint.color = iconColor
-                                plusTextPaint.textAlign = Paint.Align.LEFT
-                                canvas.drawText("+", iconLeft + iconSize + ts * 0.05f, iconTop + iconSize * 0.8f, plusTextPaint)
-                                plusTextPaint.textAlign = Paint.Align.CENTER
+                        // icons at the far right: together, own calendar, other calendar
+                        val slots = dayMarksFor(day)
+                        val iconSize = ts * 0.9f
+                        val slotGap = ts * 0.12f
+                        val iconColor = shiftColor?.getContrastColor() ?: textColor
+                        var iconRight = xPos + dayWidth - sidePad
+                        val drawables = arrayOf(slots.other, slots.own, if (slots.junts) -1 else null)
+                        drawables.forEachIndexed { slot, res ->
+                            val iconLeft = iconRight - iconSize
+                            if (res != null) {
+                                val color = if (slot == 0) iconColor.adjustAlpha(0.55f) else iconColor
+                                val resId = if (res == -1) R.drawable.ic_junts_people else res
+                                val icon = resources.getColoredDrawableWithColor(resId, color).mutate()
+                                val iconTop = (centerY - iconSize / 2f).toInt()
+                                icon.setBounds(iconLeft.toInt(), iconTop, (iconLeft + iconSize).toInt(), iconTop + iconSize.toInt())
+                                icon.draw(canvas)
                             }
+                            iconRight = iconLeft - slotGap
+                        }
+
+                        // line under the number: red today, black the open day
+                        val lineColor = when {
+                            day.isToday && !isPrintVersion -> 0xFFD32F2F.toInt()
+                            isExpandedDay -> outlineColor()
+                            else -> null
+                        }
+                        if (lineColor != null) {
+                            shiftPaint.color = lineColor
+                            canvas.drawRect(xPos, yPos + band - lineThickness(), xPos + dayWidth, yPos + band, shiftPaint)
                         }
                     } else if (isDaySelected) {
                         canvas.drawCircle(
@@ -385,9 +394,8 @@ class MonthView(context: Context, attrs: AttributeSet, defStyle: Int) : View(con
                     val nextOffset = if (isMonthDayView) {
                         verticalOffset + textPaint.textSize * 2f
                     } else {
-                        // event pills start below the colored day band
-                        val inset = if (isJuntsDay(day)) juntsStroke else 0f
-                        verticalOffset + max(bandHeight() + 2 * inset, openCircleBottom) + eventTitleHeight + smallPadding * 2
+                        // event pills start below the day band
+                        verticalOffset + bandHeight() + eventTitleHeight + smallPadding * 2
                     }
                     dayVerticalOffsets.put(day.indexOnMonthView, nextOffset.toInt())
                 }
@@ -399,28 +407,26 @@ class MonthView(context: Context, attrs: AttributeSet, defStyle: Int) : View(con
             for (event in allEvents) {
                 drawEvent(event, canvas)
             }
+            drawRowHint(canvas)
         }
 
         drawPanel(canvas)
     }
 
-    // ---- helpers for the day band, the circles and the day icons
+    // ---- helpers for the day band and the day icons
 
-    private fun isJuntsDay(day: DayMonthly): Boolean {
+    private fun hasJuntsEvent(day: DayMonthly): Boolean {
         val juntsId = config.juntsCalendarId
         return juntsId != -1L && day.dayEvents.any { it.calendarId == juntsId }
     }
 
-    // a circle wide enough for two digits; the colored band is exactly as tall as this circle
+    // the colored band behind the day number is as tall as a circle that fits two digits
     private fun circleDiameter(): Float {
         val ts = textPaint.textSize
         return max(textPaint.measureText("88"), ts * 0.75f) + ts * 0.32f
     }
 
-    private fun openRadius(): Float {
-        val ts = textPaint.textSize
-        return max(textPaint.measureText("88"), ts * 0.75f) / 2 + ts * 0.37f
-    }
+    private fun lineThickness() = max(2f, 2f * resources.displayMetrics.density)
 
     private fun darken(color: Int): Int {
         val hsl = FloatArray(3)
@@ -429,27 +435,97 @@ class MonthView(context: Context, attrs: AttributeSet, defStyle: Int) : View(con
         return ColorUtils.HSLToColor(hsl) or 0xFF000000.toInt()
     }
 
-    /** The icon to show for the day, and whether another calendar also has an icon that day. */
-    private fun dayIconFor(day: DayMonthly): Pair<DayIcons.Icon, Boolean>? {
+    private fun desaturate(color: Int): Int {
+        val hsl = FloatArray(3)
+        ColorUtils.colorToHSL(color, hsl)
+        hsl[1] = hsl[1] * 0.72f
+        return ColorUtils.HSLToColor(hsl) or 0xFF000000.toInt()
+    }
+
+    // a solid, lighter version of the color for events that are already over (no transparency)
+    private fun solidDim(color: Int): Int {
+        return ColorUtils.blendARGB(color or 0xFF000000.toInt(), config.backgroundColor or 0xFF000000.toInt(), 0.45f)
+    }
+
+    /** What is drawn at the right of the day number: together, own calendar icon, other calendar icon. */
+    private class DayMarks(val junts: Boolean, val own: Int?, val other: Int?)
+
+    private fun dayMarksFor(day: DayMonthly): DayMarks {
         val withIcon = day.dayEvents
             .sortedWith(compareBy({ it.startTS }, { it.endTS }))
             .mapNotNull { event -> DayIcons.iconOf(event.description)?.let { icon -> Pair(event, icon) } }
-        if (withIcon.isEmpty()) {
-            return null
+
+        val ownId = config.ownCalendarId
+        val own: DayIcons.Icon?
+        val other: DayIcons.Icon?
+        if (ownId != -1L) {
+            own = withIcon.firstOrNull { it.first.calendarId == ownId }?.second
+            other = withIcon.firstOrNull { it.first.calendarId != ownId }?.second
+        } else {
+            own = withIcon.firstOrNull()?.second
+            other = null
         }
 
-        val own = config.ownCalendarId
-        if (own != -1L) {
-            val mine = withIcon.filter { it.first.calendarId == own }
-            if (mine.isNotEmpty()) {
-                return Pair(mine.first().second, withIcon.any { it.first.calendarId != own })
-            }
-        }
-
-        return Pair(withIcon.first().second, own == -1L && withIcon.size > 1)
+        return DayMarks(hasJuntsEvent(day), own?.drawable, other?.drawable)
     }
 
-    private val OPEN_FREE_DAY_COLOR = 0xFF55555A.toInt()
+    // ---- rows: five rows are always shown, in a six week month the sixth one is reached by dragging up
+
+    private fun canShiftRows() = !isMonthDayView && days.size > VISIBLE_ROWS * 7 && days[VISIBLE_ROWS * 7].isThisMonth
+
+    private fun isRowVisible(row: Int) = isMonthDayView || (row >= rowShift && row < rowShift + VISIBLE_ROWS)
+
+    fun hasHiddenRow() = canShiftRows()
+
+    fun isShifted() = rowShift > 0
+
+    fun setRowShift(shift: Boolean) {
+        userMovedRows = true
+        wantShift = shift
+        val newShift = if (shift && canShiftRows()) 1 else 0
+        if (newShift != rowShift) {
+            rowShift = newShift
+            // an open day that is no longer visible is closed
+            if (selectedDayIndex >= 0 && !isRowVisible(selectedDayIndex / 7)) {
+                selectedDayIndex = -1
+            }
+            invalidate()
+        }
+    }
+
+    private fun drawRowHint(canvas: Canvas) {
+        if (!canShiftRows()) {
+            return
+        }
+
+        val barWidth = dayWidth * 0.7f
+        val barHeight = max(3f, 3f * resources.displayMetrics.density)
+        val cx = horizontalOffset + (width - horizontalOffset) / 2f
+        val y = if (rowShift == 0) height - barHeight * 1.6f else weekDaysLetterHeight + barHeight * 0.6f
+        shiftPaint.color = textColor.adjustAlpha(0.35f)
+        canvas.drawRoundRect(cx - barWidth / 2, y, cx + barWidth / 2, y + barHeight, barHeight / 2, barHeight / 2, shiftPaint)
+    }
+
+    // weekend cells get a light grey background when the option is on
+    private fun drawWeekendBackgrounds(canvas: Canvas) {
+        if (!config.weekendBackground || isMonthDayView || isPrintVersion) {
+            return
+        }
+
+        shiftPaint.color = textColor.adjustAlpha(0.07f)
+        var curId = 0
+        for (y in 0 until ROW_COUNT) {
+            for (x in 0 until COLUMN_COUNT) {
+                val day = days.getOrNull(curId)
+                if (day != null && isRowVisible(y) && day.isThisMonth && day.isWeekend) {
+                    val left = x * dayWidth + horizontalOffset
+                    val top = rowOrigin(y) + weekDaysLetterHeight
+                    canvas.drawRect(left, top, left + dayWidth, top + dayHeight, shiftPaint)
+                }
+                curId++
+            }
+        }
+    }
 
     // height of the colored band behind the day number
     private fun bandHeight() = circleDiameter()
@@ -464,29 +540,15 @@ class MonthView(context: Context, attrs: AttributeSet, defStyle: Int) : View(con
         for (y in 0 until ROW_COUNT) {
             for (x in 0 until COLUMN_COUNT) {
                 val day = days.getOrNull(curId)
-                if (day != null) {
+                if (day != null && isRowVisible(y) && (isMonthDayView || day.isThisMonth)) {
                     val shift = schedule.shiftFor(day.code)
                     val shiftColor = if (shift != null) schedule.colorFor(shift) else null
-                    val isFreeOpenDay = shiftColor == null && !day.isToday && isExpandEnabled() && selectedDayIndex == curId
-                    val isJunts = isJuntsDay(day)
-                    val inset = if (isJunts) juntsStroke else 0f
                     val left = x * dayWidth + horizontalOffset
                     val top = rowOrigin(y) + weekDaysLetterHeight
-                    val bottom = if (config.shiftFullCell) top + dayHeight else top + bandHeight() + 2 * inset
+                    val bottom = if (config.shiftFullCell) top + dayHeight else top + bandHeight()
                     if (shiftColor != null) {
                         shiftPaint.color = shiftColor or 0xFF000000.toInt()
                         canvas.drawRect(left, top, left + dayWidth, bottom, shiftPaint)
-                    } else if (isFreeOpenDay) {
-                        // open day without shift: dark grey band
-                        shiftPaint.color = OPEN_FREE_DAY_COLOR
-                        canvas.drawRect(left, top, left + dayWidth, bottom, shiftPaint)
-                    }
-
-                    // days with an event of the shared "Junts" calendar get a fine outline
-                    if (isJunts) {
-                        juntsPaint.color = outlineColor()
-                        val half = juntsStroke / 2
-                        canvas.drawRect(left + half, top + half, left + dayWidth - half, bottom - half, juntsPaint)
                     }
                 }
                 curId++
@@ -507,6 +569,9 @@ class MonthView(context: Context, attrs: AttributeSet, defStyle: Int) : View(con
         // horizontal lines
         canvas.drawLine(0f, 0f, canvas.width.toFloat(), 0f, gridPaint)
         for (i in 0 until ROW_COUNT) {
+            if (!isRowVisible(i)) {
+                continue
+            }
             val lineY = rowOrigin(i) + weekDaysLetterHeight
             canvas.drawLine(0f, lineY, canvas.width.toFloat(), lineY, gridPaint)
         }
@@ -530,6 +595,9 @@ class MonthView(context: Context, attrs: AttributeSet, defStyle: Int) : View(con
         val weekNumberPaint = Paint(textPaint)
 
         for (i in 0 until ROW_COUNT) {
+            if (!isRowVisible(i)) {
+                continue
+            }
             val weekDays = days.subList(i * 7, i * 7 + 7)
             weekNumberPaint.color = if (weekDays.any { it.isToday && !isPrintVersion }) primaryColor else textColor
 
@@ -550,15 +618,19 @@ class MonthView(context: Context, attrs: AttributeSet, defStyle: Int) : View(con
     private fun measureDaySize(viewWidth: Int, viewHeight: Int) {
         updatePanel(viewHeight)
         dayWidth = (viewWidth - horizontalOffset) / 7f
-        dayHeight = (viewHeight - weekDaysLetterHeight - panelHeight) / ROW_COUNT.toFloat()
+        val rows = if (isMonthDayView) ROW_COUNT else VISIBLE_ROWS
+        dayHeight = (viewHeight - weekDaysLetterHeight - panelHeight) / rows.toFloat()
         val availableHeightForEvents = dayHeight.toInt() - weekDaysLetterHeight
         maxEventsPerDay = availableHeightForEvents / eventTitleHeight
     }
 
     private fun isExpandEnabled() = config.expandDayInMonthView && !isMonthDayView && !isPrintVersion
 
-    private fun cardHeight() = eventTitleHeight * 2f
-    private fun cardGap() = smallPadding * 12f
+    private fun panelTextSize() = eventTitlePaint.textSize * 1.2f
+    private fun cardHeight() = panelTextSize() * 2.3f
+
+    // the space between the cards is the same as the one at the sides
+    private fun cardGap() = smallPadding * 4f
 
     // decides which events go in the panel under the selected week and how tall the panel is
     private fun updatePanel(viewHeight: Int) {
@@ -566,7 +638,7 @@ class MonthView(context: Context, attrs: AttributeSet, defStyle: Int) : View(con
         panelHiddenCount = 0
         panelHeight = 0f
         val day = days.getOrNull(selectedDayIndex)
-        if (!isExpandEnabled() || day == null || day.dayEvents.isEmpty()) {
+        if (!isExpandEnabled() || day == null || day.dayEvents.isEmpty() || !isRowVisible(selectedDayIndex / 7)) {
             return
         }
 
@@ -583,15 +655,22 @@ class MonthView(context: Context, attrs: AttributeSet, defStyle: Int) : View(con
 
     private fun expandedRow(): Int = if (panelHeight > 0f) selectedDayIndex / 7 else -1
 
+    private fun firstShownRow() = if (isMonthDayView) 0 else rowShift
+
     // top of a week row (without the header with the week day letters)
     private fun rowOrigin(row: Int): Float {
-        val extra = if (expandedRow() in 0 until row) panelHeight else 0f
-        return row * dayHeight + extra
+        val extra = if (expandedRow() in firstShownRow() until row) panelHeight else 0f
+        return (row - firstShownRow()) * dayHeight + extra
     }
 
     /** Area of one day cell, used by the wrapper to place the clickable views. */
     fun getCellRect(x: Int, y: Int): RectF {
         measureDaySize(width, height)
+        val day = days.getOrNull(y * 7 + x)
+        if (!isMonthDayView && (!isRowVisible(y) || day == null || !day.isThisMonth)) {
+            // hidden rows and days of other months cannot be tapped
+            return RectF(0f, 0f, 0f, 0f)
+        }
         val left = x * dayWidth + horizontalOffset
         val top = rowOrigin(y) + weekDaysLetterHeight
         return RectF(left, top, left + dayWidth, top + dayHeight)
@@ -617,7 +696,7 @@ class MonthView(context: Context, attrs: AttributeSet, defStyle: Int) : View(con
     }
 
     // the panel starts right under the week row of the selected day
-    private fun panelTop() = (expandedRow() + 1) * dayHeight + weekDaysLetterHeight
+    private fun panelTop() = (expandedRow() - firstShownRow() + 1) * dayHeight + weekDaysLetterHeight
 
     private fun cardTop(index: Int) = panelTop() + cardGap() + index * (cardHeight() + cardGap())
 
@@ -651,54 +730,71 @@ class MonthView(context: Context, attrs: AttributeSet, defStyle: Int) : View(con
         val left = horizontalOffset + smallPadding * 4f
         val right = width - smallPadding * 4f
         val cardH = cardHeight()
-        val titlePaint = Paint(eventTitlePaint).apply { color = textColor }
-        val timePaint = Paint(eventTitlePaint).apply { color = textColor.adjustAlpha(MEDIUM_ALPHA) }
+        val size = panelTextSize()
+        val timePaint = Paint(eventTitlePaint).apply { textSize = size }
+        val titlePaint = Paint(eventTitlePaint).apply {
+            textSize = size
+            typeface = Typeface.create(eventTitlePaint.typeface, Typeface.BOLD)
+        }
 
         panelEvents.forEachIndexed { index, ev ->
             val top = cardTop(index)
+            // solid card in the color of the event, a bit less saturated, no outline
+            val fill = desaturate(ev.color)
+            panelPaint.color = fill
             panelRect.set(left, top, right, top + cardH)
-            // very thin gray frame around the card, no fill
-            val frameWidth = hairline
-            panelFramePaint.color = outlineColor()
-            panelFramePaint.strokeWidth = frameWidth
-            panelRect.set(left + frameWidth / 2, top + frameWidth / 2, right - frameWidth / 2, top + cardH - frameWidth / 2)
-            canvas.drawRoundRect(panelRect, BG_CORNER_RADIUS, BG_CORNER_RADIUS, panelFramePaint)
+            canvas.drawRoundRect(panelRect, BG_CORNER_RADIUS * 2, BG_CORNER_RADIUS * 2, panelPaint)
 
-            // colored bar on the left
-            panelPaint.color = ev.color
-            panelRect.set(left, top, left + smallPadding * 7.5f, top + cardH)
-            canvas.drawRoundRect(panelRect, BG_CORNER_RADIUS, BG_CORNER_RADIUS, panelPaint)
+            val textColorOnCard = fill.getContrastColor()
+            timePaint.color = textColorOnCard
+            titlePaint.color = textColorOnCard
 
-            val textLeft = left + smallPadding * 14f
-            var textRight = right - smallPadding * 8f
+            val textLeft = left + smallPadding * 6f
+            var textRight = right - smallPadding * 6f
             val centerY = top + cardH / 2
 
             if (ev.isTask()) {
                 val iconSize = eventTitleHeight
-                val iconColor = if (ev.isTaskCompleted()) ev.color else textColor.adjustAlpha(MEDIUM_ALPHA)
+                val iconColor = if (ev.isTaskCompleted()) textColorOnCard else textColorOnCard.adjustAlpha(MEDIUM_ALPHA)
                 val icon = resources.getColoredDrawableWithColor(R.drawable.ic_task_vector, iconColor).mutate()
-                val iconLeft = (right - smallPadding * 8f - iconSize).toInt()
+                val iconLeft = (right - smallPadding * 6f - iconSize).toInt()
                 icon.setBounds(iconLeft, (centerY - iconSize / 2).toInt(), iconLeft + iconSize, (centerY + iconSize / 2).toInt())
                 icon.draw(canvas)
                 textRight = iconLeft - smallPadding * 4f
             }
 
-            val timeText = if (ev.getIsAllDay()) "" else Formatter.getTimeFromTS(context, ev.startTS)
-            val fullText = if (timeText.isEmpty()) ev.title else "$timeText  ${ev.title}"
-            val textY = centerY + eventTitleHeight * 0.35f
-            val title = TextUtils.ellipsize(fullText, eventTitlePaint, textRight - textLeft, TextUtils.TruncateAt.END)
+            val timeText = if (ev.getIsAllDay()) "" else Formatter.getTimeFromTS(context, ev.startTS) + "  "
+            val timeWidth = if (timeText.isEmpty()) 0f else timePaint.measureText(timeText)
+            val textY = centerY + size * 0.35f
+            if (timeText.isNotEmpty()) {
+                canvas.drawText(timeText, textLeft, textY, timePaint)
+            }
+
+            val title = TextUtils.ellipsize(ev.title, TextPaint(titlePaint), max(0f, textRight - textLeft - timeWidth), TextUtils.TruncateAt.END)
             titlePaint.isStrikeThruText = ev.isTask() && ev.isTaskCompleted()
-            canvas.drawText(title, 0, title.length, textLeft, textY, titlePaint)
+            canvas.drawText(title, 0, title.length, textLeft + timeWidth, textY, titlePaint)
         }
 
         if (panelHiddenCount > 0) {
             val top = cardTop(panelEvents.size)
-            val morePaint = Paint(timePaint).apply { textAlign = Paint.Align.CENTER }
+            val morePaint = Paint(eventTitlePaint).apply {
+                textAlign = Paint.Align.CENTER
+                color = textColor.adjustAlpha(MEDIUM_ALPHA)
+            }
             canvas.drawText("+$panelHiddenCount", (left + right) / 2, top + eventTitleHeight, morePaint)
         }
     }
 
     private fun drawEvent(event: MonthViewEvent, canvas: Canvas) {
+        if (!isRowVisible(event.startDayIndex / 7)) {
+            // this part of the event is in a row that is not shown
+            val nextIndex = (event.startDayIndex / 7 + 1) * 7
+            if (nextIndex < 42 && event.daysCnt > nextIndex - event.startDayIndex) {
+                drawEvent(event.copy(startDayIndex = nextIndex, daysCnt = event.daysCnt - (nextIndex - event.startDayIndex)), canvas)
+            }
+            return
+        }
+
         var verticalOffset = 0
         for (i in 0 until min(event.daysCnt, 7 - event.startDayIndex % 7)) {
             verticalOffset = max(verticalOffset, dayVerticalOffsets[event.startDayIndex + i])
@@ -775,30 +871,28 @@ class MonthView(context: Context, attrs: AttributeSet, defStyle: Int) : View(con
     }
 
     private fun getEventBackgroundColor(event: MonthViewEvent): Paint {
-        var paintColor = event.color
+        var paintColor = event.color or 0xFF000000.toInt()
 
-        val adjustAlpha = when {
+        val dim = when {
             event.isTask -> dimCompletedTasks && event.isTaskCompleted
             else -> dimPastEvents && event.isPastEvent && !isPrintVersion
         }
 
-        if (adjustAlpha) {
-            paintColor = paintColor.adjustAlpha(MEDIUM_ALPHA)
+        // solid colors only, a dimmed event is a lighter solid color
+        if (dim) {
+            paintColor = solidDim(paintColor)
         }
 
         return getColoredPaint(paintColor)
     }
 
     private fun getEventTitlePaint(event: MonthViewEvent): Paint {
-        var paintColor = event.color.getContrastColor()
-        val adjustAlpha = when {
+        val dim = when {
             event.isTask -> dimCompletedTasks && event.isTaskCompleted
             else -> dimPastEvents && event.isPastEvent && !isPrintVersion
         }
-
-        if (adjustAlpha) {
-            paintColor = paintColor.adjustAlpha(HIGHER_ALPHA)
-        }
+        val base = if (dim) solidDim(event.color) else event.color or 0xFF000000.toInt()
+        val paintColor = base.getContrastColor()
 
         val curPaint = Paint(eventTitlePaint)
         curPaint.color = paintColor

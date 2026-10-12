@@ -226,6 +226,7 @@
     <string name="other_time">Other time</string>
     <string name="highlight_weekends">Highlight weekends on some views</string>
     <string name="highlight_weekends_color">Color of highlighted weekends</string>
+    <string name="weekend_background">Grey background on weekends (monthly view)</string>
     <string name="allow_changing_time_zones">Allow changing event time zones</string>
     <string name="manage_quick_filter_event_types">Manage quick filter calendars</string>
     <string name="allow_creating_tasks">Allow creating tasks</string>
@@ -366,6 +367,15 @@
     <string name="fs_project">Project</string>
     <string name="fs_no_project">No project</string>
     <string name="fs_no_projects">No projects loaded. Set up FacturaScripts in Settings.</string>
+    <string name="fs_type">Type</string>
+    <string name="fs_type_required">Choose the type of the diary entry</string>
+    <string name="fs_type_client">Client</string>
+    <string name="fs_type_ajuntament">Town hall</string>
+    <string name="fs_type_obra">Site</string>
+    <string name="fs_type_coaib">COAIB</string>
+    <string name="fs_type_admin">Other authorities</string>
+    <string name="fs_type_tecnics">Collaborating technicians</string>
+    <string name="fs_type_altres">Other</string>
 
     <string name="icon_period">Period</string>
     <string name="icon_doctor">Doctor</string>

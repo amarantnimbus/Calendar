@@ -155,6 +155,7 @@ const val WEEKLY_VIEW_ITEM_HEIGHT_MULTIPLIER = "weekly_view_item_height_multipli
 const val WEEKLY_VIEW_DAYS = "weekly_view_days"
 const val HIGHLIGHT_WEEKENDS = "highlight_weekends"
 const val HIGHLIGHT_WEEKENDS_COLOR = "highlight_weekends_color"
+const val WEEKEND_BACKGROUND = "weekend_background"
 const val SHIFTS_ENABLED = "shifts_enabled"
 const val SHIFT_COLOR_DAY = "shift_color_day"
 const val SHIFT_COLOR_NIGHT = "shift_color_night"

@@ -71,6 +71,8 @@ android {
     buildTypes {
         debug {
             applicationIdSuffix = ".debug"
+            // Always sign with the same key (when available) so updates install over the old version.
+            signingConfigs.findByName("release")?.let { signingConfig = it }
         }
         release {
             isMinifyEnabled = true

@@ -183,6 +183,7 @@
     <string name="other_time">Una altra hora</string>
     <string name="highlight_weekends">Ressalta els caps de setmana en algunes vistes</string>
     <string name="highlight_weekends_color">Color dels caps de setmana ressaltats</string>
+    <string name="weekend_background">Fons gris als caps de setmana (vista mensual)</string>
     <string name="allow_changing_time_zones">Permet canviar els fusos horaris dels esdeveniments</string>
     <string name="manage_quick_filter_event_types">Gestiona els calendaris de filtre ràpid</string>
     <string name="allow_creating_tasks">Permet crear tasques</string>
@@ -311,6 +312,15 @@
     <string name="fs_project">Projecte</string>
     <string name="fs_no_project">Cap projecte</string>
     <string name="fs_no_projects">No hi ha projectes carregats. Configura FacturaScripts a Configuració.</string>
+    <string name="fs_type">Tipus</string>
+    <string name="fs_type_required">Tria el tipus de l\'entrada del diari</string>
+    <string name="fs_type_client">Client</string>
+    <string name="fs_type_ajuntament">Ajuntament</string>
+    <string name="fs_type_obra">Obra</string>
+    <string name="fs_type_coaib">Coaib</string>
+    <string name="fs_type_admin">Altres administracions</string>
+    <string name="fs_type_tecnics">Tècnics col·laboradors</string>
+    <string name="fs_type_altres">Altres</string>
 
     <string name="icon_period">Regla</string>
     <string name="icon_doctor">Metge</string>

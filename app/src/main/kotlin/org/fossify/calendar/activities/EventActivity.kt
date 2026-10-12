@@ -121,6 +121,7 @@ import org.fossify.commons.dialogs.ConfirmationAdvancedDialog
 import org.fossify.commons.dialogs.PermissionRequiredDialog
 import org.fossify.commons.dialogs.RadioGroupDialog
 import org.fossify.commons.extensions.addBitIf
+import org.fossify.commons.extensions.adjustAlpha
 import org.fossify.commons.extensions.applyColorFilter
 import org.fossify.commons.extensions.beGone
 import org.fossify.commons.extensions.beGoneIf
@@ -674,7 +675,7 @@ class EventActivity : SimpleActivity() {
         val reminders = getReminders()
         return binding.eventTitle.text.toString() != mEvent.title ||
                 binding.eventLocation.text.toString() != mEvent.location ||
-                FacturaScripts.withMarker(DayIcons.withIcon(binding.eventDescription.text.toString(), mDayIconKey), mProject) != mEvent.description ||
+                FacturaScripts.withMarker(DayIcons.withIcon(binding.eventDescription.text.toString(), mDayIconKey), mProject, mProjectType) != mEvent.description ||
                 binding.eventTimeZone.text != mEvent.getTimeZoneString() ||
                 reminders != mEvent.getReminders() ||
                 mRepeatInterval != mEvent.repeatInterval ||
@@ -752,6 +753,7 @@ class EventActivity : SimpleActivity() {
         binding.eventLocation.setText(mEvent.location)
         binding.eventDescription.setText(DayIcons.strip(FacturaScripts.stripMarker(mEvent.description)))
         mProject = FacturaScripts.markerProject(mEvent.description)
+        mProjectType = FacturaScripts.markerType(mEvent.description)
         mDayIconKey = DayIcons.keyOf(mEvent.description)
         updateProjectRow()
         updateDayIcon()
@@ -1614,6 +1616,12 @@ class EventActivity : SimpleActivity() {
     }
 
     private fun saveCurrentEvent() {
+        if (config.workFeatures && mProject != null && mProjectType == null) {
+            toast(R.string.fs_type_required)
+            showTypeDialog()
+            return
+        }
+
         if (config.wasAlarmWarningShown || (mReminder1Minutes == REMINDER_OFF && mReminder2Minutes == REMINDER_OFF && mReminder3Minutes == REMINDER_OFF)) {
             ensureBackgroundThread {
                 saveEvent()
@@ -1646,14 +1654,11 @@ class EventActivity : SimpleActivity() {
         }
 
         if (mIsUnscheduled) {
-            // waiting to be scheduled: no date, never synced, no repetition
+            // waiting to be scheduled: date 0 (1 January 1970) means "no date". It is saved in the chosen
+            // calendar like any other event, so it is synced and survives reinstalling the app.
             newStartTS = 0L
             newEndTS = 0L
             mRepeatInterval = 0
-            val localCalendar = calendarsDB.getCalendars().firstOrNull { it.caldavCalendarId == 0 }
-            if (localCalendar?.id != null) {
-                mCalendarId = localCalendar.id!!
-            }
         }
 
         if (newStartTS > newEndTS) {
@@ -1730,7 +1735,7 @@ class EventActivity : SimpleActivity() {
             startTS = newStartTS
             endTS = newEndTS
             title = newTitle
-            description = FacturaScripts.withMarker(DayIcons.withIcon(binding.eventDescription.value, mDayIconKey), mProject)
+            description = FacturaScripts.withMarker(DayIcons.withIcon(binding.eventDescription.value, mDayIconKey), mProject, mProjectType)
             reminder1Minutes = reminder1.minutes
             reminder2Minutes = reminder2.minutes
             reminder3Minutes = reminder3.minutes
@@ -1741,7 +1746,11 @@ class EventActivity : SimpleActivity() {
             importId = newImportId
             timeZone =
                 if (mIsAllDayEvent || timeZone.isEmpty()) DateTimeZone.getDefault().id else timeZone
-            flags = mEvent.flags.addBitIf(binding.eventAllDay.isChecked, FLAG_ALL_DAY)
+            flags = if (mIsUnscheduled) {
+                mEvent.flags and FLAG_ALL_DAY.inv()
+            } else {
+                mEvent.flags.addBitIf(binding.eventAllDay.isChecked, FLAG_ALL_DAY)
+            }
             repeatLimit = if (repeatInterval == 0) 0 else mRepeatLimit
             repeatRule = mRepeatRule
             attendees =
@@ -1763,7 +1772,8 @@ class EventActivity : SimpleActivity() {
                 projectId = diaryProject.id,
                 date = mEventStartDateTime.toString("yyyy-MM-dd"),
                 title = newTitle,
-                text = DayIcons.strip(FacturaScripts.stripMarker(mEvent.description))
+                text = DayIcons.strip(FacturaScripts.stripMarker(mEvent.description)),
+                type = mProjectType ?: "altres"
             )
             ensureBackgroundThread { FacturaScripts.push(this, entry) }
         }
@@ -2499,6 +2509,7 @@ class EventActivity : SimpleActivity() {
 
     private var mIsUnscheduled = false
     private var mProject: FacturaScripts.Project? = null
+    private var mProjectType: String? = null
     private var mDayIconKey: String? = null
     private var mPreImportId: String? = null
     private val ATTACH_REQUEST = 7311
@@ -2512,6 +2523,7 @@ class EventActivity : SimpleActivity() {
         eventIconColor.setOnClickListener { showEventColorDialog() }
         eventIconProject.setOnClickListener { showProjectDialog() }
         eventProject.setOnClickListener { showProjectDialog() }
+        eventProjectType.setOnClickListener { showTypeDialog() }
         eventIconAttach.setOnClickListener { showAttachmentsDialog() }
         eventIconDay.setOnClickListener { showDayIconDialog() }
         val textColor = getProperTextColor()
@@ -2661,12 +2673,25 @@ class EventActivity : SimpleActivity() {
     private fun updateProjectRow() {
         val primary = getProperPrimaryColor()
         val textColor = getProperTextColor()
-        binding.eventIconProject.beVisibleIf(config.workFeatures)
+        binding.eventProjectRow.beVisibleIf(config.workFeatures)
         binding.eventIconProject.applyColorFilter(if (mProject != null) primary else textColor)
         val name = mProject?.name
-        binding.eventProject.beVisibleIf(config.workFeatures && name != null)
-        binding.eventProject.text = if (name == null) "" else getString(R.string.fs_project) + ": " + name
-        binding.eventProject.setTextColor(textColor)
+        binding.eventProject.text = name ?: getString(R.string.fs_no_project)
+        binding.eventProject.setTextColor(if (name != null) textColor else textColor.adjustAlpha(0.55f))
+
+        val typeLabel = FacturaScripts.typeLabelRes(mProjectType)?.let { getString(it) }
+        binding.eventProjectType.beVisibleIf(config.workFeatures && name != null)
+        binding.eventProjectType.text = typeLabel ?: getString(R.string.fs_type)
+        binding.eventProjectType.setTextColor(if (typeLabel != null) primary else textColor.adjustAlpha(0.55f))
+    }
+
+    private fun showTypeDialog() {
+        hideKeyboard()
+        val names = FacturaScripts.TYPES.map { getString(it.second) as CharSequence }
+        showItemsDialog(titleId = R.string.fs_type, items = names) { which ->
+            mProjectType = FacturaScripts.TYPES[which].first
+            updateProjectRow()
+        }
     }
 
     private fun updateDayIcon() {
@@ -2896,7 +2921,14 @@ class EventActivity : SimpleActivity() {
                 projects.forEach { names.add(it.name) }
                 showItemsDialog(titleId = R.string.fs_project, items = names) { which ->
                     mProject = if (which == 0) null else projects[which - 1]
+                    if (mProject == null) {
+                        mProjectType = null
+                    }
                     updateProjectRow()
+                    if (mProject != null && mProjectType == null) {
+                        // the type is needed to save, so ask for it right away
+                        showTypeDialog()
+                    }
                 }
             }
 

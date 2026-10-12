@@ -368,6 +368,10 @@ class Config(context: Context) : BaseConfig(context) {
         set(highlightWeekendsColor) = prefs.edit()
             .putInt(HIGHLIGHT_WEEKENDS_COLOR, highlightWeekendsColor).apply()
 
+    var weekendBackground: Boolean
+        get() = prefs.getBoolean(WEEKEND_BACKGROUND, false)
+        set(weekendBackground) = prefs.edit().putBoolean(WEEKEND_BACKGROUND, weekendBackground).apply()
+
     var shiftsEnabled: Boolean
         get() = prefs.getBoolean(SHIFTS_ENABLED, false)
         set(shiftsEnabled) = prefs.edit().putBoolean(SHIFTS_ENABLED, shiftsEnabled).apply()

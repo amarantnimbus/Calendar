@@ -3,6 +3,8 @@ package org.fossify.calendar.views
 import android.content.Context
 import android.util.AttributeSet
 import android.view.LayoutInflater
+import android.view.MotionEvent
+import android.view.ViewConfiguration
 import android.widget.FrameLayout
 import org.fossify.calendar.R
 import org.fossify.calendar.databinding.MonthViewBackgroundBinding
@@ -27,6 +29,7 @@ import org.fossify.commons.dialogs.RadioGroupDialog
 import org.fossify.commons.extensions.onGlobalLayout
 import org.fossify.commons.helpers.ensureBackgroundThread
 import org.fossify.commons.models.RadioItem
+import kotlin.math.abs
 
 // used in the Monthly view fragment, 1 view per screen
 class MonthViewWrapper(
@@ -49,6 +52,11 @@ class MonthViewWrapper(
     private var inflater: LayoutInflater
     private var binding: MonthViewBinding
     private var dayClickCallback: ((day: DayMonthly) -> Unit)? = null
+    private var rowShifted = false
+    private var downX = 0f
+    private var downY = 0f
+    private var draggingRows = false
+    private val touchSlop = ViewConfiguration.get(context).scaledTouchSlop
 
     constructor(context: Context, attrs: AttributeSet) : this(context, attrs, 0)
 
@@ -100,6 +108,60 @@ class MonthViewWrapper(
         }
     }
 
+    // five rows are shown; in a month with six weeks a drag up/down moves the view one row
+    override fun onInterceptTouchEvent(ev: MotionEvent): Boolean {
+        if (isMonthDayView || !binding.monthView.hasHiddenRow()) {
+            return false
+        }
+
+        when (ev.actionMasked) {
+            MotionEvent.ACTION_DOWN -> {
+                downX = ev.x
+                downY = ev.y
+                draggingRows = false
+            }
+            MotionEvent.ACTION_MOVE -> {
+                val dx = ev.x - downX
+                val dy = ev.y - downY
+                if (abs(dy) > touchSlop * 1.5f && abs(dy) > abs(dx) * 1.5f) {
+                    draggingRows = true
+                    parent?.requestDisallowInterceptTouchEvent(true)
+                    return true
+                }
+            }
+        }
+        return false
+    }
+
+    override fun onTouchEvent(ev: MotionEvent): Boolean {
+        if (!draggingRows) {
+            return super.onTouchEvent(ev)
+        }
+
+        when (ev.actionMasked) {
+            MotionEvent.ACTION_UP -> {
+                val dy = ev.y - downY
+                if (dy < -touchSlop) {
+                    shiftRows(true)
+                } else if (dy > touchSlop) {
+                    shiftRows(false)
+                }
+                draggingRows = false
+            }
+            MotionEvent.ACTION_CANCEL -> draggingRows = false
+        }
+        return true
+    }
+
+    private fun shiftRows(shift: Boolean) {
+        rowShifted = shift
+        binding.monthView.setRowShift(shift)
+        if (expandedIndex >= 0 && shift && expandedIndex / COLUMN_COUNT < 1) {
+            expandedIndex = -1
+        }
+        requestLayout()
+    }
+
     fun updateDays(
         newDays: ArrayList<DayMonthly>,
         addEvents: Boolean,
@@ -124,12 +186,15 @@ class MonthViewWrapper(
     private fun measureSizes() {
         dayWidth = (width - horizontalOffset) / COLUMN_COUNT.toFloat()
         val header = if (context.config.highlightWeekends) 0 else weekDaysLetterHeight
-        dayHeight = (height - header) / ROW_COUNT.toFloat()
+        dayHeight = (height - header) / (if (isMonthDayView) ROW_COUNT else 5).toFloat()
     }
 
     private fun addClickableBackgrounds() {
         removeAllViews()
         binding = MonthViewBinding.inflate(inflater, this, true)
+        if (rowShifted) {
+            binding.monthView.setRowShift(true)
+        }
         wereViewsAdded = true
         if (expandedIndex >= 0) {
             // keep the open day when the events are reloaded

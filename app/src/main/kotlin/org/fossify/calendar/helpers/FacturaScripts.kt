@@ -22,8 +22,24 @@ object FacturaScripts {
         val projectId: Long,
         val date: String,
         val title: String,
-        val text: String
+        val text: String,
+        val type: String = "altres"
     )
+
+    /** The kinds of diary entry, in the order they are offered. The key is what is stored. */
+    val TYPES = listOf(
+        "client" to org.fossify.calendar.R.string.fs_type_client,
+        "ajuntament" to org.fossify.calendar.R.string.fs_type_ajuntament,
+        "obra" to org.fossify.calendar.R.string.fs_type_obra,
+        "coaib" to org.fossify.calendar.R.string.fs_type_coaib,
+        "admin" to org.fossify.calendar.R.string.fs_type_admin,
+        "tecnics" to org.fossify.calendar.R.string.fs_type_tecnics,
+        "altres" to org.fossify.calendar.R.string.fs_type_altres
+    )
+
+    fun typeLabelRes(key: String?): Int? = TYPES.firstOrNull { it.first == key }?.second
+
+    private val sendLock = Any()
 
     private const val MARKER_START = "[[FS:"
     private const val MARKER_END = "]]"
@@ -35,12 +51,14 @@ object FacturaScripts {
 
     // ---- project marker kept at the end of the event description ----
 
-    fun withMarker(text: String, project: Project?): String {
+    fun withMarker(text: String, project: Project?, type: String? = null): String {
         val clean = stripMarker(text).trimEnd()
         return if (project == null) {
             clean
         } else {
-            "$clean\n$MARKER_START${project.id}|${project.name.replace("]", ")")}$MARKER_END"
+            val name = project.name.replace("]", ")").replace("|", "/")
+            val typePart = if (type.isNullOrEmpty()) "" else "|$type"
+            "$clean\n$MARKER_START${project.id}|$name$typePart$MARKER_END"
         }
     }
 
@@ -53,19 +71,29 @@ object FacturaScripts {
         }
     }
 
-    fun markerProject(description: String): Project? {
+    private fun markerParts(description: String): List<String>? {
         val start = description.lastIndexOf(MARKER_START)
         if (start < 0 || !description.trimEnd().endsWith(MARKER_END)) {
             return null
         }
 
-        val inner = description.trimEnd()
+        return description.trimEnd()
             .removeSuffix(MARKER_END)
             .substring(start + MARKER_START.length)
-        val index = inner.indexOf('|')
-        val id = inner.substring(0, if (index >= 0) index else inner.length).toLongOrNull() ?: return null
-        val name = if (index >= 0) inner.substring(index + 1) else id.toString()
+            .split('|')
+    }
+
+    fun markerProject(description: String): Project? {
+        val parts = markerParts(description) ?: return null
+        val id = parts[0].toLongOrNull() ?: return null
+        val name = if (parts.size >= 2) parts[1] else id.toString()
         return Project(id, name)
+    }
+
+    /** The type kept in the marker, or null when the event has none (older events). */
+    fun markerType(description: String): String? {
+        val parts = markerParts(description) ?: return null
+        return if (parts.size >= 3 && TYPES.any { it.first == parts[2] }) parts[2] else null
     }
 
     // ---- HTTP ----
@@ -160,22 +188,30 @@ object FacturaScripts {
         .put("date", entry.date)
         .put("title", entry.title)
         .put("text", entry.text)
+        .put("type", entry.type)
 
     private fun entryFromJson(item: JSONObject) = Entry(
         item.getString("uid"),
         item.getLong("projectId"),
         item.getString("date"),
         item.getString("title"),
-        item.getString("text")
+        item.getString("text"),
+        item.optString("type", "altres").ifEmpty { "altres" }
     )
 
-    private fun send(context: Context, entry: Entry): Boolean {
+    // one at a time, so saving the same event twice quickly cannot create two entries
+    private fun send(context: Context, entry: Entry): Boolean = synchronized(sendLock) {
+        sendNow(context, entry)
+    }
+
+    private fun sendNow(context: Context, entry: Entry): Boolean {
         val form = mapOf(
             "uid" to entry.uid,
             "idproyecto" to entry.projectId.toString(),
             "fecha" to entry.date,
             "titulo" to entry.title,
-            "descripcion" to entry.text
+            "descripcion" to entry.text,
+            "tipo" to entry.type
         )
 
         val lookup = request(

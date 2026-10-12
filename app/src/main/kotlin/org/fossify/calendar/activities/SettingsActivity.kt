@@ -209,6 +209,7 @@ class SettingsActivity : SimpleActivity() {
         setupStartWeekOn()
         setupHighlightWeekends()
         setupHighlightWeekendsColor()
+        setupWeekendBackground()
         setupShifts()
         setupDeleteAllEvents()
         setupDisplayDescription()
@@ -544,6 +545,14 @@ class SettingsActivity : SimpleActivity() {
             settingsHighlightWeekends.toggle()
             config.highlightWeekends = settingsHighlightWeekends.isChecked
             settingsHighlightWeekendsColorHolder.beVisibleIf(config.highlightWeekends)
+        }
+    }
+
+    private fun setupWeekendBackground() = binding.apply {
+        settingsWeekendBackground.isChecked = config.weekendBackground
+        settingsWeekendBackgroundHolder.setOnClickListener {
+            settingsWeekendBackground.toggle()
+            config.weekendBackground = settingsWeekendBackground.isChecked
         }
     }
 
