@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/quick_filter_calendar_holder"
+    android:layout_width="match_parent"
+    android:layout_height="@dimen/quick_filter_height"
+    android:minWidth="@dimen/quick_filter_min_width">
+
+    <ImageView
+        android:id="@+id/quick_filter_calendar_color"
+        android:layout_width="30dp"
+        android:layout_height="30dp"
+        android:layout_centerInParent="true"
+        android:clickable="false"
+        android:importantForAccessibility="no" />
+
+    <org.fossify.commons.views.MyButton
+        android:id="@+id/quick_filter_calendar"
+        android:layout_width="match_parent"
+        android:layout_height="@dimen/quick_filter_height"
+        android:layout_alignParentTop="true"
+        android:layout_alignParentBottom="true"
+        android:background="?attr/selectableItemBackground"
+        android:checked="false"
+        android:gravity="center"
+        android:maxLines="1"
+        android:padding="0dp"
+        android:text=""
+        android:textAllCaps="false"
+        android:textSize="15sp"
+        android:textStyle="bold" />
+
+</RelativeLayout>
