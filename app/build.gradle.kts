@@ -23,8 +23,8 @@ fun hasSigningVars(): Boolean {
 }
 
 base {
-    val versionCode = project.property("VERSION_CODE").toString().toInt()
-    archivesName = "calendar-$versionCode"
+    val versionLabel = project.property("VERSION_NAME").toString()
+    archivesName = "calendar-v$versionLabel"
 }
 
 android {

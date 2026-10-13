@@ -201,7 +201,11 @@ class SettingsActivity : SimpleActivity() {
         setupSettingItems()
     }
 
+    private val hiddenBySections = HashMap<View, Int>()
+
     private fun setupSettingItems() {
+        hiddenBySections.forEach { (view, visibility) -> view.visibility = visibility }
+        hiddenBySections.clear()
         setupCustomizeColors()
         setupCustomizeNotifications()
         setupUseEnglish()
@@ -307,6 +311,7 @@ class SettingsActivity : SimpleActivity() {
                     setupSettingItems()
                 }
             } else if (!currentOpen) {
+                hiddenBySections[child] = child.visibility
                 child.visibility = View.GONE
             }
         }
