@@ -44,6 +44,9 @@ class EventsHelper(val context: Context) {
             } catch (ignored: Exception) {
             }
 
+            // the local calendar is hidden: everything is stored in synchronized calendars
+            calendars = calendars.filter { it.id != LOCAL_CALENDAR_ID }.toMutableList() as ArrayList<CalendarEntity>
+
             if (showWritableOnly) {
                 val caldavCalendars = activity.calDAVHelper.getCalDAVCalendars("", true)
                 calendars = calendars.filter {
@@ -552,6 +555,7 @@ class EventsHelper(val context: Context) {
                 }
             }
 
+            DayIcons.colorOf(it.description)?.let { markedColor -> it.color = markedColor }
             if (it.color == 0) {
                 it.color = calendarColors.get(it.calendarId) ?: context.getProperPrimaryColor()
             }

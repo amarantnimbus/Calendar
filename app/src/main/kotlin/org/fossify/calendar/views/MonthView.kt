@@ -478,18 +478,6 @@ class MonthView(context: Context, attrs: AttributeSet, defStyle: Int) : View(con
         return (fill and 0x00FFFFFF) or ((opacity() * 255).toInt() shl 24)
     }
 
-    // color of the calendar initial: the calendar color, adjusted when it would vanish on the pill
-    private fun initialColor(calendarColor: Int, pill: Int): Int {
-        val cal = calendarColor or 0xFF000000.toInt()
-        if (ColorUtils.calculateContrast(cal, pill or 0xFF000000.toInt()) >= 2.2) {
-            return cal
-        }
-        val hsl = FloatArray(3)
-        ColorUtils.colorToHSL(cal, hsl)
-        hsl[2] = if (ColorUtils.calculateLuminance(pill) > 0.5) 0.22f else 0.88f
-        return ColorUtils.HSLToColor(hsl) or 0xFF000000.toInt()
-    }
-
     private fun pillBaseColor(event: MonthViewEvent): Int {
         val dim = when {
             event.isTask -> dimCompletedTasks && event.isTaskCompleted
@@ -808,13 +796,23 @@ class MonthView(context: Context, attrs: AttributeSet, defStyle: Int) : View(con
             val timeText = if (ev.getIsAllDay()) "" else Formatter.getTimeFromTS(context, ev.startTS) + "  "
             val timeWidth = if (timeText.isEmpty()) 0f else timePaint.measureText(timeText)
             val textY = centerY + size * 0.35f
-            if (timeText.isNotEmpty()) {
-                canvas.drawText(timeText, textLeft, textY, timePaint)
+
+            // the initial of the calendar first, in bold
+            val initial = calendarInfo[ev.calendarId]?.first?.takeIf { it.isNotEmpty() }?.substring(0, 1)?.uppercase()
+            var contentLeft = textLeft
+            if (initial != null) {
+                titlePaint.isStrikeThruText = false
+                canvas.drawText(initial, contentLeft, textY, titlePaint)
+                contentLeft += titlePaint.measureText("$initial ")
             }
 
-            val title = TextUtils.ellipsize(ev.title, TextPaint(titlePaint), max(0f, textRight - textLeft - timeWidth), TextUtils.TruncateAt.END)
+            if (timeText.isNotEmpty()) {
+                canvas.drawText(timeText, contentLeft, textY, timePaint)
+            }
+
+            val title = TextUtils.ellipsize(ev.title, TextPaint(titlePaint), max(0f, textRight - contentLeft - timeWidth), TextUtils.TruncateAt.END)
             titlePaint.isStrikeThruText = ev.isTask() && ev.isTaskCompleted()
-            canvas.drawText(title, 0, title.length, textLeft + timeWidth, textY, titlePaint)
+            canvas.drawText(title, 0, title.length, contentLeft + timeWidth, textY, titlePaint)
         }
 
         if (panelHiddenCount > 0) {
@@ -857,7 +855,6 @@ class MonthView(context: Context, attrs: AttributeSet, defStyle: Int) : View(con
         val bgLeft = xPos + smallPadding
         val bgTop = backgroundY + smallPadding - eventTitleHeight
         var bgRight = xPos - smallPadding + dayWidth * event.daysCnt
-        val bgBottom = backgroundY + smallPadding * 2
         if (bgRight > canvas.width.toFloat()) {
             bgRight = canvas.width.toFloat() - smallPadding
             val newStartDayIndex = (event.startDayIndex / 7 + 1) * 7
@@ -867,46 +864,89 @@ class MonthView(context: Context, attrs: AttributeSet, defStyle: Int) : View(con
             }
         }
 
+        val specificEventTitlePaint = getEventTitlePaint(event)
+        val taskIconWidth = if (event.isTask) eventTitleHeight + smallPadding else 0
+        val initialPaint = Paint(specificEventTitlePaint).apply {
+            typeface = Typeface.create(specificEventTitlePaint.typeface, Typeface.BOLD)
+        }
+        val initial = calendarInitial(event)
+        val initialWidth = if (initial != null) initialPaint.measureText("$initial ") else 0f
+        val textWidth = bgRight - bgLeft - smallPadding * 2 - taskIconWidth
+        val lineStep = eventTitleHeight + smallPadding
+        val fullLines = if (config.monthFullText) wrapTitle(event.title, textWidth - initialWidth, textWidth) else null
+        val extraHeight = if (fullLines == null) 0 else (fullLines.size - 1) * lineStep
+        val bgBottom = backgroundY + smallPadding * 2 + extraHeight
+
         bgRectF.set(bgLeft, bgTop, bgRight, bgBottom)
         canvas.drawRoundRect(bgRectF, BG_CORNER_RADIUS, BG_CORNER_RADIUS, getEventBackgroundColor(event))
 
-        val specificEventTitlePaint = getEventTitlePaint(event)
-        var taskIconWidth = 0
         if (event.isTask) {
             val taskIcon = resources.getColoredDrawableWithColor(R.drawable.ic_task_vector, specificEventTitlePaint.color).mutate()
             val taskIconY = yPos.toInt() + verticalOffset - eventTitleHeight + smallPadding * 2
             taskIcon.setBounds(xPos.toInt() + smallPadding * 2, taskIconY, xPos.toInt() + eventTitleHeight + smallPadding * 2, taskIconY + eventTitleHeight)
             taskIcon.draw(canvas)
-            taskIconWidth += eventTitleHeight + smallPadding
         }
 
-        drawEventTitle(event, canvas, xPos + taskIconWidth, yPos + verticalOffset, bgRight - bgLeft - smallPadding - taskIconWidth, specificEventTitlePaint)
+        // the initial of the calendar, in bold, black or white depending on the pill
+        val textX = xPos + taskIconWidth + smallPadding * 2
+        val baseY = yPos + verticalOffset
+        if (initial != null) {
+            canvas.drawText(initial, textX, baseY, initialPaint)
+        }
+
+        if (fullLines != null) {
+            fullLines.forEachIndexed { index, line ->
+                val lineX = if (index == 0) textX + initialWidth else textX
+                canvas.drawText(line, lineX, baseY + index * lineStep, specificEventTitlePaint)
+            }
+        } else {
+            val ellipsized = TextUtils.ellipsize(event.title, eventTitlePaint, max(0f, textWidth - initialWidth), TextUtils.TruncateAt.END)
+            canvas.drawText(ellipsized, 0, ellipsized.length, textX + initialWidth, baseY, specificEventTitlePaint)
+        }
 
         for (i in 0 until min(event.daysCnt, 7 - event.startDayIndex % 7)) {
-            dayVerticalOffsets.put(event.startDayIndex + i, verticalOffset + eventTitleHeight + smallPadding * 2)
+            dayVerticalOffsets.put(event.startDayIndex + i, verticalOffset + eventTitleHeight + smallPadding * 2 + extraHeight)
         }
     }
 
-    private fun drawEventTitle(event: MonthViewEvent, canvas: Canvas, x: Float, y: Float, availableWidth: Float, paint: Paint) {
-        var startX = x + smallPadding * 2
-        var available = availableWidth - smallPadding
+    private fun calendarInitial(event: MonthViewEvent): String? {
+        val name = calendarInfo[event.calendarId]?.first ?: return null
+        return if (name.isEmpty()) null else name.substring(0, 1).uppercase()
+    }
 
-        // the initial of the calendar, in bold and in the color of that calendar
-        val info = calendarInfo[event.calendarId]
-        if (info != null && info.first.isNotEmpty()) {
-            val initial = info.first.substring(0, 1).uppercase()
-            val initialPaint = Paint(paint).apply {
-                typeface = Typeface.create(paint.typeface, Typeface.BOLD)
-                color = initialColor(info.second, shownColor(pillBaseColor(event)))
+    // greedy word wrap of a title: the first line is shorter because the initial takes space
+    private fun wrapTitle(title: String, firstWidth: Float, width: Float): List<String> {
+        val lines = ArrayList<String>()
+        var current = ""
+        var limit = max(firstWidth, 1f)
+        val fullWidth = max(width, 1f)
+        title.split(" ").filter { it.isNotEmpty() }.forEach { word ->
+            var rest = word
+            val trial = if (current.isEmpty()) rest else "$current $rest"
+            if (eventTitlePaint.measureText(trial) <= limit) {
+                current = trial
+                return@forEach
             }
-            canvas.drawText(initial, startX, y, initialPaint)
-            val used = initialPaint.measureText("$initial ")
-            startX += used
-            available -= used
-        }
 
-        val ellipsized = TextUtils.ellipsize(event.title, eventTitlePaint, max(0f, available), TextUtils.TruncateAt.END)
-        canvas.drawText(ellipsized, 0, ellipsized.length, startX, y, paint)
+            if (current.isNotEmpty()) {
+                lines.add(current)
+                current = ""
+                limit = fullWidth
+            }
+
+            // a word longer than a whole line is cut
+            while (eventTitlePaint.measureText(rest) > limit) {
+                val count = max(1, eventTitlePaint.breakText(rest, true, limit, null))
+                lines.add(rest.substring(0, count))
+                rest = rest.substring(count)
+                limit = fullWidth
+            }
+            current = rest
+        }
+        if (current.isNotEmpty() || lines.isEmpty()) {
+            lines.add(current)
+        }
+        return lines
     }
 
     private fun getTextPaint(startDay: DayMonthly): Paint {

@@ -368,6 +368,23 @@ class Config(context: Context) : BaseConfig(context) {
         set(highlightWeekendsColor) = prefs.edit()
             .putInt(HIGHLIGHT_WEEKENDS_COLOR, highlightWeekendsColor).apply()
 
+    /** Color chosen in the app for a synchronized calendar: it must not be overwritten by the provider's one. */
+    fun getCalendarColorOverride(caldavCalendarId: Int): Int? {
+        return if (prefs.contains("calendar_color_override_$caldavCalendarId")) {
+            prefs.getInt("calendar_color_override_$caldavCalendarId", 0)
+        } else {
+            null
+        }
+    }
+
+    fun setCalendarColorOverride(caldavCalendarId: Int, color: Int) {
+        prefs.edit().putInt("calendar_color_override_$caldavCalendarId", color).apply()
+    }
+
+    var monthFullText: Boolean
+        get() = prefs.getBoolean(MONTH_FULL_TEXT, false)
+        set(monthFullText) = prefs.edit().putBoolean(MONTH_FULL_TEXT, monthFullText).apply()
+
     var tailscaleAutoSync: Boolean
         get() = prefs.getBoolean(TAILSCALE_AUTO_SYNC, true)
         set(tailscaleAutoSync) = prefs.edit().putBoolean(TAILSCALE_AUTO_SYNC, tailscaleAutoSync).apply()

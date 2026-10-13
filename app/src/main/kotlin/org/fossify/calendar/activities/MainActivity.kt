@@ -269,6 +269,8 @@ class MainActivity : SimpleActivity(), RefreshRecyclerViewListener {
     override fun onResume() {
         super.onResume()
         watchNetworkForTailscaleIcon()
+        mSearchHandler.removeCallbacks(mSearchWatcher)
+        mSearchHandler.post(mSearchWatcher)
         updateTailscaleIcon()
         if (mStoredTextColor != getProperTextColor() || mStoredBackgroundColor != getProperBackgroundColor() || mStoredPrimaryColor != getProperPrimaryColor()
             || mStoredDayCode != Formatter.getTodayCode() || mStoredDimPastEvents != config.dimPastEvents || mStoredDimCompletedTasks != config.dimCompletedTasks
@@ -337,6 +339,7 @@ class MainActivity : SimpleActivity(), RefreshRecyclerViewListener {
     override fun onPause() {
         super.onPause()
         stopWatchingNetwork()
+        mSearchHandler.removeCallbacks(mSearchWatcher)
         storeStateVariables()
     }
 
@@ -371,6 +374,26 @@ class MainActivity : SimpleActivity(), RefreshRecyclerViewListener {
     }
 
     private var mTailscaleCallback: ConnectivityManager.NetworkCallback? = null
+
+    // shows the search icons as soon as the search opens, before anything is typed
+    private var mSearchWasOpen = false
+    private val mSearchHandler = android.os.Handler(android.os.Looper.getMainLooper())
+    private val mSearchWatcher = object : Runnable {
+        override fun run() {
+            val open = binding.mainMenu.isSearchOpen
+            if (open && !mSearchWasOpen && binding.searchHolder.isGone()) {
+                binding.searchPlaceholder.beGone()
+                binding.searchPlaceholder2.beGone()
+                binding.searchHolder.fadeIn()
+            }
+            if (!open && mSearchWasOpen && binding.searchHolder.isVisible()) {
+                binding.searchHolder.fadeOut()
+                binding.searchResultsList.adapter = null
+            }
+            mSearchWasOpen = open
+            mSearchHandler.postDelayed(this, 250)
+        }
+    }
 
     // green when Tailscale is on, dim when it is off; hidden if the Tailscale app is not installed
     private fun updateTailscaleIcon() {

@@ -443,11 +443,12 @@ class EventActivity : SimpleActivity() {
         }
 
         if (event == null) {
+            // new events never start in the local calendar nor in "Junts"
             val juntsCal = findJuntsCalendar()
-            if (juntsCal != null && mCalendarId == juntsCal.id) {
-                mCalendarId = mStoredCalendars.firstOrNull { it.id == config.ownCalendarId && it.id != juntsCal.id }?.id
-                    ?: mStoredCalendars.firstOrNull { it.id == config.lastUsedLocalCalendarId && it.id != juntsCal.id }?.id
-                    ?: mStoredCalendars.firstOrNull { it.id != juntsCal.id }?.id
+            val unwanted = { id: Long? -> id == LOCAL_CALENDAR_ID || (juntsCal != null && id == juntsCal.id) }
+            if (unwanted(mCalendarId)) {
+                mCalendarId = mStoredCalendars.firstOrNull { it.id == config.ownCalendarId && !unwanted(it.id) }?.id
+                    ?: mStoredCalendars.firstOrNull { it.caldavCalendarId != 0 && !unwanted(it.id) }?.id
                     ?: mCalendarId
             }
         }
@@ -685,7 +686,7 @@ class EventActivity : SimpleActivity() {
         val reminders = getReminders()
         return binding.eventTitle.text.toString() != mEvent.title ||
                 binding.eventLocation.text.toString() != mEvent.location ||
-                FacturaScripts.withMarker(DayIcons.withIcon(binding.eventDescription.text.toString(), mDayIconKey), mProject, mProjectType) != mEvent.description ||
+                FacturaScripts.withMarker(DayIcons.withIcon(binding.eventDescription.text.toString(), mDayIconKey, mIsUnscheduled, mEventColor), mProject, mProjectType) != mEvent.description ||
                 binding.eventTimeZone.text != mEvent.getTimeZoneString() ||
                 reminders != mEvent.getReminders() ||
                 mRepeatInterval != mEvent.repeatInterval ||
@@ -738,7 +739,7 @@ class EventActivity : SimpleActivity() {
         window.setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_STATE_ALWAYS_HIDDEN)
         binding.eventToolbar.title = getString(R.string.edit_event)
         mOriginalTimeZone = mEvent.timeZone
-        if (mEvent.startTS == 0L && mEvent.endTS == 0L) {
+        if ((mEvent.startTS == 0L && mEvent.endTS == 0L) || DayIcons.isPending(mEvent.description)) {
             // event waiting to be scheduled: show today while it has no date
             mIsUnscheduled = true
             mEventStartDateTime = DateTime.now().withTimeAtStartOfDay()
@@ -783,7 +784,7 @@ class EventActivity : SimpleActivity() {
         mAvailability = mEvent.availability
         mAccessLevel = mEvent.accessLevel
         mStatus = mEvent.status
-        mEventColor = mEvent.color
+        mEventColor = DayIcons.colorOf(mEvent.description) ?: mEvent.color
 
         mAttendees = mEvent.attendees.toMutableList() as ArrayList<Attendee>
         mOriginalAttendees = mAttendees.map { it.copy() }.toMutableList() as ArrayList<Attendee>
@@ -1663,8 +1664,8 @@ class EventActivity : SimpleActivity() {
         if (mIsUnscheduled) {
             // waiting to be scheduled: date 0 (1 January 1970) means "no date". It is saved in the chosen
             // calendar like any other event, so it is synced and survives reinstalling the app.
-            newStartTS = 0L
-            newEndTS = 0L
+            newStartTS = DayIcons.PENDING_START_TS
+            newEndTS = DayIcons.PENDING_END_TS
             mRepeatInterval = 0
         }
 
@@ -1742,7 +1743,7 @@ class EventActivity : SimpleActivity() {
             startTS = newStartTS
             endTS = newEndTS
             title = newTitle
-            description = FacturaScripts.withMarker(DayIcons.withIcon(binding.eventDescription.value, mDayIconKey), mProject, mProjectType)
+            description = FacturaScripts.withMarker(DayIcons.withIcon(binding.eventDescription.value, mDayIconKey, mIsUnscheduled, mEventColor), mProject, mProjectType)
             reminder1Minutes = reminder1.minutes
             reminder2Minutes = reminder2.minutes
             reminder3Minutes = reminder3.minutes
@@ -2678,7 +2679,7 @@ class EventActivity : SimpleActivity() {
     }
 
     // the "no date" switch is for events that are new or already without a date
-    private fun mIsNewOrUnscheduledEditable() = mIsNewEvent || mIsUnscheduled || mEvent.startTS == 0L
+    private fun mIsNewOrUnscheduledEditable() = mIsNewEvent || mIsUnscheduled || mEvent.startTS == 0L || DayIcons.isPending(mEvent.description)
 
     private fun updateProjectRow() {
         val primary = getProperPrimaryColor()
@@ -2960,12 +2961,12 @@ class EventActivity : SimpleActivity() {
         val icon = binding.eventJunts
         icon.beVisibleIf(junts != null)
         if (junts != null) {
-            icon.applyColorFilter(if (current.id == junts.id) getProperPrimaryColor() else getProperTextColor())
+            icon.applyColorFilter(if (current.id == junts.id) getProperTextColor() else getProperTextColor().adjustAlpha(0.4f))
             icon.setOnClickListener {
                 if (mCalendarId == junts.id) {
                     val previous = mCalendarBeforeJunts
-                        ?: mStoredCalendars.firstOrNull { it.id == config.lastUsedLocalCalendarId && it.id != junts.id }
-                        ?: mStoredCalendars.firstOrNull { it.id != junts.id }
+                        ?: mStoredCalendars.firstOrNull { it.id == config.ownCalendarId && it.id != junts.id }
+                        ?: mStoredCalendars.firstOrNull { it.id != junts.id && it.id != LOCAL_CALENDAR_ID }
                     if (previous != null) {
                         applyCalendarSelection(previous)
                     }

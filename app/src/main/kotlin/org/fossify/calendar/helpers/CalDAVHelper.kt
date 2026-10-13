@@ -58,12 +58,13 @@ class CalDAVHelper(val context: Context) {
             for (calendar in calDAVCalendars) {
                 val localCalendar =
                     eventsHelper.getCalendarWithCalDAVCalendarId(calendar.id) ?: continue
-                if (calendar.displayName != localCalendar.title || calendar.color != localCalendar.color) {
+                val chosenColor = context.config.getCalendarColorOverride(calendar.id) ?: calendar.color
+                if (calendar.displayName != localCalendar.title || chosenColor != localCalendar.color) {
                     localCalendar.apply {
                         title = calendar.displayName
                         caldavDisplayName = calendar.displayName
                         caldavEmail = calendar.accountName
-                        color = calendar.color
+                        color = chosenColor
                         eventsHelper.insertOrUpdateCalendarSync(this)
                     }
                 }
@@ -287,7 +288,7 @@ class CalDAVHelper(val context: Context) {
                 source = source,
                 accessLevel = accessLevel,
                 availability = availability,
-                color = color,
+                color = DayIcons.colorOf(description) ?: color,
                 status = status
             )
 

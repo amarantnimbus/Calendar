@@ -351,4 +351,5 @@
     <string name="tailscale_turned_on">Tailscale activat</string>
     <string name="tailscale_turned_off">Tailscale desactivat</string>
     <string name="tailscale_auto_sync">Activar Tailscale en actualitzar i desactivar-lo en acabar</string>
+    <string name="month_full_text">Mostrar tot el text dels esdeveniments a les caselles del mes</string>
 </resources>

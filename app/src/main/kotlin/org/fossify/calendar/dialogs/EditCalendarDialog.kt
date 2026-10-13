@@ -6,6 +6,7 @@ import androidx.appcompat.app.AlertDialog
 import org.fossify.calendar.R
 import org.fossify.calendar.databinding.DialogCalendarBinding
 import org.fossify.calendar.extensions.calDAVHelper
+import org.fossify.calendar.extensions.config
 import org.fossify.calendar.extensions.eventsHelper
 import org.fossify.calendar.helpers.OTHER_EVENT
 import org.fossify.calendar.models.CalendarEntity
@@ -27,6 +28,7 @@ class EditCalendarDialog(
     val callback: (calendar: CalendarEntity) -> Unit
 ) {
     private var isNewEvent = calendar == null
+    private val initialColor = calendar?.color
     private val binding by activity.viewBinding(DialogCalendarBinding::inflate)
 
     init {
@@ -113,6 +115,10 @@ class EditCalendarDialog(
         calendar!!.title = title
         if (calendar!!.caldavCalendarId != 0) {
             calendar!!.caldavDisplayName = title
+        }
+
+        if (calendar!!.caldavCalendarId != 0 && calendar!!.color != initialColor) {
+            activity.config.setCalendarColorOverride(calendar!!.caldavCalendarId, calendar!!.color)
         }
 
         calendar!!.id = activity.eventsHelper.insertOrUpdateCalendarSync(calendar!!)

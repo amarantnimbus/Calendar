@@ -255,6 +255,21 @@
             </RelativeLayout>
 
             <RelativeLayout
+                android:id="@+id/settings_month_full_text_holder"
+                style="@style/SettingsHolderSwitchStyle"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content">
+
+                <org.fossify.commons.views.MyMaterialSwitch
+                    android:id="@+id/settings_month_full_text"
+                    style="@style/SettingsSwitchStyle"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="@string/month_full_text" />
+
+            </RelativeLayout>
+
+            <RelativeLayout
                 android:id="@+id/settings_tailscale_auto_holder"
                 style="@style/SettingsHolderSwitchStyle"
                 android:layout_width="match_parent"

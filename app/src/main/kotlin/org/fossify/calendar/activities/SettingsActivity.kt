@@ -212,6 +212,7 @@ class SettingsActivity : SimpleActivity() {
         setupWeekendBackground()
         setupEventTransparency()
         setupTailscaleAuto()
+        setupMonthFullText()
         setupShifts()
         setupDeleteAllEvents()
         setupDisplayDescription()
@@ -547,6 +548,14 @@ class SettingsActivity : SimpleActivity() {
             settingsHighlightWeekends.toggle()
             config.highlightWeekends = settingsHighlightWeekends.isChecked
             settingsHighlightWeekendsColorHolder.beVisibleIf(config.highlightWeekends)
+        }
+    }
+
+    private fun setupMonthFullText() = binding.apply {
+        settingsMonthFullText.isChecked = config.monthFullText
+        settingsMonthFullTextHolder.setOnClickListener {
+            settingsMonthFullText.toggle()
+            config.monthFullText = settingsMonthFullText.isChecked
         }
     }
 

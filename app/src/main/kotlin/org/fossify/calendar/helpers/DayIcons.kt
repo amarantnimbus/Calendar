@@ -31,13 +31,38 @@ object DayIcons {
 
     fun iconOf(description: String): Icon? = byKey(keyOf(description))
 
-    fun strip(description: String): String = regex.replace(description, "").trimEnd()
+    // hidden flags that travel in the description too: pending event "[[PD]]" and event color "[[CL:rrggbb]]"
+    private val extraRegex = Regex("\\n?\\[\\[(?:PD|CL:[0-9A-Fa-f]{6})\\]\\]")
+    private val colorRegex = Regex("\\[\\[CL:([0-9A-Fa-f]{6})\\]\\]")
+    const val PENDING_MARKER = "[[PD]]"
+
+    /** Fixed, valid date of pending events (1 January 2000): servers and calendar providers accept it. */
+    const val PENDING_START_TS = 946684800L
+    const val PENDING_END_TS = 946688400L
+
+    fun isPending(description: String) = description.contains(PENDING_MARKER)
+
+    fun colorOf(description: String): Int? {
+        val hex = colorRegex.find(description)?.groupValues?.get(1) ?: return null
+        return (0xFF000000 or hex.toLong(16)).toInt()
+    }
+
+    fun strip(description: String): String = extraRegex.replace(regex.replace(description, ""), "").trimEnd()
 
     /** The description as the person wrote it, without the hidden markers (icon and project). */
     fun visibleText(description: String): String = strip(FacturaScripts.stripMarker(description))
 
-    fun withIcon(description: String, key: String?): String {
-        val clean = strip(description)
-        return if (key == null) clean else "$clean\n${marker(key)}"
+    fun withIcon(description: String, key: String?, pending: Boolean = false, color: Int = 0): String {
+        var result = strip(description)
+        if (key != null) {
+            result += "\n${marker(key)}"
+        }
+        if (pending) {
+            result += "\n$PENDING_MARKER"
+        }
+        if (color != 0) {
+            result += "\n[[CL:%06X]]".format(color and 0xFFFFFF)
+        }
+        return result
     }
 }

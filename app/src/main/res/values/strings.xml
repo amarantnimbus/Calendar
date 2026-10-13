@@ -406,4 +406,5 @@
     <string name="tailscale_turned_on">Tailscale on</string>
     <string name="tailscale_turned_off">Tailscale off</string>
     <string name="tailscale_auto_sync">Turn Tailscale on when refreshing and off when done</string>
+    <string name="month_full_text">Show the full text of events in the month cells</string>
 </resources>
