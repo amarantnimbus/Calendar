@@ -67,9 +67,14 @@ jobs:
                   msg=$(grep -E "^e: " build.log | sed -e 's/^e: //' -e 's#file:///home/runner/work/Calendar/Calendar/##' | head -20 | paste -sd'|' - || true)
                   echo "::error title=Kotlin errors::${msg:-no lines starting with e: were found}"
 
+            - name: Read the version
+              id: ver
+              shell: bash
+              run: echo "v=$(grep '^VERSION_NAME=' gradle.properties | cut -d= -f2)" >> "$GITHUB_OUTPUT"
+
             - name: Upload the APK
               uses: actions/upload-artifact@v4
               with:
-                  name: calendar-turnos-apk
+                  name: calendar-v${{ steps.ver.outputs.v }}
                   path: app/build/outputs/apk/foss/debug/*.apk
                   if-no-files-found: error
