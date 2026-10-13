@@ -257,7 +257,6 @@ class MonthView(context: Context, attrs: AttributeSet, defStyle: Int) : View(con
         measureDaySize(canvas)
 
         val schedule = ShiftHelper.load(config)
-        drawWeekendBackgrounds(canvas)
         drawShiftBackgrounds(canvas, schedule)
 
         if (config.showGrid && !isMonthDayView) {
@@ -543,27 +542,6 @@ class MonthView(context: Context, attrs: AttributeSet, defStyle: Int) : View(con
         val y = if (rowShift == 0) height - barHeight * 1.6f else weekDaysLetterHeight + barHeight * 0.6f
         shiftPaint.color = textColor.adjustAlpha(0.35f)
         canvas.drawRoundRect(cx - barWidth / 2, y, cx + barWidth / 2, y + barHeight, barHeight / 2, barHeight / 2, shiftPaint)
-    }
-
-    // weekend cells get a light grey background when the option is on
-    private fun drawWeekendBackgrounds(canvas: Canvas) {
-        if (!config.weekendBackground || isMonthDayView || isPrintVersion) {
-            return
-        }
-
-        shiftPaint.color = textColor.adjustAlpha(0.07f)
-        var curId = 0
-        for (y in 0 until ROW_COUNT) {
-            for (x in 0 until COLUMN_COUNT) {
-                val day = days.getOrNull(curId)
-                if (day != null && isRowVisible(y) && day.isThisMonth && day.isWeekend) {
-                    val left = x * dayWidth + horizontalOffset
-                    val top = rowOrigin(y) + weekDaysLetterHeight
-                    canvas.drawRect(left, top, left + dayWidth, top + dayHeight, shiftPaint)
-                }
-                curId++
-            }
-        }
     }
 
     // height of the colored band behind the day number

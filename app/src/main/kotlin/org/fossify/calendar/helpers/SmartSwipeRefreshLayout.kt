@@ -15,9 +15,24 @@ class SmartSwipeRefreshLayout @JvmOverloads constructor(
     private var mInitialDownX = 0f
 
     private val touchSlop = ViewConfiguration.get(context).scaledTouchSlop
+    private var multiTouch = false
+
+    init {
+        // long pull needed (about 200 dp) so a pinch is not mistaken for a refresh
+        setDistanceToTriggerSync((200 * context.resources.displayMetrics.density).toInt())
+    }
 
     override fun onInterceptTouchEvent(ev: MotionEvent): Boolean {
         val action = ev.actionMasked
+
+        if (action == MotionEvent.ACTION_DOWN) {
+            multiTouch = false
+        } else if (action == MotionEvent.ACTION_POINTER_DOWN || ev.pointerCount > 1) {
+            multiTouch = true
+        }
+        if (multiTouch) {
+            return false
+        }
 
         // Fail fast if swipe refresh is disabled, child can scroll up, or refresh is in progress
         if (!isEnabled || canChildScrollUp() || isRefreshing) {
@@ -41,5 +56,13 @@ class SmartSwipeRefreshLayout @JvmOverloads constructor(
         }
 
         return super.onInterceptTouchEvent(ev)
+    }
+
+    override fun onTouchEvent(ev: MotionEvent): Boolean {
+        if (ev.actionMasked == MotionEvent.ACTION_POINTER_DOWN || ev.pointerCount > 1) {
+            multiTouch = true
+            return false
+        }
+        return super.onTouchEvent(ev)
     }
 }

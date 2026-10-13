@@ -3,7 +3,9 @@ package org.fossify.calendar.activities
 import android.app.DatePickerDialog
 import android.app.TimePickerDialog
 import android.content.ActivityNotFoundException
+import android.content.ContentUris
 import android.content.Intent
+import android.provider.CalendarContract
 import android.media.AudioManager
 import android.media.RingtoneManager
 import android.os.Bundle
@@ -27,6 +29,7 @@ import org.fossify.calendar.extensions.calDAVHelper
 import org.fossify.calendar.extensions.calendarsDB
 import org.fossify.calendar.extensions.cancelScheduledAutomaticBackup
 import org.fossify.calendar.extensions.config
+import org.fossify.calendar.extensions.eventsDB
 import org.fossify.calendar.extensions.eventsHelper
 import org.fossify.calendar.extensions.getSyncedCalDAVCalendars
 import org.fossify.calendar.extensions.scheduleNextAutomaticBackup
@@ -51,6 +54,7 @@ import org.fossify.calendar.helpers.DIM_PAST_EVENTS
 import org.fossify.calendar.helpers.DISPLAY_DESCRIPTION
 import org.fossify.calendar.helpers.DISPLAY_PAST_EVENTS
 import org.fossify.calendar.helpers.EVENTS_LIST_VIEW
+import org.fossify.calendar.helpers.DayIcons
 import org.fossify.calendar.helpers.Formatter
 import org.fossify.calendar.helpers.HIGHLIGHT_WEEKENDS
 import org.fossify.calendar.helpers.HIGHLIGHT_WEEKENDS_COLOR
@@ -209,9 +213,7 @@ class SettingsActivity : SimpleActivity() {
         setupStartWeekOn()
         setupHighlightWeekends()
         setupHighlightWeekendsColor()
-        setupWeekendBackground()
         setupEventTransparency()
-        setupTailscaleAuto()
         setupMonthFullText()
         setupShifts()
         setupDeleteAllEvents()
@@ -273,9 +275,40 @@ class SettingsActivity : SimpleActivity() {
             binding.settingsEventsLabel,
             binding.settingsTasksLabel,
             binding.settingsBackupsLabel,
-            binding.settingsMigratingLabel
+            binding.settingsMigratingLabel,
+            binding.settingsAppInfoLabel
         ).forEach {
             it.setTextColor(getProperPrimaryColor())
+        }
+        setupCollapsibleSections()
+    }
+
+    private fun setupCollapsibleSections() {
+        val holder = binding.settingsHolder
+        val open = config.openSettingSections
+        val labels = (0 until holder.childCount).map { holder.getChildAt(it) }
+            .filter { it is android.widget.TextView && it.id != View.NO_ID &&
+                resources.getResourceEntryName(it.id).let { n -> n.startsWith("settings_") && n.endsWith("_label") } &&
+                it.layoutParams is android.view.ViewGroup.LayoutParams && it !is org.fossify.commons.views.MyTextView }
+        var currentOpen = true
+        for (i in 0 until holder.childCount) {
+            val child = holder.getChildAt(i)
+            if (child in labels) {
+                val tv = child as android.widget.TextView
+                val key = resources.getResourceEntryName(tv.id)
+                if (tv.tag == null) tv.tag = tv.text.toString()
+                val base = tv.tag as String
+                currentOpen = open.contains(key)
+                tv.text = (if (currentOpen) "▾  " else "▸  ") + base
+                tv.setOnClickListener {
+                    val set = config.openSettingSections.toMutableSet()
+                    if (!set.add(key)) set.remove(key)
+                    config.openSettingSections = set
+                    setupSettingItems()
+                }
+            } else if (!currentOpen) {
+                child.visibility = View.GONE
+            }
         }
     }
 
@@ -559,14 +592,6 @@ class SettingsActivity : SimpleActivity() {
         }
     }
 
-    private fun setupTailscaleAuto() = binding.apply {
-        settingsTailscaleAuto.isChecked = config.tailscaleAutoSync
-        settingsTailscaleAutoHolder.setOnClickListener {
-            settingsTailscaleAuto.toggle()
-            config.tailscaleAutoSync = settingsTailscaleAuto.isChecked
-        }
-    }
-
     private fun setupEventTransparency() = binding.apply {
         settingsEventTransparency.text = "${config.eventTransparency} %"
         settingsEventTransparencyHolder.setOnClickListener {
@@ -575,14 +600,6 @@ class SettingsActivity : SimpleActivity() {
                 config.eventTransparency = values[index]
                 settingsEventTransparency.text = "${values[index]} %"
             }
-        }
-    }
-
-    private fun setupWeekendBackground() = binding.apply {
-        settingsWeekendBackground.isChecked = config.weekendBackground
-        settingsWeekendBackgroundHolder.setOnClickListener {
-            settingsWeekendBackground.toggle()
-            config.weekendBackground = settingsWeekendBackground.isChecked
         }
     }
 
@@ -837,6 +854,33 @@ class SettingsActivity : SimpleActivity() {
     private fun setupAppInfo() = binding.apply {
         settingsAppChangesHolder.setOnClickListener {
             showTextDialog(R.string.app_changes, getString(R.string.changelog_text))
+        }
+        settingsDiagnosticsHolder.setOnClickListener { showDiagnostics() }
+    }
+
+    private fun showDiagnostics() {
+        ensureBackgroundThread {
+            val sb = StringBuilder("Versió ${org.fossify.calendar.BuildConfig.VERSION_NAME}\n")
+            try {
+                eventsDB.getLastUpdatedEvents().forEach { e ->
+                    val cal = calendarsDB.getCalendarWithId(e.calendarId)?.getDisplayTitle() ?: "?"
+                    val appColor = String.format("#%08x", e.color)
+                    val marker = DayIcons.colorOf(e.description)?.let { String.format("#%06x", it and 0xFFFFFF) } ?: "-"
+                    var provider = "-"
+                    try {
+                        val uri = ContentUris.withAppendedId(CalendarContract.Events.CONTENT_URI, e.getCalDAVEventId())
+                        contentResolver.query(uri, arrayOf(CalendarContract.Events.EVENT_COLOR), null, null, null)?.use {
+                            if (it.moveToFirst()) provider = if (it.isNull(0)) "null" else String.format("#%08x", it.getInt(0))
+                        }
+                    } catch (ex: Exception) {
+                        provider = "error"
+                    }
+                    sb.append("\n• ${e.title}\n  calendari: $cal\n  color app: $appColor\n  color marca: $marker\n  color proveïdor: $provider\n  inici/fi: ${e.startTS} / ${e.endTS}\n  pendent: ${DayIcons.isPending(e.description)}\n")
+                }
+            } catch (ex: Exception) {
+                sb.append("\nError: ${ex.message}")
+            }
+            runOnUiThread { showTextDialog(R.string.diagnostics, sb.toString()) }
         }
     }
 

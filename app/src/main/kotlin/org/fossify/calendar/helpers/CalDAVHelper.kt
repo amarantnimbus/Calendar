@@ -427,10 +427,22 @@ class CalDAVHelper(val context: Context) {
     fun insertCalDAVEvent(event: Event, originalInstanceTime: Long? = null) {
         val uri = Events.CONTENT_URI
         val values = fillEventContentValues(event, originalInstanceTime)
-        val newUri = context.contentResolver.insert(uri, values)
+        val newUri = try {
+            context.contentResolver.insert(uri, values)
+        } catch (e: Exception) {
+            // try again without any color, so that the event is never lost because of it
+            values.remove(Events.EVENT_COLOR_KEY)
+            values.remove(Events.EVENT_COLOR)
+            try {
+                context.contentResolver.insert(uri, values)
+            } catch (e2: Exception) {
+                context.toast("${context.getString(org.fossify.commons.R.string.unknown_error_occurred)}: ${e2.message}", Toast.LENGTH_LONG)
+                null
+            }
+        } ?: return
 
         val calendarId = event.getCalDAVCalendarId()
-        val eventRemoteID = java.lang.Long.parseLong(newUri!!.lastPathSegment!!)
+        val eventRemoteID = java.lang.Long.parseLong(newUri.lastPathSegment!!)
         event.importId = getCalDAVEventImportId(calendarId, eventRemoteID)
 
         setupCalDAVEventReminders(event)
@@ -446,7 +458,18 @@ class CalDAVHelper(val context: Context) {
         event.importId = getCalDAVEventImportId(event.getCalDAVCalendarId(), eventRemoteID)
 
         val newUri = ContentUris.withAppendedId(uri, eventRemoteID)
-        context.contentResolver.update(newUri, values, null, null)
+        try {
+            context.contentResolver.update(newUri, values, null, null)
+        } catch (e: Exception) {
+            values.remove(Events.EVENT_COLOR_KEY)
+            values.remove(Events.EVENT_COLOR)
+            try {
+                context.contentResolver.update(newUri, values, null, null)
+            } catch (e2: Exception) {
+                context.toast("${context.getString(org.fossify.commons.R.string.unknown_error_occurred)}: ${e2.message}", Toast.LENGTH_LONG)
+                return
+            }
+        }
 
         setupCalDAVEventReminders(event)
         setupCalDAVEventAttendees(event)
@@ -523,17 +546,19 @@ class CalDAVHelper(val context: Context) {
             put(Events.ACCESS_LEVEL, event.accessLevel)
             put(Events.AVAILABILITY, event.availability)
 
+            // Only palette colors known by the calendar provider are written to it. Any other color
+            // travels with the event in the description (see DayIcons) and is never sent to the provider.
             if (event.color == 0) {
                 put(Events.EVENT_COLOR_KEY, "")
-                putNull(Events.EVENT_COLOR)
             } else {
-                val calendar = eventsHelper.getCalendarWithCalDAVCalendarId(calendarId)!!
-                val colors = getAvailableCalDAVCalendarColors(calendar, Colors.TYPE_EVENT)
-                val colorKey = colors[event.color]
-                if (colorKey != null) {
-                    put(Events.EVENT_COLOR_KEY, colorKey)
-                } else {
-                    put(Events.EVENT_COLOR, event.color or 0xFF000000.toInt())
+                try {
+                    val calendar = eventsHelper.getCalendarWithCalDAVCalendarId(calendarId)
+                    val colors = if (calendar != null) getAvailableCalDAVCalendarColors(calendar, Colors.TYPE_EVENT) else null
+                    val colorKey = colors?.get(event.color)
+                    if (colorKey != null) {
+                        put(Events.EVENT_COLOR_KEY, colorKey)
+                    }
+                } catch (ignored: Exception) {
                 }
             }
 

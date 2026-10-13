@@ -47,6 +47,9 @@ interface EventsDao {
     @Query("SELECT * FROM events WHERE ((start_ts = 0 AND end_ts = 0) OR description LIKE '%[[PD]]%') AND type = $TYPE_EVENT ORDER BY last_updated DESC")
     fun getUnscheduledEvents(): List<Event>
 
+    @Query("SELECT * FROM events WHERE type = $TYPE_EVENT ORDER BY last_updated DESC LIMIT 5")
+    fun getLastUpdatedEvents(): List<Event>
+
     @Query("SELECT * FROM events WHERE title = :title AND type = $TYPE_EVENT")
     fun getEventsWithTitle(title: String): List<Event>
 

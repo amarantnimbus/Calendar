@@ -226,8 +226,7 @@
     <string name="other_time">Other time</string>
     <string name="highlight_weekends">Highlight weekends on some views</string>
     <string name="highlight_weekends_color">Color of highlighted weekends</string>
-    <string name="weekend_background">Grey background on weekends (monthly view)</string>
-    <string name="event_transparency">Event transparency (month view pills and day cards)</string>
+    <string name="event_transparency">Transparency</string>
     <string name="allow_changing_time_zones">Allow changing event time zones</string>
     <string name="manage_quick_filter_event_types">Manage quick filter calendars</string>
     <string name="allow_creating_tasks">Allow creating tasks</string>
@@ -325,10 +324,10 @@
     <string name="faq_6_text">You can do both of those in the app Settings - Manage calendars. Just click on the wanted one for changing the label and color, or select the wanted one by long pressing it and use the trashbin at the top menu for deleting.</string>
     <!-- Shifts -->
     <string name="shifts">Shifts</string>
-    <string name="shifts_show_in_month_view">Color the days of the month view by shift</string>
-    <string name="shift_color_day">Day shift color</string>
-    <string name="shift_color_night">Night shift color</string>
-    <string name="shift_color_off_duty">Rest shift color</string>
+    <string name="shifts_show_in_month_view">Shift function</string>
+    <string name="shift_color_day">Day</string>
+    <string name="shift_color_night">Night</string>
+    <string name="shift_color_off_duty">Off duty</string>
     <string name="shift_start_date">Cycle start date</string>
     <string name="shift_cycle">Shift cycle</string>
     <string name="shift_cycle_explanation">Write blocks of days followed by a letter, separated by commas: D = day, N = night, S = rest, L = free. Example: 2D,2N,2S,4L (it repeats forever).</string>
@@ -346,7 +345,7 @@
     -->
     <string name="expand_day_in_month_view">Expand the tapped day inside the month view</string>
     <string name="more_events_count">+%d</string>
-    <string name="shift_full_cell">Paint the whole day cell (instead of only a band at the top)</string>
+    <string name="shift_full_cell">Full cell</string>
     <string name="junts">Junts</string>
     <string name="event_name_hint">Event name</string>
     <string name="comment_hint">Comment</string>
@@ -385,7 +384,6 @@
     <string name="icon_vacation">Vacation</string>
     <string name="icon_vet">Vet</string>
     <string name="icon_important">Important</string>
-    <string name="icon_flower">Flower</string>
     <string name="no_icon">No icon</string>
     <string name="day_icon">Day icon</string>
     <string name="attachments">Attachments</string>
@@ -405,6 +403,20 @@
     <string name="tailscale_sync_done">Synchronized, Tailscale turned off</string>
     <string name="tailscale_turned_on">Tailscale on</string>
     <string name="tailscale_turned_off">Tailscale off</string>
-    <string name="tailscale_auto_sync">Turn Tailscale on when refreshing and off when done</string>
-    <string name="month_full_text">Show the full text of events in the month cells</string>
+    <string name="month_full_text">Full text</string>
+    <string name="icon_daisy">Daisy</string>
+    <string name="icon_car">Car</string>
+    <string name="icon_motorbike">Motorbike</string>
+    <string name="icon_leaf">Leaf</string>
+    <string name="icon_meeting">Meeting</string>
+    <string name="icon_shopping">Shopping</string>
+    <string name="icon_home">Home</string>
+    <string name="icon_phone">Phone</string>
+    <string name="icon_cake">Cake</string>
+    <string name="lbl_format_24h">24h format</string>
+    <string name="lbl_weekends_color">Weekends in color</string>
+    <string name="lbl_pull_refresh">Swipe to refresh</string>
+    <string name="lbl_reminder_memory">Event memory</string>
+    <string name="lbl_empty"> </string>
+    <string name="diagnostics">Diagnostics</string>
 </resources>

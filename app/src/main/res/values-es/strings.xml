@@ -183,8 +183,7 @@
     <string name="other_time">Otro momento</string>
     <string name="highlight_weekends">Resaltar los fines de semana en algunas vistas</string>
     <string name="highlight_weekends_color">Color de los fines de semana resaltados</string>
-    <string name="weekend_background">Fondo gris en los fines de semana (vista mensual)</string>
-    <string name="event_transparency">Transparencia de los eventos (píldoras y tarjetas)</string>
+    <string name="event_transparency">Transparencia</string>
     <string name="allow_changing_time_zones">Permitir cambiar las zonas horarias de los eventos</string>
     <string name="manage_quick_filter_event_types">Administrar calendarios de filtro rápido</string>
     <string name="allow_creating_tasks">Permitir crear tareas</string>
@@ -276,10 +275,10 @@
     <string name="holiday_management_notice">La app ahora actualiza los festivos de modo automático. Indique otra vez sus países para habilitarlo. Puede ser necesario tener que eliminar a mano los festivos antes importados.</string>
     <!-- Shifts -->
     <string name="shifts">Turnos</string>
-    <string name="shifts_show_in_month_view">Colorear los días de la vista mensual según el turno</string>
-    <string name="shift_color_day">Color del turno de día</string>
-    <string name="shift_color_night">Color del turno de noche</string>
-    <string name="shift_color_off_duty">Color del turno de descanso</string>
+    <string name="shifts_show_in_month_view">Función de turnos</string>
+    <string name="shift_color_day">Día</string>
+    <string name="shift_color_night">Noche</string>
+    <string name="shift_color_off_duty">Descanso</string>
     <string name="shift_start_date">Fecha de inicio del ciclo</string>
     <string name="shift_cycle">Ciclo de turnos</string>
     <string name="shift_cycle_explanation">Escribe bloques de días seguidos de una letra, separados por comas: D = día, N = noche, S = descanso, L = libre. Ejemplo: 2D,2N,2S,4L (se repite indefinidamente).</string>
@@ -291,7 +290,7 @@
     <string name="shift_free">Libre</string>
     <string name="shift_back_to_cycle">Volver al ciclo</string>
     <string name="expand_day_in_month_view">Desplegar el día pulsado dentro de la vista mensual</string>
-    <string name="shift_full_cell">Pintar la casilla entera (en lugar de solo una franja arriba)</string>
+    <string name="shift_full_cell">Casilla entera</string>
     <string name="junts">Juntos</string>
     <string name="event_name_hint">Nombre del evento</string>
     <string name="comment_hint">Comentario</string>
@@ -330,7 +329,6 @@
     <string name="icon_vacation">Vacaciones</string>
     <string name="icon_vet">Veterinario</string>
     <string name="icon_important">Importante</string>
-    <string name="icon_flower">Flor</string>
     <string name="no_icon">Sin icono</string>
     <string name="day_icon">Icono del día</string>
     <string name="attachments">Adjuntos</string>
@@ -350,6 +348,20 @@
     <string name="tailscale_sync_done">Sincronizado, Tailscale desactivado</string>
     <string name="tailscale_turned_on">Tailscale activado</string>
     <string name="tailscale_turned_off">Tailscale desactivado</string>
-    <string name="tailscale_auto_sync">Activar Tailscale al actualizar y desactivarlo al terminar</string>
-    <string name="month_full_text">Mostrar todo el texto de los eventos en las casillas del mes</string>
+    <string name="month_full_text">Texto completo</string>
+    <string name="icon_daisy">Margarita</string>
+    <string name="icon_car">Coche</string>
+    <string name="icon_motorbike">Moto</string>
+    <string name="icon_leaf">Hoja</string>
+    <string name="icon_meeting">Reunión</string>
+    <string name="icon_shopping">Comprar</string>
+    <string name="icon_home">Casa</string>
+    <string name="icon_phone">Teléfono</string>
+    <string name="icon_cake">Pastel</string>
+    <string name="lbl_format_24h">Formato 24h</string>
+    <string name="lbl_weekends_color">Fines de semana en color</string>
+    <string name="lbl_pull_refresh">Actualizar deslizando</string>
+    <string name="lbl_reminder_memory">Memoria por eventos</string>
+    <string name="lbl_empty"> </string>
+    <string name="diagnostics">Diagnóstico</string>
 </resources>

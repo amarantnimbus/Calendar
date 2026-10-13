@@ -194,7 +194,7 @@
                     style="@style/SettingsSwitchStyle"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:text="@string/use_24_hour_time_format" />
+                    android:text="@string/lbl_format_24h" />
 
             </RelativeLayout>
 
@@ -209,7 +209,7 @@
                     style="@style/SettingsSwitchStyle"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:text="@string/highlight_weekends" />
+                    android:text="@string/lbl_weekends_color" />
 
             </RelativeLayout>
 
@@ -228,7 +228,7 @@
                     android:layout_alignBottom="@+id/settings_highlight_weekends_color"
                     android:layout_toStartOf="@+id/settings_highlight_weekends_color"
                     android:gravity="center_vertical|start"
-                    android:text="@string/highlight_weekends_color" />
+                    android:text="@string/lbl_empty" />
 
                 <ImageView
                     android:id="@+id/settings_highlight_weekends_color"
@@ -236,21 +236,6 @@
                     android:layout_height="@dimen/color_sample_size"
                     android:layout_alignParentEnd="true"
                     android:clickable="false" />
-
-            </RelativeLayout>
-
-            <RelativeLayout
-                android:id="@+id/settings_weekend_background_holder"
-                style="@style/SettingsHolderSwitchStyle"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content">
-
-                <org.fossify.commons.views.MyMaterialSwitch
-                    android:id="@+id/settings_weekend_background"
-                    style="@style/SettingsSwitchStyle"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:text="@string/weekend_background" />
 
             </RelativeLayout>
 
@@ -266,21 +251,6 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:text="@string/month_full_text" />
-
-            </RelativeLayout>
-
-            <RelativeLayout
-                android:id="@+id/settings_tailscale_auto_holder"
-                style="@style/SettingsHolderSwitchStyle"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content">
-
-                <org.fossify.commons.views.MyMaterialSwitch
-                    android:id="@+id/settings_tailscale_auto"
-                    style="@style/SettingsSwitchStyle"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:text="@string/tailscale_auto_sync" />
 
             </RelativeLayout>
 
@@ -655,7 +625,7 @@
                     style="@style/SettingsSwitchStyle"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:text="@string/enable_pull_to_refresh" />
+                    android:text="@string/lbl_pull_refresh" />
 
             </RelativeLayout>
 
@@ -765,7 +735,7 @@
                     style="@style/SettingsSwitchStyle"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:text="@string/use_last_event_reminders" />
+                    android:text="@string/lbl_reminder_memory" />
 
             </RelativeLayout>
 
@@ -1006,6 +976,21 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:text="@string/app_changes" />
+
+            </RelativeLayout>
+
+            <RelativeLayout
+                android:id="@+id/settings_diagnostics_holder"
+                style="@style/SettingsHolderTextViewStyle"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content">
+
+                <org.fossify.commons.views.MyTextView
+                    android:id="@+id/settings_diagnostics_label"
+                    style="@style/SettingsTextLabelStyle"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="@string/diagnostics" />
 
             </RelativeLayout>
 

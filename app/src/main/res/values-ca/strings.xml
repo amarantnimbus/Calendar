@@ -183,8 +183,7 @@
     <string name="other_time">Una altra hora</string>
     <string name="highlight_weekends">Ressalta els caps de setmana en algunes vistes</string>
     <string name="highlight_weekends_color">Color dels caps de setmana ressaltats</string>
-    <string name="weekend_background">Fons gris als caps de setmana (vista mensual)</string>
-    <string name="event_transparency">Transparència dels esdeveniments (píndoles i targetes)</string>
+    <string name="event_transparency">Transparència</string>
     <string name="allow_changing_time_zones">Permet canviar els fusos horaris dels esdeveniments</string>
     <string name="manage_quick_filter_event_types">Gestiona els calendaris de filtre ràpid</string>
     <string name="allow_creating_tasks">Permet crear tasques</string>
@@ -276,10 +275,10 @@
     <string name="holidays_updated">S\'han actualitzat els festius</string>
     <!-- Shifts -->
     <string name="shifts">Torns</string>
-    <string name="shifts_show_in_month_view">Pinta els dies de la vista mensual segons el torn</string>
-    <string name="shift_color_day">Color del torn de dia</string>
-    <string name="shift_color_night">Color del torn de nit</string>
-    <string name="shift_color_off_duty">Color del torn de descans</string>
+    <string name="shifts_show_in_month_view">Funció de torns</string>
+    <string name="shift_color_day">Dia</string>
+    <string name="shift_color_night">Nit</string>
+    <string name="shift_color_off_duty">Descans</string>
     <string name="shift_start_date">Data d\'inici del cicle</string>
     <string name="shift_cycle">Cicle de torns</string>
     <string name="shift_cycle_explanation">Escriu blocs de dies seguits d\'una lletra, separats per comes: D = dia, N = nit, S = descans, L = lliure. Exemple: 2D,2N,2S,4L (es repeteix indefinidament).</string>
@@ -291,7 +290,7 @@
     <string name="shift_free">Lliure</string>
     <string name="shift_back_to_cycle">Torna al cicle</string>
     <string name="expand_day_in_month_view">Desplega el dia premut dins de la vista mensual</string>
-    <string name="shift_full_cell">Pinta la casella sencera (en lloc de només una franja a dalt)</string>
+    <string name="shift_full_cell">Casella sencera</string>
     <string name="junts">Junts</string>
     <string name="event_name_hint">Nom de l\'esdeveniment</string>
     <string name="comment_hint">Comentari</string>
@@ -330,7 +329,6 @@
     <string name="icon_vacation">Vacances</string>
     <string name="icon_vet">Veterinari</string>
     <string name="icon_important">Important</string>
-    <string name="icon_flower">Flor</string>
     <string name="no_icon">Sense icona</string>
     <string name="day_icon">Icona del dia</string>
     <string name="attachments">Adjunts</string>
@@ -350,6 +348,20 @@
     <string name="tailscale_sync_done">Sincronitzat, Tailscale desactivat</string>
     <string name="tailscale_turned_on">Tailscale activat</string>
     <string name="tailscale_turned_off">Tailscale desactivat</string>
-    <string name="tailscale_auto_sync">Activar Tailscale en actualitzar i desactivar-lo en acabar</string>
-    <string name="month_full_text">Mostrar tot el text dels esdeveniments a les caselles del mes</string>
+    <string name="month_full_text">Text complet</string>
+    <string name="icon_daisy">Margarida</string>
+    <string name="icon_car">Cotxe</string>
+    <string name="icon_motorbike">Moto</string>
+    <string name="icon_leaf">Fulla</string>
+    <string name="icon_meeting">Reunió</string>
+    <string name="icon_shopping">Comprar</string>
+    <string name="icon_home">Casa</string>
+    <string name="icon_phone">Telèfon</string>
+    <string name="icon_cake">Pastís</string>
+    <string name="lbl_format_24h">Format 24h</string>
+    <string name="lbl_weekends_color">Caps de setmana a color</string>
+    <string name="lbl_pull_refresh">Actualitzar lliscant</string>
+    <string name="lbl_reminder_memory">Memòria per esdeveniments</string>
+    <string name="lbl_empty"> </string>
+    <string name="diagnostics">Diagnòstic</string>
 </resources>

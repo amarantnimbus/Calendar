@@ -287,6 +287,10 @@ class Config(context: Context) : BaseConfig(context) {
         get() = prefs.getInt(DEFAULT_REMINDER_3, REMINDER_OFF)
         set(defaultReminder3) = prefs.edit().putInt(DEFAULT_REMINDER_3, defaultReminder3).apply()
 
+    var openSettingSections: Set<String>
+        get() = prefs.getStringSet("open_setting_sections", HashSet())!!
+        set(value) = prefs.edit().putStringSet("open_setting_sections", HashSet(value)).apply()
+
     var pullToRefresh: Boolean
         get() = prefs.getBoolean(PULL_TO_REFRESH, false)
         set(pullToRefresh) = prefs.edit().putBoolean(PULL_TO_REFRESH, pullToRefresh).apply()
@@ -385,18 +389,10 @@ class Config(context: Context) : BaseConfig(context) {
         get() = prefs.getBoolean(MONTH_FULL_TEXT, false)
         set(monthFullText) = prefs.edit().putBoolean(MONTH_FULL_TEXT, monthFullText).apply()
 
-    var tailscaleAutoSync: Boolean
-        get() = prefs.getBoolean(TAILSCALE_AUTO_SYNC, true)
-        set(tailscaleAutoSync) = prefs.edit().putBoolean(TAILSCALE_AUTO_SYNC, tailscaleAutoSync).apply()
-
     /** 0 = solid pills and cards, 100 = fully transparent. */
     var eventTransparency: Int
         get() = prefs.getInt(EVENT_TRANSPARENCY, 0)
         set(eventTransparency) = prefs.edit().putInt(EVENT_TRANSPARENCY, eventTransparency).apply()
-
-    var weekendBackground: Boolean
-        get() = prefs.getBoolean(WEEKEND_BACKGROUND, false)
-        set(weekendBackground) = prefs.edit().putBoolean(WEEKEND_BACKGROUND, weekendBackground).apply()
 
     var shiftsEnabled: Boolean
         get() = prefs.getBoolean(SHIFTS_ENABLED, false)

@@ -452,7 +452,7 @@ class MainActivity : SimpleActivity(), RefreshRecyclerViewListener {
      * and turns Tailscale off again if this refresh was the one that turned it on.
      */
     private fun refreshWithTailscale() {
-        if (!config.tailscaleAutoSync || !TailscaleSync.isInstalled(this)) {
+        if (!TailscaleSync.isInstalled(this)) {
             refreshCalDAVCalendars(true)
             return
         }
