@@ -32,7 +32,10 @@ import org.fossify.calendar.extensions.seconds
 import org.fossify.calendar.extensions.shareEvents
 import org.fossify.calendar.extensions.showEventRepeatIntervalDialog
 import org.fossify.calendar.extensions.updateTaskCompletion
+import org.fossify.calendar.helpers.CALDAV
 import org.fossify.calendar.helpers.CALENDAR_ID
+import org.fossify.calendar.helpers.DayIcons
+import org.fossify.calendar.helpers.TYPE_EVENT
 import org.fossify.calendar.helpers.DELETE_ALL_OCCURRENCES
 import org.fossify.calendar.helpers.DELETE_FUTURE_OCCURRENCES
 import org.fossify.calendar.helpers.DELETE_SELECTED_OCCURRENCE
@@ -383,6 +386,15 @@ class TaskActivity : SimpleActivity() {
     }
 
     private fun resolveTaskCalendarId(storedCalendars: ArrayList<CalendarEntity>): Long {
+        // tasks live in a synced calendar (as marked events), so both phones can see and tick them
+        val synced = storedCalendars.filter { it.id != LOCAL_CALENDAR_ID && it.caldavCalendarId != 0 }
+        if (config.caldavSync && synced.isNotEmpty()) {
+            val chosen = synced.firstOrNull { it.id == config.defaultCalendarId }
+                ?: synced.firstOrNull { it.id != config.juntsCalendarId }
+                ?: synced.first()
+            return chosen.id!!
+        }
+
         return if (config.defaultCalendarId == -1L) {
             config.lastUsedLocalCalendarId
         } else {
@@ -597,7 +609,40 @@ class TaskActivity : SimpleActivity() {
         }
     }
 
+    // a task in a synced calendar is saved as a normal event with the hidden marker [[TK]]
+    private fun storeSyncedTask(calendar: CalendarEntity) {
+        ensureBackgroundThread {
+            val oldId = mTask.id
+            val done = mTaskCompleted
+            val allDay = mTask.flags and FLAG_ALL_DAY != 0
+            mTask.apply {
+                id = null
+                type = TYPE_EVENT
+                source = "$CALDAV-${calendar.caldavCalendarId}"
+                calendarId = calendar.id!!
+                endTS = if (allDay) startTS + 12 * 3600 else startTS + 1800
+                flags = flags.removeBit(FLAG_TASK_COMPLETED)
+                description = DayIcons.withIcon(description, null, false, color, true, done)
+            }
+            eventsHelper.insertEvent(mTask, addToCalDAV = true, showToasts = true) {
+                if (oldId != null) {
+                    eventsHelper.deleteEvent(oldId, false)
+                }
+                runOnUiThread {
+                    hideKeyboard()
+                    finish()
+                }
+            }
+        }
+    }
+
     private fun storeTask(wasRepeatable: Boolean) {
+        val targetCalendar = calendarsDB.getCalendarWithId(mCalendarId)
+        if (targetCalendar != null && targetCalendar.caldavCalendarId != 0 && config.caldavSync) {
+            storeSyncedTask(targetCalendar)
+            return
+        }
+
         if (mTask.id == null) {
             eventsHelper.insertTask(mTask, true) {
                 hideKeyboard()
@@ -937,7 +982,7 @@ class TaskActivity : SimpleActivity() {
         SelectCalendarDialog(
             activity = this,
             currCalendar = mCalendarId,
-            showCalDAVCalendars = false,
+            showCalDAVCalendars = true,
             showNewCalendarOption = false,
             addLastUsedOneAsFirstOption = false,
             showOnlyWritable = true,
@@ -954,7 +999,7 @@ class TaskActivity : SimpleActivity() {
             if (calendar != null) {
                 runOnUiThread {
                     binding.calendarTitle.text = calendar.title
-                    binding.calendarSubtitle.text = getString(R.string.offline_never_synced)
+                    binding.calendarSubtitle.text = if (calendar.caldavCalendarId != 0) "" else getString(R.string.offline_never_synced)
                     updateTaskColorInfo(calendar.color)
                 }
             }

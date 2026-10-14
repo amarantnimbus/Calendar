@@ -7,6 +7,12 @@
         android:title="@string/save"
         app:showAsAction="always" />
     <item
+        android:id="@+id/mark_done"
+        android:icon="@drawable/ic_task_vector"
+        android:title="@string/mark_task_done"
+        android:visible="false"
+        app:showAsAction="always" />
+    <item
         android:id="@+id/delete"
         android:icon="@drawable/ic_delete_vector"
         android:title="@string/delete"

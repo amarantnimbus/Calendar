@@ -182,6 +182,8 @@ data class Event(
     fun getIsAllDay() = flags and FLAG_ALL_DAY != 0
     fun hasMissingYear() = flags and FLAG_MISSING_YEAR != 0
     fun isTask() = type == TYPE_TASK
+    fun isTaskMarked() = type != TYPE_TASK && org.fossify.calendar.helpers.DayIcons.isTask(description)
+    fun isTaskMarkedDone() = isTaskMarked() && org.fossify.calendar.helpers.DayIcons.isDone(description)
     fun isTaskCompleted() = isTask() && flags and FLAG_TASK_COMPLETED != 0
 
     fun getReminders() = listOf(

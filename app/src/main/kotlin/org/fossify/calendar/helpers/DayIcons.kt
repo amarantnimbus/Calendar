@@ -40,7 +40,21 @@ object DayIcons {
     fun iconOf(description: String): Icon? = byKey(keyOf(description))
 
     // hidden flags that travel in the description too: pending event "[[PD]]" and event color "[[CL:rrggbb]]"
-    private val extraRegex = Regex("\\n?\\[\\[(?:PD|CL:[0-9A-Fa-f]{6})\\]\\]")
+    private val extraRegex = Regex("\\n?\\[\\[(?:PD|TK|TD|CL:[0-9A-Fa-f]{6})\\]\\]")
+    private val doneRegex = Regex("\\n?\\[\\[TD\\]\\]")
+    const val TASK_MARKER = "[[TK]]"
+    const val DONE_MARKER = "[[TD]]"
+
+    /** A task shared through CalDAV is a normal event with the hidden marker "[[TK]]"; "[[TD]]" means done. */
+    fun isTask(description: String) = description.contains(TASK_MARKER)
+
+    fun isDone(description: String) = description.contains(DONE_MARKER)
+
+    /** Same description with the done marker set or removed, all other markers untouched. */
+    fun withDone(description: String, done: Boolean): String {
+        val base = doneRegex.replace(description, "").trimEnd()
+        return if (done) "$base\n$DONE_MARKER" else base
+    }
     private val colorRegex = Regex("\\[\\[CL:([0-9A-Fa-f]{6})\\]\\]")
     const val PENDING_MARKER = "[[PD]]"
 
@@ -60,8 +74,14 @@ object DayIcons {
     /** The description as the person wrote it, without the hidden markers (icon and project). */
     fun visibleText(description: String): String = strip(FacturaScripts.stripMarker(description))
 
-    fun withIcon(description: String, key: String?, pending: Boolean = false, color: Int = 0): String {
+    fun withIcon(description: String, key: String?, pending: Boolean = false, color: Int = 0, task: Boolean = false, done: Boolean = false): String {
         var result = strip(description)
+        if (task) {
+            result += "\n$TASK_MARKER"
+            if (done) {
+                result += "\n$DONE_MARKER"
+            }
+        }
         if (key != null) {
             result += "\n${marker(key)}"
         }

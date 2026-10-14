@@ -237,8 +237,8 @@ class MonthView(context: Context, attrs: AttributeSet?, defStyle: Int) : View(co
                         originalStartDayIndex = dayIndexOnMonthView,
                         isAllDay = event.getIsAllDay(),
                         isPastEvent = event.isPastEvent,
-                        isTask = event.isTask(),
-                        isTaskCompleted = event.isTaskCompleted(),
+                        isTask = event.isTask() || event.isTaskMarked(),
+                        isTaskCompleted = event.isTaskCompleted() || event.isTaskMarkedDone(),
                         isAttendeeInviteDeclined = event.isAttendeeInviteDeclined(),
                         isEventCanceled = event.isEventCanceled(),
                         calendarId = event.calendarId
@@ -475,6 +475,13 @@ class MonthView(context: Context, attrs: AttributeSet?, defStyle: Int) : View(co
     // the color the eye sees for a fill painted with the current opacity
     private fun shownColor(fill: Int): Int {
         return ColorUtils.blendARGB(bgColor() or 0xFF000000.toInt(), fill or 0xFF000000.toInt(), opacity())
+    }
+
+    // the cards of the open day have their own transparency
+    private fun panelOpacity() = (100 - config.panelTransparency.coerceIn(0, 100)) / 100f
+
+    private fun withPanelOpacity(fill: Int): Int {
+        return (fill and 0x00FFFFFF) or ((panelOpacity() * 255).toInt() shl 24)
     }
 
     private fun withOpacity(fill: Int): Int {
@@ -760,11 +767,13 @@ class MonthView(context: Context, attrs: AttributeSet?, defStyle: Int) : View(co
             val top = cardTop(index)
             // solid card in the color of the event, a bit less saturated, no outline
             val fill = desaturate(ev.color)
-            panelPaint.color = withOpacity(fill)
+            panelPaint.color = withPanelOpacity(fill)
             panelRect.set(left, top, right, top + cardH)
             canvas.drawRoundRect(panelRect, BG_CORNER_RADIUS * 2, BG_CORNER_RADIUS * 2, panelPaint)
 
-            val textColorOnCard = shownColor(fill).getContrastColor()
+            val textColorOnCard = ColorUtils.blendARGB(bgColor() or 0xFF000000.toInt(), fill or 0xFF000000.toInt(), panelOpacity()).getContrastColor()
+            val isTaskCard = ev.isTask() || ev.isTaskMarked()
+            val isDoneCard = ev.isTaskCompleted() || ev.isTaskMarkedDone()
             timePaint.color = textColorOnCard
             titlePaint.color = textColorOnCard
 
@@ -772,9 +781,9 @@ class MonthView(context: Context, attrs: AttributeSet?, defStyle: Int) : View(co
             var textRight = right - smallPadding * 6f
             val centerY = top + cardH / 2
 
-            if (ev.isTask()) {
+            if (isTaskCard) {
                 val iconSize = eventTitleHeight
-                val iconColor = if (ev.isTaskCompleted()) textColorOnCard else textColorOnCard.adjustAlpha(MEDIUM_ALPHA)
+                val iconColor = if (isDoneCard) textColorOnCard else textColorOnCard.adjustAlpha(MEDIUM_ALPHA)
                 val icon = resources.getColoredDrawableWithColor(R.drawable.ic_task_vector, iconColor).mutate()
                 val iconLeft = (right - smallPadding * 6f - iconSize).toInt()
                 icon.setBounds(iconLeft, (centerY - iconSize / 2).toInt(), iconLeft + iconSize, (centerY + iconSize / 2).toInt())
@@ -800,7 +809,7 @@ class MonthView(context: Context, attrs: AttributeSet?, defStyle: Int) : View(co
             }
 
             val title = TextUtils.ellipsize(ev.title, TextPaint(titlePaint), max(0f, textRight - contentLeft - timeWidth), TextUtils.TruncateAt.END)
-            titlePaint.isStrikeThruText = ev.isTask() && ev.isTaskCompleted()
+            titlePaint.isStrikeThruText = isTaskCard && isDoneCard
             canvas.drawText(title, 0, title.length, contentLeft + timeWidth, textY, titlePaint)
         }
 

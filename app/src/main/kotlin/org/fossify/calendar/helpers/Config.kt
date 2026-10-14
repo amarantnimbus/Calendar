@@ -390,6 +390,10 @@ class Config(context: Context) : BaseConfig(context) {
         set(monthFullText) = prefs.edit().putBoolean(MONTH_FULL_TEXT, monthFullText).apply()
 
     /** 0 = solid pills and cards, 100 = fully transparent. */
+    var panelTransparency: Int
+        get() = prefs.getInt("panel_transparency", eventTransparency)
+        set(panelTransparency) = prefs.edit().putInt("panel_transparency", panelTransparency).apply()
+
     var eventTransparency: Int
         get() = prefs.getInt(EVENT_TRANSPARENCY, 0)
         set(eventTransparency) = prefs.edit().putInt(EVENT_TRANSPARENCY, eventTransparency).apply()

@@ -225,6 +225,7 @@ class SettingsActivity : SimpleActivity() {
         setupHighlightWeekends()
         setupHighlightWeekendsColor()
         setupEventTransparency()
+        setupPanelTransparency()
         setupMonthFullText()
         setupShifts()
         setupDeleteAllEvents()
@@ -616,6 +617,17 @@ class SettingsActivity : SimpleActivity() {
             showItemsDialog(R.string.event_transparency, values.map { "$it %" }) { index ->
                 config.eventTransparency = values[index]
                 settingsEventTransparency.text = "${values[index]} %"
+            }
+        }
+    }
+
+    private fun setupPanelTransparency() = binding.apply {
+        settingsPanelTransparency.text = "${config.panelTransparency} %"
+        settingsPanelTransparencyHolder.setOnClickListener {
+            val values = (0..80 step 10).toList()
+            showItemsDialog(R.string.panel_transparency, values.map { "$it %" }) { index ->
+                config.panelTransparency = values[index]
+                settingsPanelTransparency.text = "${values[index]} %"
             }
         }
     }

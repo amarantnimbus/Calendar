@@ -607,6 +607,11 @@ class EventActivity : SimpleActivity() {
                 findItem(R.id.delete).isVisible = mEvent.id != null
                 findItem(R.id.share).isVisible = mEvent.id != null
                 findItem(R.id.duplicate).isVisible = mEvent.id != null
+                val isTaskEvent = mEvent.id != null && DayIcons.isTask(mEvent.description)
+                findItem(R.id.mark_done).isVisible = isTaskEvent
+                findItem(R.id.mark_done).title = getString(
+                    if (DayIcons.isDone(mEvent.description)) R.string.mark_task_pending else R.string.mark_task_done
+                )
             }
         }
     }
@@ -622,9 +627,26 @@ class EventActivity : SimpleActivity() {
                 R.id.delete -> deleteEvent()
                 R.id.duplicate -> duplicateEvent()
                 R.id.share -> shareEvent()
+                R.id.mark_done -> toggleTaskDone()
                 else -> return@setOnMenuItemClickListener false
             }
             return@setOnMenuItemClickListener true
+        }
+    }
+
+    // a task shared through CalDAV is an event with a hidden marker: done / pending is a marker too
+    private fun toggleTaskDone() {
+        val id = mEvent.id ?: return
+        ensureBackgroundThread {
+            val event = eventsDB.getEventWithId(id) ?: return@ensureBackgroundThread
+            event.description = DayIcons.withDone(event.description, !DayIcons.isDone(event.description))
+            event.lastUpdated = System.currentTimeMillis()
+            eventsHelper.updateEvent(event, updateAtCalDAV = true, showToasts = false) {
+                runOnUiThread {
+                    hideKeyboard()
+                    finish()
+                }
+            }
         }
     }
 
@@ -686,7 +708,7 @@ class EventActivity : SimpleActivity() {
         val reminders = getReminders()
         return binding.eventTitle.text.toString() != mEvent.title ||
                 binding.eventLocation.text.toString() != mEvent.location ||
-                FacturaScripts.withMarker(DayIcons.withIcon(binding.eventDescription.text.toString(), mDayIconKey, mIsUnscheduled, mEventColor), mProject, mProjectType) != mEvent.description ||
+                FacturaScripts.withMarker(DayIcons.withIcon(binding.eventDescription.text.toString(), mDayIconKey, mIsUnscheduled, mEventColor, DayIcons.isTask(mEvent.description), DayIcons.isDone(mEvent.description)), mProject, mProjectType) != mEvent.description ||
                 binding.eventTimeZone.text != mEvent.getTimeZoneString() ||
                 reminders != mEvent.getReminders() ||
                 mRepeatInterval != mEvent.repeatInterval ||
@@ -1743,7 +1765,7 @@ class EventActivity : SimpleActivity() {
             startTS = newStartTS
             endTS = newEndTS
             title = newTitle
-            description = FacturaScripts.withMarker(DayIcons.withIcon(binding.eventDescription.value, mDayIconKey, mIsUnscheduled, mEventColor), mProject, mProjectType)
+            description = FacturaScripts.withMarker(DayIcons.withIcon(binding.eventDescription.value, mDayIconKey, mIsUnscheduled, mEventColor, DayIcons.isTask(mEvent.description), DayIcons.isDone(mEvent.description)), mProject, mProjectType)
             reminder1Minutes = reminder1.minutes
             reminder2Minutes = reminder2.minutes
             reminder3Minutes = reminder3.minutes

@@ -428,4 +428,7 @@
     <string name="use_same_snooze">Same snooze</string>
     <string name="snooze_time">Snooze time</string>
     <string name="start_week_on">Week starts on</string>
+    <string name="panel_transparency">Open day transparency</string>
+    <string name="mark_task_done">Mark as done</string>
+    <string name="mark_task_pending">Mark as pending</string>
 </resources>

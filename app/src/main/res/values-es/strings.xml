@@ -373,4 +373,7 @@
     <string name="use_same_snooze">Mismo aplazamiento</string>
     <string name="snooze_time">Tiempo de aplazamiento</string>
     <string name="start_week_on">La semana empieza en</string>
+    <string name="panel_transparency">Transparencia desplegados</string>
+    <string name="mark_task_done">Marcar como hecha</string>
+    <string name="mark_task_pending">Marcar como pendiente</string>
 </resources>
