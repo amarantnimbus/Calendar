@@ -37,7 +37,7 @@ import kotlin.math.max
 import kotlin.math.min
 
 // used in the Monthly view fragment, 1 view per screen
-class MonthView(context: Context, attrs: AttributeSet, defStyle: Int) : View(context, attrs, defStyle) {
+class MonthView(context: Context, attrs: AttributeSet?, defStyle: Int) : View(context, attrs, defStyle) {
     companion object {
         private const val BG_CORNER_RADIUS = 3f
         private const val EVENT_DOT_COLUMN_COUNT = 3
@@ -71,6 +71,8 @@ class MonthView(context: Context, attrs: AttributeSet, defStyle: Int) : View(con
     private var highlightWeekends = false
     private var isPrintVersion = false
     private var isMonthDayView = false
+    private var forcedRows = 0
+    private var bgOverride: Int? = null
     private var allEvents = ArrayList<MonthViewEvent>()
     private var bgRectF = RectF()
     private var dayTextRect = Rect()
@@ -100,7 +102,7 @@ class MonthView(context: Context, attrs: AttributeSet, defStyle: Int) : View(con
     }
     private val shiftPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply { style = Paint.Style.FILL }
 
-    constructor(context: Context, attrs: AttributeSet) : this(context, attrs, 0)
+    constructor(context: Context, attrs: AttributeSet?) : this(context, attrs, 0)
 
     init {
         primaryColor = context.getProperPrimaryColor()
@@ -462,15 +464,17 @@ class MonthView(context: Context, attrs: AttributeSet, defStyle: Int) : View(con
 
     // a solid, lighter version of the color for events that are already over (no transparency)
     private fun solidDim(color: Int): Int {
-        return ColorUtils.blendARGB(color or 0xFF000000.toInt(), config.backgroundColor or 0xFF000000.toInt(), 0.45f)
+        return ColorUtils.blendARGB(color or 0xFF000000.toInt(), bgColor() or 0xFF000000.toInt(), 0.45f)
     }
 
     // how much of the event color shows (1 = solid), from the transparency setting
+    private fun bgColor() = bgOverride ?: config.backgroundColor
+
     private fun opacity() = (100 - config.eventTransparency.coerceIn(0, 100)) / 100f
 
     // the color the eye sees for a fill painted with the current opacity
     private fun shownColor(fill: Int): Int {
-        return ColorUtils.blendARGB(config.backgroundColor or 0xFF000000.toInt(), fill or 0xFF000000.toInt(), opacity())
+        return ColorUtils.blendARGB(bgColor() or 0xFF000000.toInt(), fill or 0xFF000000.toInt(), opacity())
     }
 
     private fun withOpacity(fill: Int): Int {
@@ -509,9 +513,11 @@ class MonthView(context: Context, attrs: AttributeSet, defStyle: Int) : View(con
 
     // ---- rows: five rows are always shown, in a six week month the sixth one is reached by dragging up
 
-    private fun canShiftRows() = !isMonthDayView && days.size > VISIBLE_ROWS * 7 && days[VISIBLE_ROWS * 7].isThisMonth
+    private fun canShiftRows() = forcedRows == 0 && !isMonthDayView && days.size > VISIBLE_ROWS * 7 && days[VISIBLE_ROWS * 7].isThisMonth
 
-    private fun isRowVisible(row: Int) = isMonthDayView || (row >= rowShift && row < rowShift + VISIBLE_ROWS)
+    private fun visibleRows() = if (forcedRows > 0) forcedRows else VISIBLE_ROWS
+
+    private fun isRowVisible(row: Int) = isMonthDayView || (row >= rowShift && row < rowShift + visibleRows())
 
     fun hasHiddenRow() = canShiftRows()
 
@@ -624,15 +630,20 @@ class MonthView(context: Context, attrs: AttributeSet, defStyle: Int) : View(con
     }
 
     private fun measureDaySize(viewWidth: Int, viewHeight: Int) {
+        if (forcedRows > 0) {
+            // widget: the week number column is half a cell and the letters band is half a row
+            horizontalOffset = if (showWeekNumbers) (viewWidth / 15f).toInt() else 0
+            weekDaysLetterHeight = if (highlightWeekends) 0 else (viewHeight / (forcedRows + 0.5f) * 0.5f).toInt()
+        }
         updatePanel(viewHeight)
         dayWidth = (viewWidth - horizontalOffset) / 7f
-        val rows = if (isMonthDayView) ROW_COUNT else VISIBLE_ROWS
+        val rows = if (isMonthDayView) ROW_COUNT else visibleRows()
         dayHeight = (viewHeight - weekDaysLetterHeight - panelHeight) / rows.toFloat()
         val availableHeightForEvents = dayHeight.toInt() - weekDaysLetterHeight
         maxEventsPerDay = availableHeightForEvents / eventTitleHeight
     }
 
-    private fun isExpandEnabled() = config.expandDayInMonthView && !isMonthDayView && !isPrintVersion
+    private fun isExpandEnabled() = config.expandDayInMonthView && !isMonthDayView && !isPrintVersion && forcedRows == 0
 
     private fun panelTextSize() = eventTitlePaint.textSize * 1.2f
     private fun cardHeight() = panelTextSize() * 2.3f
@@ -1007,6 +1018,37 @@ class MonthView(context: Context, attrs: AttributeSet, defStyle: Int) : View(con
     private fun isDayValid(event: Event, code: String): Boolean {
         val date = Formatter.getDateTimeFromCode(code)
         return event.startTS != event.endTS && Formatter.getDateTimeFromTS(event.endTS) == Formatter.getDateTimeFromTS(date.seconds()).withTimeAtStartOfDay()
+    }
+
+    /** Draws this month into a bitmap, used by the home screen widget. */
+    fun renderForWidget(
+        rowCount: Int,
+        widgetTextColor: Int,
+        widgetBgColor: Int,
+        info: HashMap<Long, Pair<String, Int>>,
+        newDays: ArrayList<DayMonthly>,
+        widthPx: Int,
+        heightPx: Int
+    ): Bitmap {
+        forcedRows = rowCount
+        bgOverride = widgetBgColor
+        textColor = widgetTextColor
+        weekendsTextColor = config.highlightWeekendsColor
+        textPaint.color = textColor
+        plusTextPaint.color = textColor
+        plusTextPaint.alpha = 175
+        eventTitlePaint.color = textColor
+        gridPaint.color = textColor.adjustAlpha(LOWER_ALPHA)
+        calendarInfo = info
+        updateDays(newDays, false)
+        val bitmap = Bitmap.createBitmap(widthPx, heightPx, Bitmap.Config.ARGB_8888)
+        measure(
+            MeasureSpec.makeMeasureSpec(widthPx, MeasureSpec.EXACTLY),
+            MeasureSpec.makeMeasureSpec(heightPx, MeasureSpec.EXACTLY)
+        )
+        layout(0, 0, widthPx, heightPx)
+        draw(Canvas(bitmap))
+        return bitmap
     }
 
     fun togglePrintMode() {

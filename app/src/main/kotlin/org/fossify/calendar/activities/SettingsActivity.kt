@@ -202,10 +202,17 @@ class SettingsActivity : SimpleActivity() {
     }
 
     private val hiddenBySections = HashMap<View, Int>()
+    private val closedViews = ArrayList<View>()
+
+    // some options change their visibility later (after loading calendars): closed sections stay closed
+    private fun enforceCollapsed() {
+        closedViews.forEach { it.visibility = View.GONE }
+    }
 
     private fun setupSettingItems() {
         hiddenBySections.forEach { (view, visibility) -> view.visibility = visibility }
         hiddenBySections.clear()
+        closedViews.clear()
         setupCustomizeColors()
         setupCustomizeNotifications()
         setupUseEnglish()
@@ -311,7 +318,10 @@ class SettingsActivity : SimpleActivity() {
                     setupSettingItems()
                 }
             } else if (!currentOpen) {
-                hiddenBySections[child] = child.visibility
+                if (!hiddenBySections.containsKey(child)) {
+                    hiddenBySections[child] = child.visibility
+                }
+                closedViews.add(child)
                 child.visibility = View.GONE
             }
         }
@@ -410,6 +420,7 @@ class SettingsActivity : SimpleActivity() {
 
         eventsHelper.getCalendars(this@SettingsActivity, false) {
             settingsManageQuickFilterCalendarsHolder.beGoneIf(it.size < 2)
+            enforceCollapsed()
         }
     }
 
@@ -498,6 +509,7 @@ class SettingsActivity : SimpleActivity() {
 
             settingsManageSyncedCalendarsHolder.beVisibleIf(newCalendarIds.isNotEmpty())
             settingsCaldavPullToRefreshHolder.beVisibleIf(newCalendarIds.isNotEmpty())
+            enforceCollapsed()
             settingsCaldavSync.isChecked = newCalendarIds.isNotEmpty()
             config.caldavSync = newCalendarIds.isNotEmpty()
             if (settingsCaldavSync.isChecked) {

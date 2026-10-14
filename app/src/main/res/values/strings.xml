@@ -135,9 +135,9 @@
     <!-- Export / Import -->
     <string name="import_events">Import events</string>
     <string name="export_events">Export events</string>
-    <string name="import_events_from_ics">Import events from an .ics file</string>
+    <string name="import_events_from_ics">Import from .ics</string>
     <string name="import_events_from_ics_pro">Import events from an .ics file (Pro)</string>
-    <string name="export_events_to_ics">Export events to an .ics file</string>
+    <string name="export_events_to_ics">Export to .ics</string>
     <string name="default_event_type">Default calendar</string>
     <string name="export_past_events_too">Export past events too</string>
     <string name="export_tasks">Export tasks</string>
@@ -153,7 +153,7 @@
 
     <!-- Weekly view -->
     <string name="week">Week</string>
-    <string name="start_week_with_current_day">Start week with the current day</string>
+    <string name="start_week_with_current_day">Week starts today</string>
 
     <!-- Calendars -->
     <string name="event_types">Calendars</string>
@@ -185,28 +185,28 @@
     <string name="manage_event_types">Manage calendars</string>
     <string name="start_day_at">Start day at</string>
     <string name="end_day_at">End day at</string>
-    <string name="midnight_spanning">Show events spanning across midnight at the top bar</string>
-    <string name="allow_customizing_day_count">Allow customizing day count</string>
-    <string name="week_numbers">Show week numbers</string>
-    <string name="vibrate">Vibrate on reminder notification</string>
+    <string name="midnight_spanning">Midnight events on top</string>
+    <string name="allow_customizing_day_count">Editable day count</string>
+    <string name="week_numbers">Week numbers</string>
+    <string name="vibrate">Vibrate on reminders</string>
     <string name="reminder_sound">Reminder sound</string>
     <string name="no_ringtone_picker">No app capable of setting ringtone found</string>
     <string name="no_ringtone_selected">None</string>
     <string name="day_end_before_start">The day cannot end earlier than it starts</string>
     <string name="caldav_sync">CalDAV sync</string>
     <string name="event_lists">Event lists</string>
-    <string name="display_past_events">Display events from the past</string>
-    <string name="replace_description_with_location">Replace event description with location</string>
-    <string name="display_description_or_location">Display description or location</string>
+    <string name="display_past_events">Show past events</string>
+    <string name="replace_description_with_location">Location instead of description</string>
+    <string name="display_description_or_location">Description or location</string>
     <string name="delete_all_events">Delete all events</string>
-    <string name="delete_all_events_and_tasks">Delete all events and tasks</string>
+    <string name="delete_all_events_and_tasks">Delete events and tasks</string>
     <string name="delete_all_events_confirmation">Are you sure you want to delete all events and tasks? This will leave your calendars and other settings intact.</string>
     <string name="show_a_grid">Show a grid</string>
-    <string name="loop_reminders">Loop reminders until dismissed</string>
+    <string name="loop_reminders">Loop reminders</string>
     <string name="dim_past_events">Dim past events</string>
     <string name="dim_completed_tasks">Dim completed tasks</string>
     <string name="events">Events</string>
-    <string name="reminder_stream">Audio stream used by reminders</string>
+    <string name="reminder_stream">Reminder audio</string>
     <string name="system_stream">System</string>
     <string name="alarm_stream">Alarm</string>
     <string name="notification_stream">Notification</string>
@@ -215,7 +215,7 @@
     <string name="default_reminder_1">Default reminder 1</string>
     <string name="default_reminder_2">Default reminder 2</string>
     <string name="default_reminder_3">Default reminder 3</string>
-    <string name="view_to_open_from_widget">View to open from the event list widget</string>
+    <string name="view_to_open_from_widget">List widget view</string>
     <string name="last_view">Last view</string>
     <string name="new_events">New events</string>
     <string name="default_start_time">Default start time</string>
@@ -227,14 +227,14 @@
     <string name="highlight_weekends">Highlight weekends on some views</string>
     <string name="highlight_weekends_color">Color of highlighted weekends</string>
     <string name="event_transparency">Transparency</string>
-    <string name="allow_changing_time_zones">Allow changing event time zones</string>
-    <string name="manage_quick_filter_event_types">Manage quick filter calendars</string>
+    <string name="allow_changing_time_zones">Editable time zones</string>
+    <string name="manage_quick_filter_event_types">Quick filter calendars</string>
     <string name="allow_creating_tasks">Allow creating tasks</string>
 
     <!-- CalDAV sync -->
     <string name="caldav">CalDAV</string>
     <string name="select_caldav_calendars">Select calendars to sync</string>
-    <string name="manage_synced_calendars">Manage synced calendars</string>
+    <string name="manage_synced_calendars">Synced calendars</string>
     <string name="store_locally_only">Store locally only</string>
     <string name="refresh_caldav_calendars">Refresh CalDAV calendars</string>
     <string name="refreshing">Refreshing…</string>
@@ -343,7 +343,7 @@
         Haven't found some strings? There's more at
         https://github.com/FossifyOrg/Commons/tree/master/commons/src/main/res
     -->
-    <string name="expand_day_in_month_view">Expand the tapped day inside the month view</string>
+    <string name="expand_day_in_month_view">Expand tapped day</string>
     <string name="more_events_count">+%d</string>
     <string name="shift_full_cell">Full cell</string>
     <string name="junts">Junts</string>
@@ -357,7 +357,7 @@
     <string name="pending_events">Pending to schedule</string>
     <string name="no_pending">Nothing pending</string>
     <string name="new_pending">New pending</string>
-    <string name="work_features_summary">Work features: pending inbox and events without a date</string>
+    <string name="work_features_summary">Work features</string>
     <string name="fs_connection">FacturaScripts connection</string>
     <string name="fs_url_hint">Address (e.g. http://nas:8080)</string>
     <string name="fs_key_hint">API key</string>
@@ -419,4 +419,13 @@
     <string name="lbl_reminder_memory">Event memory</string>
     <string name="lbl_empty"> </string>
     <string name="diagnostics">Diagnostics</string>
+    <string name="customize_colors">Colors</string>
+    <string name="customize_notifications">Notifications</string>
+    <string name="customize_widget_colors">Widget colors</string>
+    <string name="enable_automatic_backups">Automatic backups</string>
+    <string name="manage_automatic_backups">Manage backups</string>
+    <string name="use_english_language">Use English</string>
+    <string name="use_same_snooze">Same snooze</string>
+    <string name="snooze_time">Snooze time</string>
+    <string name="start_week_on">Week starts on</string>
 </resources>
