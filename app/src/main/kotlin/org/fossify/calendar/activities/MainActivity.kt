@@ -309,7 +309,6 @@ class MainActivity : SimpleActivity(), RefreshRecyclerViewListener {
 
         binding.apply {
             mainMenu.updateColors()
-        mainMenu.onTitleClickListener = { if (config.storedView == MONTHLY_VIEW) showGoToDateDialog() }
             storeStateVariables()
             updateWidgets()
             updateTextColors(calendarCoordinator)
@@ -514,6 +513,15 @@ class MainActivity : SimpleActivity(), RefreshRecyclerViewListener {
         mainMenu.toggleHideOnScroll(false)
         mainMenu.setupMenu()
         mainMenu.updateColors()
+        // the content starts right under the bar and ends above the system bar
+        mainMenu.addOnLayoutChangeListener { v, _, _, _, _, _, _, _, _ ->
+            val lp = calendarCoordinator.layoutParams as android.view.ViewGroup.MarginLayoutParams
+            if (lp.topMargin != v.height) {
+                lp.topMargin = v.height
+                calendarCoordinator.layoutParams = lp
+            }
+        }
+        mainMenu.onTitleClickListener = { if (config.storedView == MONTHLY_VIEW) showGoToDateDialog() }
 
         mainMenu.onSearchTextChangedListener = { text ->
             searchQueryChanged(text)
