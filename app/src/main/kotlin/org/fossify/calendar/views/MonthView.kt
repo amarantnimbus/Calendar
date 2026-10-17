@@ -748,6 +748,14 @@ class MonthView(context: Context, attrs: AttributeSet?, defStyle: Int) : View(co
         return true
     }
 
+    // first non-empty line of the comment, without the hidden markers and the format marks
+    private fun firstCommentLine(description: String): String {
+        val visible = org.fossify.calendar.helpers.FormatMarks.plain(
+            org.fossify.calendar.helpers.DayIcons.visibleText(description)
+        )
+        return visible.lineSequence().map { it.trim() }.firstOrNull { it.isNotEmpty() } ?: ""
+    }
+
     private fun drawPanel(canvas: Canvas) {
         if (panelHeight <= 0f) {
             return
@@ -766,7 +774,11 @@ class MonthView(context: Context, attrs: AttributeSet?, defStyle: Int) : View(co
         panelEvents.forEachIndexed { index, ev ->
             val top = cardTop(index)
             // solid card in the color of the event, a bit less saturated, no outline
-            val fill = desaturate(ev.color)
+            val taskCard = ev.isTask() || ev.isTaskMarked()
+            val doneCard = ev.isTaskCompleted() || ev.isTaskMarkedDone()
+            // finished tasks get the same lighter color as in the month cell
+            val baseColor = if (taskCard && doneCard && dimCompletedTasks) solidDim(ev.color) else ev.color
+            val fill = desaturate(baseColor)
             panelPaint.color = withPanelOpacity(fill)
             panelRect.set(left, top, right, top + cardH)
             canvas.drawRoundRect(panelRect, BG_CORNER_RADIUS * 2, BG_CORNER_RADIUS * 2, panelPaint)
@@ -778,26 +790,27 @@ class MonthView(context: Context, attrs: AttributeSet?, defStyle: Int) : View(co
             titlePaint.color = textColorOnCard
 
             val textLeft = left + smallPadding * 6f
-            var textRight = right - smallPadding * 6f
+            val textRight = right - smallPadding * 6f
             val centerY = top + cardH / 2
+            val iconSize = eventTitleHeight
+            val slotWidth = iconSize + smallPadding * 2f
 
+            // the task symbol goes first; events keep the same empty slot so everything lines up
             if (isTaskCard) {
-                val iconSize = eventTitleHeight
                 val iconColor = if (isDoneCard) textColorOnCard else textColorOnCard.adjustAlpha(MEDIUM_ALPHA)
                 val icon = resources.getColoredDrawableWithColor(R.drawable.ic_task_vector, iconColor).mutate()
-                val iconLeft = (right - smallPadding * 6f - iconSize).toInt()
+                val iconLeft = textLeft.toInt()
                 icon.setBounds(iconLeft, (centerY - iconSize / 2).toInt(), iconLeft + iconSize, (centerY + iconSize / 2).toInt())
                 icon.draw(canvas)
-                textRight = iconLeft - smallPadding * 4f
             }
 
             val timeText = if (ev.getIsAllDay()) "" else Formatter.getTimeFromTS(context, ev.startTS) + "  "
             val timeWidth = if (timeText.isEmpty()) 0f else timePaint.measureText(timeText)
             val textY = centerY + size * 0.35f
 
-            // the initial of the calendar first, in bold
+            // the initial of the calendar, in bold
             val initial = calendarInfo[ev.calendarId]?.first?.takeIf { it.isNotEmpty() }?.substring(0, 1)?.uppercase()
-            var contentLeft = textLeft
+            var contentLeft = textLeft + slotWidth
             if (initial != null) {
                 titlePaint.isStrikeThruText = false
                 canvas.drawText(initial, contentLeft, textY, titlePaint)
@@ -808,9 +821,27 @@ class MonthView(context: Context, attrs: AttributeSet?, defStyle: Int) : View(co
                 canvas.drawText(timeText, contentLeft, textY, timePaint)
             }
 
-            val title = TextUtils.ellipsize(ev.title, TextPaint(titlePaint), max(0f, textRight - contentLeft - timeWidth), TextUtils.TruncateAt.END)
+            val titleLeft = contentLeft + timeWidth
+            val titleSpace = max(0f, textRight - titleLeft)
+            val title = TextUtils.ellipsize(ev.title, TextPaint(titlePaint), titleSpace, TextUtils.TruncateAt.END)
             titlePaint.isStrikeThruText = isTaskCard && isDoneCard
-            canvas.drawText(title, 0, title.length, contentLeft + timeWidth, textY, titlePaint)
+            canvas.drawText(title, 0, title.length, titleLeft, textY, titlePaint)
+
+            // first line of the comment, on the same line, only if the whole title fits
+            val titleFits = title.length == ev.title.length
+            if (titleFits) {
+                val comment = firstCommentLine(ev.description)
+                if (comment.isNotEmpty()) {
+                    val used = titlePaint.measureText(ev.title)
+                    val commentLeft = titleLeft + used
+                    val commentSpace = textRight - commentLeft
+                    if (commentSpace > 0f) {
+                        val commentPaint = Paint(timePaint).apply { color = textColorOnCard.adjustAlpha(MEDIUM_ALPHA) }
+                        val text = TextUtils.ellipsize(" \u00B7 $comment", TextPaint(commentPaint), commentSpace, TextUtils.TruncateAt.END)
+                        canvas.drawText(text, 0, text.length, commentLeft, textY, commentPaint)
+                    }
+                }
+            }
         }
 
         if (panelHiddenCount > 0) {

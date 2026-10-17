@@ -40,7 +40,7 @@ object DayIcons {
     fun iconOf(description: String): Icon? = byKey(keyOf(description))
 
     // hidden flags that travel in the description too: pending event "[[PD]]" and event color "[[CL:rrggbb]]"
-    private val extraRegex = Regex("\\n?\\[\\[(?:PD|TK|TD|CL:[0-9A-Fa-f]{6})\\]\\]")
+    private val extraRegex = Regex("\\n?\\[\\[(?:PD|TK|TD|CL:[0-9A-Fa-f]{6}|FX:[^\\]]*)\\]\\]")
     private val doneRegex = Regex("\\n?\\[\\[TD\\]\\]")
     const val TASK_MARKER = "[[TK]]"
     const val DONE_MARKER = "[[TD]]"

@@ -121,7 +121,14 @@ class MyWidgetMonthlyProvider : AppWidgetProvider() {
 
     private fun updateGrid(context: Context, views: RemoteViews, appWidgetManager: AppWidgetManager, widgetId: Int, days: ArrayList<DayMonthly>) {
         val weeks = weeksOf(days)
-        val (width, height) = gridSize(context, appWidgetManager, widgetId)
+        var (width, height) = gridSize(context, appWidgetManager, widgetId)
+        // RemoteViews has a memory limit for bitmaps: keep the picture under ~4 MB
+        val maxBytes = 4L * 1024 * 1024
+        if (width.toLong() * height * 4 > maxBytes) {
+            val k = Math.sqrt(maxBytes.toDouble() / (width.toLong() * height * 4))
+            width = (width * k).toInt().coerceAtLeast(200)
+            height = (height * k).toInt().coerceAtLeast(200)
+        }
 
         val info = HashMap<Long, Pair<String, Int>>()
         try {

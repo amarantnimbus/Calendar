@@ -497,8 +497,9 @@ class WeekFragment : Fragment(), WeeklyCalendar {
     }
 
     private fun launchNewEventIntent(timestamp: Long, isTask: Boolean) {
-        Intent(context, getActivityToOpen(isTask)).apply {
+        Intent(context, org.fossify.calendar.activities.EventActivity::class.java).apply {
             putExtra(NEW_EVENT_START_TS, timestamp)
+            if (isTask) putExtra(org.fossify.calendar.helpers.NEW_TASK_MARKED, true)
             putExtra(NEW_EVENT_SET_HOUR_DURATION, true)
             startActivity(this)
         }

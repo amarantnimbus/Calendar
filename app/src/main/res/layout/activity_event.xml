@@ -120,6 +120,21 @@
 
             </LinearLayout>
 
+            <TextView
+                android:id="@+id/event_fs_details"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="56dp"
+                android:layout_marginEnd="@dimen/activity_margin"
+                android:background="?attr/selectableItemBackground"
+                android:ellipsize="end"
+                android:maxLines="2"
+                android:paddingTop="@dimen/small_margin"
+                android:paddingBottom="@dimen/small_margin"
+                android:text="@string/fs_details"
+                android:textSize="14sp"
+                android:visibility="gone" />
+
             <LinearLayout
                 android:id="@+id/event_icon_row"
                 android:layout_width="match_parent"
@@ -195,6 +210,17 @@
                 android:layout_height="1dp"
                 android:background="#000000" />
 
+            <org.fossify.commons.views.MyMaterialSwitch
+                android:id="@+id/event_task_switch"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="@dimen/activity_margin"
+                android:layout_marginTop="@dimen/small_margin"
+                android:layout_marginEnd="@dimen/activity_margin"
+                android:background="@null"
+                android:text="@string/task"
+                android:textSize="@dimen/day_text_size" />
+
             <org.fossify.commons.views.MyEditText
                 android:id="@+id/event_title"
                 android:layout_width="match_parent"
@@ -227,7 +253,9 @@
                 android:inputType="textCapSentences|textMultiLine"
                 android:linksClickable="true"
                 android:minHeight="200dp"
+                android:overScrollMode="ifContentScrolls"
                 android:padding="0dp"
+                android:scrollbars="vertical"
                 android:textAlignment="viewStart"
                 android:textCursorDrawable="@null"
                 android:textSize="@dimen/day_text_size" />
@@ -864,6 +892,17 @@
                 android:importantForAccessibility="no" />
 
         </RelativeLayout>
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/event_done_button"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="@dimen/activity_margin"
+                android:layout_marginTop="@dimen/activity_margin"
+                android:layout_marginEnd="@dimen/activity_margin"
+                android:layout_marginBottom="@dimen/activity_margin"
+                android:text="@string/mark_task_done"
+                android:visibility="gone" />
 
         </LinearLayout>
     </androidx.core.widget.NestedScrollView>

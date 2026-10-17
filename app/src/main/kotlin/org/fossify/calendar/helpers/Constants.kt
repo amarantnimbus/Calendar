@@ -43,6 +43,7 @@ const val LOCAL_CALENDAR_ID = 1L
 const val TIME_ZONE = "time_zone"
 const val CURRENT_TIME_ZONE = "current_time_zone"
 const val IS_TASK = "is_task"
+const val NEW_TASK_MARKED = "new_task_marked"
 
 const val MONTHLY_VIEW = 1
 const val YEARLY_VIEW = 2

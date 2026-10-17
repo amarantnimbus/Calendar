@@ -58,6 +58,7 @@ import org.fossify.calendar.helpers.MyWidgetDateProvider
 import org.fossify.calendar.helpers.MyWidgetListProvider
 import org.fossify.calendar.helpers.MyWidgetMonthlyProvider
 import org.fossify.calendar.helpers.NEW_EVENT_START_TS
+import org.fossify.calendar.helpers.NEW_TASK_MARKED
 import org.fossify.calendar.helpers.REMINDER_NOTIFICATION
 import org.fossify.calendar.helpers.REMINDER_OFF
 import org.fossify.calendar.helpers.SCHEDULE_CALDAV_REQUEST_CODE
@@ -691,8 +692,9 @@ fun Context.launchNewTaskIntent(
     dayCode: String = Formatter.getTodayCode(),
     allowChangingDay: Boolean = false
 ) {
-    Intent(applicationContext, TaskActivity::class.java).apply {
+    Intent(applicationContext, EventActivity::class.java).apply {
         putExtra(NEW_EVENT_START_TS, getNewEventTimestampFromCode(dayCode, allowChangingDay))
+        putExtra(NEW_TASK_MARKED, true)
         addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
         startActivity(this)
     }

@@ -18,8 +18,8 @@ class SmartSwipeRefreshLayout @JvmOverloads constructor(
     private var multiTouch = false
 
     init {
-        // long pull needed (about 200 dp) so a pinch is not mistaken for a refresh
-        setDistanceToTriggerSync((200 * context.resources.displayMetrics.density).toInt())
+        // long pull needed (120 dp) so a pinch is not mistaken for a refresh
+        setDistanceToTriggerSync((120 * context.resources.displayMetrics.density).toInt())
     }
 
     override fun onInterceptTouchEvent(ev: MotionEvent): Boolean {

@@ -84,6 +84,7 @@ import org.fossify.calendar.helpers.LOCAL_CALENDAR_ID
 import org.fossify.calendar.helpers.NEW_EVENT_SET_HOUR_DURATION
 import org.fossify.calendar.helpers.FacturaScripts
 import org.fossify.calendar.helpers.NEW_EVENT_START_TS
+import org.fossify.calendar.helpers.NEW_TASK_MARKED
 import org.fossify.calendar.helpers.NEW_PENDING_EVENT
 import org.fossify.calendar.helpers.ORIGINAL_ATTENDEES
 import org.fossify.calendar.helpers.ORIGINAL_END_TS
@@ -607,11 +608,59 @@ class EventActivity : SimpleActivity() {
                 findItem(R.id.delete).isVisible = mEvent.id != null
                 findItem(R.id.share).isVisible = mEvent.id != null
                 findItem(R.id.duplicate).isVisible = mEvent.id != null
-                val isTaskEvent = mEvent.id != null && DayIcons.isTask(mEvent.description)
-                findItem(R.id.mark_done).isVisible = isTaskEvent
-                findItem(R.id.mark_done).title = getString(
-                    if (DayIcons.isDone(mEvent.description)) R.string.mark_task_pending else R.string.mark_task_done
-                )
+            }
+            updateTaskUi()
+        }
+    }
+
+    private var mTaskUiReady = false
+
+    // the "Task" switch of the editor: a task is an event with the hidden marker [[TK]]
+    private fun updateTaskUi() {
+        binding.apply {
+            eventTaskSwitch.setOnCheckedChangeListener(null)
+            eventTaskSwitch.isChecked = mIsTaskMarked
+            eventTaskSwitch.setOnCheckedChangeListener { _, checked ->
+                mIsTaskMarked = checked
+                updateTaskUi()
+            }
+            eventIconAttach.beVisibleIf(!mIsTaskMarked)
+            val saved = mEvent.id != null && mIsTaskMarked && DayIcons.isTask(mEvent.description)
+            eventDoneButton.beVisibleIf(saved)
+            eventDoneButton.text = getString(
+                if (DayIcons.isDone(mEvent.description)) R.string.mark_task_pending else R.string.mark_task_done
+            )
+            eventDoneButton.setOnClickListener { toggleTaskDone() }
+            if (!mTaskUiReady) {
+                mTaskUiReady = true
+                eventDescription.setOnTouchListener { v, ev ->
+                    if (eventDescription.canScrollVertically(1) || eventDescription.canScrollVertically(-1)) {
+                        v.parent.requestDisallowInterceptTouchEvent(true)
+                    }
+                    if (ev.action == android.view.MotionEvent.ACTION_UP) {
+                        v.parent.requestDisallowInterceptTouchEvent(false)
+                    }
+                    false
+                }
+                // the long text fills all the screen space left and then scrolls inside
+                eventNestedScrollview.addOnLayoutChangeListener { _, _, top, _, bottom, _, _, _, _ ->
+                    val view = eventDescription
+                    var offset = view.top
+                    var parent = view.parent as? android.view.View
+                    while (parent != null && parent !== eventNestedScrollview) {
+                        if (parent === eventNestedScrollview.getChildAt(0)) break
+                        offset += parent.top
+                        parent = parent.parent as? android.view.View
+                    }
+                    val reserved = if (eventDoneButton.visibility == android.view.View.VISIBLE) {
+                        eventDoneButton.height + dp(32)
+                    } else 0
+                    val avail = (bottom - top) - offset - reserved - dp(16)
+                    val max = avail.coerceAtLeast(dp(200))
+                    if (view.maxHeight != max) {
+                        view.maxHeight = max
+                    }
+                }
             }
         }
     }
@@ -627,8 +676,7 @@ class EventActivity : SimpleActivity() {
                 R.id.delete -> deleteEvent()
                 R.id.duplicate -> duplicateEvent()
                 R.id.share -> shareEvent()
-                R.id.mark_done -> toggleTaskDone()
-                else -> return@setOnMenuItemClickListener false
+                                else -> return@setOnMenuItemClickListener false
             }
             return@setOnMenuItemClickListener true
         }
@@ -708,7 +756,7 @@ class EventActivity : SimpleActivity() {
         val reminders = getReminders()
         return binding.eventTitle.text.toString() != mEvent.title ||
                 binding.eventLocation.text.toString() != mEvent.location ||
-                FacturaScripts.withMarker(DayIcons.withIcon(binding.eventDescription.text.toString(), mDayIconKey, mIsUnscheduled, mEventColor, DayIcons.isTask(mEvent.description), DayIcons.isDone(mEvent.description)), mProject, mProjectType) != mEvent.description ||
+                FacturaScripts.withMarker(DayIcons.withIcon(binding.eventDescription.text.toString(), mDayIconKey, mIsUnscheduled, mEventColor, mIsTaskMarked, DayIcons.isDone(mEvent.description)), mProject, mProjectType, mFsExtras) != mEvent.description ||
                 binding.eventTimeZone.text != mEvent.getTimeZoneString() ||
                 reminders != mEvent.getReminders() ||
                 mRepeatInterval != mEvent.repeatInterval ||
@@ -787,10 +835,13 @@ class EventActivity : SimpleActivity() {
         binding.eventDescription.setText(DayIcons.strip(FacturaScripts.stripMarker(mEvent.description)))
         mProject = FacturaScripts.markerProject(mEvent.description)
         mProjectType = FacturaScripts.markerType(mEvent.description)
+        mFsExtras = FacturaScripts.markerExtras(mEvent.description)
         mDayIconKey = DayIcons.keyOf(mEvent.description)
+        mIsTaskMarked = DayIcons.isTask(mEvent.description)
         updateProjectRow()
         updateDayIcon()
         updateAttachIcon()
+        updateTaskUi()
 
         mReminder1Minutes = mEvent.reminder1Minutes
         mReminder2Minutes = mEvent.reminder2Minutes
@@ -868,6 +919,7 @@ class EventActivity : SimpleActivity() {
             }
             mEventEndDateTime = mEventStartDateTime.plusMinutes(addMinutes)
         }
+        mIsTaskMarked = intent.getBooleanExtra(NEW_TASK_MARKED, false)
         if (intent.getBooleanExtra(NEW_PENDING_EVENT, false) && config.workFeatures) {
             mIsUnscheduled = true
         }
@@ -880,6 +932,7 @@ class EventActivity : SimpleActivity() {
         }
         addDefValuesToNewEvent()
         checkAttendees()
+        updateTaskUi()
     }
 
     private fun addDefValuesToNewEvent() {
@@ -1765,7 +1818,7 @@ class EventActivity : SimpleActivity() {
             startTS = newStartTS
             endTS = newEndTS
             title = newTitle
-            description = FacturaScripts.withMarker(DayIcons.withIcon(binding.eventDescription.value, mDayIconKey, mIsUnscheduled, mEventColor, DayIcons.isTask(mEvent.description), DayIcons.isDone(mEvent.description)), mProject, mProjectType)
+            description = FacturaScripts.withMarker(DayIcons.withIcon(binding.eventDescription.value, mDayIconKey, mIsUnscheduled, mEventColor, mIsTaskMarked, DayIcons.isDone(mEvent.description)), mProject, mProjectType, mFsExtras)
             reminder1Minutes = reminder1.minutes
             reminder2Minutes = reminder2.minutes
             reminder3Minutes = reminder3.minutes
@@ -1797,13 +1850,18 @@ class EventActivity : SimpleActivity() {
 
         val diaryProject = mProject
         if (diaryProject != null && !mIsUnscheduled && config.workFeatures) {
+            val extras = mFsExtras
+            // the date of the fact follows the registration date until it is changed by hand
+            val entryDate = extras?.fecha?.ifEmpty { extras.freg }?.ifEmpty { null }
+                ?: mEventStartDateTime.toString("yyyy-MM-dd")
             val entry = FacturaScripts.Entry(
                 uid = mEvent.importId,
                 projectId = diaryProject.id,
-                date = mEventStartDateTime.toString("yyyy-MM-dd"),
+                date = entryDate,
                 title = newTitle,
                 text = DayIcons.strip(FacturaScripts.stripMarker(mEvent.description)),
-                type = mProjectType ?: "altres"
+                type = mProjectType ?: "altres",
+                extras = extras
             )
             ensureBackgroundThread { FacturaScripts.push(this, entry) }
         }
@@ -2538,6 +2596,8 @@ class EventActivity : SimpleActivity() {
     // ---- simplified event screen: header, icon row, "Junts" checkbox and date/time popup ----
 
     private var mIsUnscheduled = false
+    private var mIsTaskMarked = false
+    private var mFsExtras: FacturaScripts.Extras? = null
     private var mProject: FacturaScripts.Project? = null
     private var mProjectType: String? = null
     private var mDayIconKey: String? = null
@@ -2557,6 +2617,7 @@ class EventActivity : SimpleActivity() {
         eventIconProject.setOnClickListener { showProjectDialog() }
         eventProject.setOnClickListener { showProjectDialog() }
         eventProjectType.setOnClickListener { showTypeDialog() }
+        eventFsDetails.setOnClickListener { showEntryDetailsDialog() }
         eventIconAttach.setOnClickListener { showAttachmentsDialog() }
         eventIconDay.setOnClickListener { showDayIconDialog() }
         val textColor = getProperTextColor()
@@ -2708,7 +2769,10 @@ class EventActivity : SimpleActivity() {
         val textColor = getProperTextColor()
         binding.eventProjectRow.beVisibleIf(config.workFeatures)
         binding.eventIconProject.applyColorFilter(if (mProject != null) primary else textColor)
-        val name = mProject?.name
+        val name = mProject?.label()
+        binding.eventFsDetails.beVisibleIf(config.workFeatures && name != null)
+        binding.eventFsDetails.text = fsDetailsSummary()
+        binding.eventFsDetails.setTextColor(if (mFsExtras != null) primary else textColor.adjustAlpha(0.55f))
         binding.eventProject.text = name ?: getString(R.string.fs_no_project)
         binding.eventProject.setTextColor(if (name != null) textColor else textColor.adjustAlpha(0.55f))
 
@@ -2935,6 +2999,7 @@ class EventActivity : SimpleActivity() {
         }
     }
 
+    // search box: nothing is listed until something is typed, at most 8 results
     private fun showProjectDialog() {
         hideKeyboard()
         ensureBackgroundThread {
@@ -2948,27 +3013,289 @@ class EventActivity : SimpleActivity() {
                     toast(R.string.fs_no_projects)
                     return@runOnUiThread
                 }
-
-                val names = ArrayList<CharSequence>()
-                names.add(getString(R.string.fs_no_project))
-                projects.forEach { names.add(it.name) }
-                showItemsDialog(titleId = R.string.fs_project, items = names) { which ->
-                    mProject = if (which == 0) null else projects[which - 1]
-                    if (mProject == null) {
-                        mProjectType = null
-                    }
-                    updateProjectRow()
-                    if (mProject != null && mProjectType == null) {
-                        // the type is needed to save, so ask for it right away
-                        showTypeDialog()
-                    }
-                }
+                openProjectSearch(projects)
             }
 
             // keep the list fresh for next time
             if (FacturaScripts.isConfigured(this)) {
                 FacturaScripts.fetchProjects(this)
             }
+        }
+    }
+
+    private fun openProjectSearch(projects: List<FacturaScripts.Project>) {
+        val textColor = getProperTextColor()
+        val holder = android.widget.LinearLayout(this).apply {
+            orientation = android.widget.LinearLayout.VERTICAL
+            setPadding(dp(20), dp(8), dp(20), dp(8))
+        }
+        val input = android.widget.EditText(this).apply {
+            hint = getString(R.string.fs_search_hint)
+            setSingleLine(true)
+            inputType = android.text.InputType.TYPE_CLASS_TEXT or android.text.InputType.TYPE_TEXT_FLAG_NO_SUGGESTIONS
+            setTextColor(textColor)
+            setHintTextColor(textColor.adjustAlpha(0.5f))
+        }
+        val results = android.widget.LinearLayout(this).apply {
+            orientation = android.widget.LinearLayout.VERTICAL
+        }
+        val scroll = android.widget.ScrollView(this).apply { addView(results) }
+        holder.addView(input)
+        holder.addView(scroll)
+
+        val dialog = androidx.appcompat.app.AlertDialog.Builder(this)
+            .setTitle(R.string.fs_project)
+            .setView(holder)
+            .setNegativeButton(org.fossify.commons.R.string.cancel, null)
+            .apply {
+                if (mProject != null) {
+                    setNeutralButton(R.string.fs_no_project) { _, _ ->
+                        mProject = null
+                        mProjectType = null
+                        mFsExtras = null
+                        updateProjectRow()
+                    }
+                }
+            }
+            .create()
+
+        fun refresh(query: String) {
+            results.removeAllViews()
+            if (query.isBlank()) return
+            val found = FacturaScripts.search(projects, query, 8)
+            if (found.isEmpty()) {
+                results.addView(android.widget.TextView(this).apply {
+                    text = getString(R.string.fs_search_empty)
+                    setTextColor(textColor.adjustAlpha(0.6f))
+                    setPadding(0, dp(12), 0, dp(12))
+                })
+                return
+            }
+            found.forEach { project ->
+                results.addView(android.widget.TextView(this).apply {
+                    text = project.resultLine()
+                    setTextColor(textColor)
+                    textSize = 15f
+                    setPadding(0, dp(12), 0, dp(12))
+                    setOnClickListener {
+                        mProject = project
+                        updateProjectRow()
+                        dialog.dismiss()
+                        if (mProjectType == null) {
+                            // the type is needed to save, so ask for it right away
+                            showTypeDialog()
+                        }
+                    }
+                })
+            }
+        }
+
+        input.addTextChangedListener(object : android.text.TextWatcher {
+            override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
+            override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {}
+            override fun afterTextChanged(s: android.text.Editable?) {
+                refresh(s?.toString() ?: "")
+            }
+        })
+
+        dialog.window?.setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_STATE_VISIBLE)
+        dialog.show()
+        input.requestFocus()
+    }
+
+    private fun fsDetailsSummary(): String {
+        val e = mFsExtras ?: return getString(R.string.fs_details)
+        val parts = ArrayList<String>()
+        FacturaScripts.INTERLOCUTOR_TYPES.firstOrNull { it.first == e.tipoint }?.let { parts.add(getString(it.second)) }
+        if (e.interl.isNotBlank()) parts.add(e.interl)
+        when (e.sentido) {
+            "enviat" -> parts.add(getString(R.string.fs_sent))
+            "rebut" -> parts.add(getString(R.string.fs_received))
+        }
+        if (e.fresp.isNotBlank()) parts.add(getString(R.string.fs_reply_date) + " " + e.fresp)
+        else if (e.dias.isNotBlank()) parts.add(e.dias + " " + getString(R.string.fs_business_days).lowercase())
+        if (e.urgente) parts.add(getString(R.string.fs_urgent))
+        if (e.completar) parts.add(getString(R.string.fs_to_complete))
+        return if (parts.isEmpty()) getString(R.string.fs_details) else parts.joinToString(" · ")
+    }
+
+    private fun pickFsDate(current: String, onPicked: (String) -> Unit) {
+        val base = try {
+            if (current.isNotEmpty()) org.joda.time.LocalDate.parse(current) else org.joda.time.LocalDate.now()
+        } catch (e: Exception) {
+            org.joda.time.LocalDate.now()
+        }
+        DatePickerDialog(this, { _, y, m, d ->
+            onPicked(org.joda.time.LocalDate(y, m + 1, d).toString("yyyy-MM-dd"))
+        }, base.year, base.monthOfYear - 1, base.dayOfMonth).show()
+    }
+
+    private fun showEntryDetailsDialog() {
+        hideKeyboard()
+        val textColor = getProperTextColor()
+        val start = mFsExtras ?: FacturaScripts.Extras(freg = org.joda.time.LocalDate.now().toString("yyyy-MM-dd"))
+        var freg = start.freg.ifEmpty { org.joda.time.LocalDate.now().toString("yyyy-MM-dd") }
+        // empty means "same as the registration date"
+        var fecha = start.fecha
+        var fresp = start.fresp
+
+        val content = android.widget.LinearLayout(this).apply {
+            orientation = android.widget.LinearLayout.VERTICAL
+            setPadding(dp(20), dp(8), dp(20), dp(8))
+        }
+
+        fun label(textId: Int) = android.widget.TextView(this).apply {
+            text = getString(textId)
+            setTextColor(textColor.adjustAlpha(0.65f))
+            textSize = 13f
+            setPadding(0, dp(12), 0, 0)
+        }
+
+        fun spinner(items: List<String>, selected: Int) = android.widget.Spinner(this).apply {
+            adapter = android.widget.ArrayAdapter(this@EventActivity, android.R.layout.simple_spinner_dropdown_item, items)
+            setSelection(selected)
+        }
+
+        fun dateButton(value: () -> String) = android.widget.Button(this).apply {
+            isAllCaps = false
+            text = value().ifEmpty { getString(R.string.fs_none) }
+        }
+
+        // interlocutor type and name
+        val none = getString(R.string.fs_none)
+        val typeKeys = listOf("") + FacturaScripts.INTERLOCUTOR_TYPES.map { it.first }
+        val typeSpinner = spinner(listOf(none) + FacturaScripts.INTERLOCUTOR_TYPES.map { getString(it.second) }, typeKeys.indexOf(start.tipoint).coerceAtLeast(0))
+        val nameInput = android.widget.EditText(this).apply {
+            setText(start.interl)
+            filters = arrayOf(android.text.InputFilter.LengthFilter(100))
+            setSingleLine(true)
+            setTextColor(textColor)
+        }
+        content.addView(label(R.string.fs_int_type)); content.addView(typeSpinner)
+        content.addView(label(R.string.fs_int_name)); content.addView(nameInput)
+
+        // direction
+        val dirKeys = listOf("", "enviat", "rebut")
+        val dirSpinner = spinner(listOf(none, getString(R.string.fs_sent), getString(R.string.fs_received)), dirKeys.indexOf(start.sentido).coerceAtLeast(0))
+        content.addView(label(R.string.fs_direction)); content.addView(dirSpinner)
+
+        // reply: a date or a number of business days
+        val replyButton = dateButton { fresp }
+        replyButton.setOnClickListener {
+            pickFsDate(fresp) { fresp = it; replyButton.text = it }
+        }
+        replyButton.setOnLongClickListener {
+            fresp = ""; replyButton.text = none; true
+        }
+        val daysInput = android.widget.EditText(this).apply {
+            setText(start.dias)
+            inputType = android.text.InputType.TYPE_CLASS_NUMBER
+            setTextColor(textColor)
+        }
+        content.addView(label(R.string.fs_reply_date)); content.addView(replyButton)
+        content.addView(label(R.string.fs_business_days)); content.addView(daysInput)
+
+        // state: only sent if changed here
+        val stateKeys = listOf("", "pendent", "resolt")
+        val stateSpinner = spinner(
+            listOf(getString(R.string.fs_state_keep), getString(R.string.fs_state_pending), getString(R.string.fs_state_resolved)),
+            stateKeys.indexOf(start.estado).coerceAtLeast(0)
+        )
+        content.addView(label(R.string.fs_state)); content.addView(stateSpinner)
+
+        val completarBox = android.widget.CheckBox(this).apply {
+            text = getString(R.string.fs_to_complete)
+            isChecked = start.completar
+            setTextColor(textColor)
+        }
+        val urgentSwitch = android.widget.Switch(this).apply {
+            text = getString(R.string.fs_urgent)
+            isChecked = start.urgente
+            setTextColor(textColor)
+            setPadding(0, dp(8), 0, dp(8))
+        }
+        content.addView(completarBox); content.addView(urgentSwitch)
+
+        // task: only when the entry is created
+        val taskSwitch = android.widget.Switch(this).apply {
+            text = getString(R.string.fs_create_task)
+            setTextColor(textColor)
+            setPadding(0, dp(8), 0, dp(8))
+        }
+        val taskTitle = android.widget.EditText(this).apply {
+            hint = getString(R.string.fs_task_title)
+            setText(start.tareaTitulo)
+            filters = arrayOf(android.text.InputFilter.LengthFilter(100))
+            setSingleLine(true)
+            setTextColor(textColor)
+        }
+        val taskDesc = android.widget.EditText(this).apply {
+            hint = getString(R.string.fs_task_desc)
+            setText(start.tareaDesc)
+            inputType = android.text.InputType.TYPE_CLASS_TEXT or android.text.InputType.TYPE_TEXT_FLAG_MULTI_LINE
+            setTextColor(textColor)
+        }
+        val taskHolder = android.widget.LinearLayout(this).apply {
+            orientation = android.widget.LinearLayout.VERTICAL
+            addView(taskTitle); addView(taskDesc)
+            visibility = android.view.View.GONE
+        }
+        if (!start.tk) {
+            taskSwitch.isChecked = start.tareaTitulo.isNotBlank()
+            taskHolder.visibility = if (taskSwitch.isChecked) android.view.View.VISIBLE else android.view.View.GONE
+            taskSwitch.setOnCheckedChangeListener { _, checked ->
+                taskHolder.visibility = if (checked) android.view.View.VISIBLE else android.view.View.GONE
+            }
+            content.addView(taskSwitch); content.addView(taskHolder)
+        }
+
+        // registration date and date of the fact
+        val factButton = dateButton { fecha.ifEmpty { freg } }
+        val regButton = dateButton { freg }
+        regButton.setOnClickListener {
+            pickFsDate(freg) {
+                freg = it
+                regButton.text = it
+                if (fecha.isEmpty()) factButton.text = it
+            }
+        }
+        factButton.setOnClickListener {
+            pickFsDate(fecha.ifEmpty { freg }) { fecha = it; factButton.text = it }
+        }
+        content.addView(label(R.string.fs_reg_date)); content.addView(regButton)
+        content.addView(label(R.string.fs_fact_date)); content.addView(factButton)
+
+        val scroll = android.widget.ScrollView(this).apply { addView(content) }
+        val dialog = androidx.appcompat.app.AlertDialog.Builder(this)
+            .setTitle(R.string.fs_details)
+            .setView(scroll)
+            .setPositiveButton(org.fossify.commons.R.string.ok, null)
+            .setNegativeButton(org.fossify.commons.R.string.cancel, null)
+            .create()
+        dialog.show()
+        dialog.getButton(androidx.appcompat.app.AlertDialog.BUTTON_POSITIVE).setOnClickListener {
+            val wantsTask = !start.tk && taskSwitch.isChecked
+            if (wantsTask && taskTitle.text.toString().isBlank()) {
+                toast(R.string.fs_task_title_required)
+                return@setOnClickListener
+            }
+            mFsExtras = FacturaScripts.Extras(
+                tipoint = typeKeys[typeSpinner.selectedItemPosition],
+                interl = nameInput.text.toString().trim(),
+                sentido = dirKeys[dirSpinner.selectedItemPosition],
+                fresp = fresp,
+                dias = if (fresp.isEmpty()) daysInput.text.toString().trim() else "",
+                estado = stateKeys[stateSpinner.selectedItemPosition],
+                completar = completarBox.isChecked,
+                urgente = urgentSwitch.isChecked,
+                freg = freg,
+                fecha = if (fecha == freg) "" else fecha,
+                tk = start.tk,
+                tareaTitulo = if (wantsTask) taskTitle.text.toString().trim() else "",
+                tareaDesc = if (wantsTask) taskDesc.text.toString() else ""
+            )
+            updateProjectRow()
+            dialog.dismiss()
         }
     }
 
