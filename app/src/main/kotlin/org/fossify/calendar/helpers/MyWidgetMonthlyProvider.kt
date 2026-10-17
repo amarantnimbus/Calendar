@@ -162,8 +162,8 @@ class MyWidgetMonthlyProvider : AppWidgetProvider() {
         val dp = dm.density
 
         // sizes follow the font size chosen in Settings; they are real sp sizes, so nothing is stretched
-        val numberSp = context.getWidgetFontSize() * 0.8f
-        val pillSp = context.getWidgetFontSize() * 0.66f
+        val numberSp = context.getWidgetFontSize() * 0.4f
+        val pillSp = context.getWidgetFontSize() * 0.33f
         val numberPx = android.util.TypedValue.applyDimension(android.util.TypedValue.COMPLEX_UNIT_SP, numberSp, dm)
         val pillPx = android.util.TypedValue.applyDimension(android.util.TypedValue.COMPLEX_UNIT_SP, pillSp, dm)
         val iconPx = (numberPx * 0.95f).toInt().coerceAtLeast(8)
@@ -172,8 +172,8 @@ class MyWidgetMonthlyProvider : AppWidgetProvider() {
         val rowUnits = weeks + if (showLetters) 0.5f else 0f
         val cellH = height / rowUnits
         val cellW = width / (7f + if (data.showWeekNumbers) 0.5f else 0f)
-        val bandPx = numberPx * 1.25f + 2 * dp
-        val pillRowPx = pillPx * 1.25f + 3 * dp
+        val bandPx = numberPx * 1.25f
+        val pillRowPx = pillPx * 1.25f + 0.5f * dp
         // an estimate (fonts differ a little between phones): it errs on the safe side
         val room = cellH * 0.93f - bandPx - 2 * dp
         val fitPills = Math.floor((room / pillRowPx).toDouble()).toInt().coerceAtLeast(0)
@@ -235,7 +235,7 @@ class MyWidgetMonthlyProvider : AppWidgetProvider() {
 
             // only the icons that fit next to the number
             val numberWidth = numberPx * 0.62f * day.number.length
-            val maxIcons = Math.floor(((cellW - 6 * dp - numberWidth) / (iconPx + dp)).toDouble()).toInt().coerceAtLeast(0)
+            val maxIcons = Math.floor(((cellW - 4 * dp - numberWidth) / (iconPx + dp)).toDouble()).toInt().coerceAtLeast(0)
             val iconIds = intArrayOf(R.id.cell_icon_a, R.id.cell_icon_b, R.id.cell_icon_c)
             day.icons.take(maxIcons).forEachIndexed { n, icon ->
                 cell.setViewVisibility(iconIds[n], View.VISIBLE)
