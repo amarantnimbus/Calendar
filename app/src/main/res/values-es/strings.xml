@@ -409,6 +409,7 @@
     <string name="fs_none">—</string>
     <string name="fs_clear">Borrar</string>
     <string name="icon_food">Comida</string>
+    <string name="icon_crane">Grúa</string>
     <string name="task_name_hint">Título de la tarea</string>
     <string name="task_comment_hint">Descripción de la tarea</string>
     <string name="sec_appearance">Apariencia</string>

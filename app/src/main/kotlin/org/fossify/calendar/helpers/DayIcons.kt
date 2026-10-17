@@ -27,7 +27,8 @@ object DayIcons {
         Icon("home", R.drawable.ic_day_home, R.string.icon_home),
         Icon("phone", R.drawable.ic_day_phone, R.string.icon_phone),
         Icon("cake", R.drawable.ic_day_cake, R.string.icon_cake),
-        Icon("food", R.drawable.ic_day_food, R.string.icon_food)
+        Icon("food", R.drawable.ic_day_food, R.string.icon_food),
+        Icon("crane", R.drawable.ic_day_crane, R.string.icon_crane)
     )
 
     private val regex = Regex("\\n?\\[\\[IC:([a-z]+)\\]\\]")

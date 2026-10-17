@@ -409,6 +409,7 @@
     <string name="fs_none">—</string>
     <string name="fs_clear">Esborra</string>
     <string name="icon_food">Menjar</string>
+    <string name="icon_crane">Grua</string>
     <string name="task_name_hint">Títol de la tasca</string>
     <string name="task_comment_hint">Descripció de la tasca</string>
     <string name="sec_appearance">Aspecte</string>

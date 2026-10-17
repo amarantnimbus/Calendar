@@ -309,6 +309,7 @@ class MainActivity : SimpleActivity(), RefreshRecyclerViewListener {
 
         binding.apply {
             mainMenu.updateColors()
+        mainMenu.onTitleClickListener = { if (config.storedView == MONTHLY_VIEW) showGoToDateDialog() }
             storeStateVariables()
             updateWidgets()
             updateTextColors(calendarCoordinator)
@@ -371,6 +372,19 @@ class MainActivity : SimpleActivity(), RefreshRecyclerViewListener {
                 resources.getBoolean(org.fossify.commons.R.bool.is_google_play_build)
         }
         updateTailscaleIcon()
+        binding.mainMenu.updateColors()
+        updateMonthTitle()
+    }
+
+    // the month name sits where the search pill used to be; other views show no title there
+    fun updateMonthTitle() {
+        val holder = getCurrentFragment()
+        val title = if (config.storedView == MONTHLY_VIEW && holder is org.fossify.calendar.fragments.MonthFragmentsHolder) {
+            holder.getCurrentMonthTitle()
+        } else {
+            ""
+        }
+        binding.mainMenu.setTitle(title)
     }
 
     private var mTailscaleCallback: ConnectivityManager.NetworkCallback? = null
@@ -499,6 +513,7 @@ class MainActivity : SimpleActivity(), RefreshRecyclerViewListener {
         mainMenu.requireToolbar().inflateMenu(R.menu.menu_main)
         mainMenu.toggleHideOnScroll(false)
         mainMenu.setupMenu()
+        mainMenu.updateColors()
 
         mainMenu.onSearchTextChangedListener = { text ->
             searchQueryChanged(text)
@@ -510,6 +525,7 @@ class MainActivity : SimpleActivity(), RefreshRecyclerViewListener {
             }
 
             when (menuItem.itemId) {
+                R.id.search -> mainMenu.openSearch()
                 R.id.change_view -> showViewDialog()
                 R.id.pending_events -> showPendingEventsDialog()
                 R.id.go_to_today -> goToToday()
@@ -1448,6 +1464,7 @@ class MainActivity : SimpleActivity(), RefreshRecyclerViewListener {
         supportFragmentManager.executePendingTransactions()
         supportFragmentManager.beginTransaction().replace(R.id.fragments_holder, fragment).commitNow()
         binding.mainMenu.toggleForceArrowBackIcon(false)
+        binding.mainMenu.post { updateMonthTitle() }
     }
 
     private fun fixDayCode(dayCode: String? = null): String? = when {

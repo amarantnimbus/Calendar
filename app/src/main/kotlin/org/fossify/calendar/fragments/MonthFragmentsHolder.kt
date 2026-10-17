@@ -65,6 +65,7 @@ class MonthFragmentsHolder : MyFragmentHolder(), NavigationListener {
 
                 override fun onPageSelected(position: Int) {
                     currentDayCode = codes[position]
+                    (activity as? MainActivity)?.updateMonthTitle()
                     val shouldGoToTodayBeVisible = shouldGoToTodayBeVisible()
                     if (isGoToTodayVisible != shouldGoToTodayBeVisible) {
                         (activity as? MainActivity)?.toggleGoToTodayVisibility(shouldGoToTodayBeVisible)
@@ -74,6 +75,14 @@ class MonthFragmentsHolder : MyFragmentHolder(), NavigationListener {
             })
             currentItem = defaultMonthlyPage
         }
+        viewPager.post { (activity as? MainActivity)?.updateMonthTitle() }
+    }
+
+    fun getCurrentMonthTitle(): String {
+        val ctx = context ?: return ""
+        if (currentDayCode.length < 6) return ""
+        return Formatter.getMonthName(ctx, currentDayCode.substring(4, 6).toInt()).replaceFirstChar { it.uppercase() } +
+            if (currentDayCode.substring(0, 4) != Formatter.getTodayCode().substring(0, 4)) " " + currentDayCode.substring(0, 4) else ""
     }
 
     private fun getMonths(code: String): List<String> {

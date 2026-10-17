@@ -4,15 +4,21 @@
     xmlns:tools="http://schemas.android.com/tools"
     tools:ignore="AppCompatResource">
     <item
-        android:id="@+id/go_to_today"
-        android:icon="@drawable/ic_today_vector"
-        android:title="@string/go_to_today"
+        android:id="@+id/search"
+        android:icon="@drawable/ic_magnifier"
+        android:title="@string/search"
         app:showAsAction="always" />
     <item
         android:id="@+id/pending_events"
         android:icon="@drawable/ic_inbox_vector"
         android:title="@string/pending_events"
         app:showAsAction="always" />
+    <item
+        android:id="@+id/go_to_today"
+        android:icon="@drawable/ic_today_vector"
+        android:title="@string/go_to_today"
+        app:showAsAction="always" />
+
     <item
         android:id="@+id/change_view"
         android:icon="@drawable/ic_change_view_vector"

@@ -5,7 +5,7 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent">
 
-    <org.fossify.commons.views.MySearchMenu
+    <org.fossify.calendar.views.CalendarTopBar
         android:id="@+id/main_menu"
         android:layout_width="match_parent"
         android:layout_height="wrap_content" />

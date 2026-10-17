@@ -76,13 +76,6 @@
         android:paddingEnd="@dimen/medium_margin"
         android:src="@drawable/ic_plus_vector" />
 
-    <ImageView
-        android:id="@+id/widget_month_image"
-        android:layout_width="match_parent"
-        android:layout_height="match_parent"
-        android:layout_below="@+id/top_value"
-        android:scaleType="fitXY" />
-
     <LinearLayout
         android:id="@+id/table_holder"
         android:layout_width="match_parent"

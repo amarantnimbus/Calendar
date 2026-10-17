@@ -126,16 +126,22 @@ class MyWidgetMonthlyProvider : AppWidgetProvider() {
         return Pair(width, height)
     }
 
+    private val iconCache = HashMap<String, android.graphics.Bitmap>()
+
+    private fun iconBitmap(context: Context, resId: Int, color: Int, sizePx: Int): android.graphics.Bitmap {
+        val key = "$resId:$color:$sizePx"
+        return iconCache.getOrPut(key) {
+            val drawable = context.resources.getColoredDrawableWithColor(resId, color).mutate()
+            val bmp = android.graphics.Bitmap.createBitmap(sizePx, sizePx, android.graphics.Bitmap.Config.ARGB_8888)
+            drawable.setBounds(0, 0, sizePx, sizePx)
+            drawable.draw(android.graphics.Canvas(bmp))
+            bmp
+        }
+    }
+
     private fun updateGrid(context: Context, views: RemoteViews, appWidgetManager: AppWidgetManager, widgetId: Int, days: ArrayList<DayMonthly>) {
         val weeks = weeksOf(days)
-        var (width, height) = gridSize(context, appWidgetManager, widgetId)
-        // RemoteViews has a memory limit for bitmaps: keep the picture under ~4 MB
-        val maxBytes = 4L * 1024 * 1024
-        if (width.toLong() * height * 4 > maxBytes) {
-            val k = Math.sqrt(maxBytes.toDouble() / (width.toLong() * height * 4))
-            width = (width * k).toInt().coerceAtLeast(200)
-            height = (height * k).toInt().coerceAtLeast(200)
-        }
+        val (width, height) = gridSize(context, appWidgetManager, widgetId)
 
         val info = HashMap<Long, Pair<String, Int>>()
         try {
@@ -146,24 +152,127 @@ class MyWidgetMonthlyProvider : AppWidgetProvider() {
         } catch (ignored: Exception) {
         }
 
-        val monthView = MonthView(context, null)
-        val bitmap = monthView.renderForWidget(
-            weeks, context.config.widgetTextColor, context.config.widgetBgColor, info, days, width, height
+        val data = MonthView(context, null).widgetData(
+            weeks, context.config.widgetTextColor, context.config.widgetBgColor, info, days
         )
-        views.setImageViewBitmap(R.id.widget_month_image, bitmap)
 
-        views.setViewVisibility(R.id.band_spacer, if (context.config.highlightWeekends) View.GONE else View.VISIBLE)
         val res = context.resources
+        val dm = res.displayMetrics
         val packageName = context.packageName
+        val dp = dm.density
+
+        // sizes follow the font size chosen in Settings; they are real sp sizes, so nothing is stretched
+        val numberSp = context.getWidgetFontSize()
+        val pillSp = numberSp * 0.8f
+        val numberPx = android.util.TypedValue.applyDimension(android.util.TypedValue.COMPLEX_UNIT_SP, numberSp, dm)
+        val pillPx = android.util.TypedValue.applyDimension(android.util.TypedValue.COMPLEX_UNIT_SP, pillSp, dm)
+        val iconPx = (numberPx * 0.95f).toInt().coerceAtLeast(8)
+
+        val showLetters = !context.config.highlightWeekends
+        val rowUnits = weeks + if (showLetters) 0.5f else 0f
+        val cellH = height / rowUnits
+        val cellW = width / (7f + if (data.showWeekNumbers) 0.5f else 0f)
+        val bandPx = numberPx * 1.25f + 2 * dp
+        val pillRowPx = pillPx * 1.25f + 3 * dp
+        // an estimate (fonts differ a little between phones): it errs on the safe side
+        val room = cellH * 0.93f - bandPx - 2 * dp
+        val fitPills = Math.floor((room / pillRowPx).toDouble()).toInt().coerceAtLeast(0)
+
+        views.setViewVisibility(R.id.band_spacer, if (showLetters) View.VISIBLE else View.GONE)
+        if (showLetters) {
+            val letters = RemoteViews(packageName, R.layout.widget_letters)
+            letters.setViewVisibility(R.id.letters_offset, if (data.showWeekNumbers) View.VISIBLE else View.GONE)
+            data.letters.forEachIndexed { i, (text, color) ->
+                val id = res.getIdentifier("letter_$i", "id", packageName)
+                letters.setTextViewText(id, text)
+                letters.setTextColor(id, color)
+                letters.setTextViewTextSize(id, android.util.TypedValue.COMPLEX_UNIT_SP, pillSp)
+            }
+            views.removeAllViews(R.id.band_spacer)
+            views.addView(R.id.band_spacer, letters)
+        }
+
         for (week in 0..5) {
             val rowId = res.getIdentifier("week_row_$week", "id", packageName)
             views.setViewVisibility(rowId, if (week < weeks) View.VISIBLE else View.GONE)
             val weekNumId = res.getIdentifier("week_num_$week", "id", packageName)
-            views.setViewVisibility(weekNumId, if (context.config.showWeekNumbers) View.VISIBLE else View.GONE)
+            views.setViewVisibility(weekNumId, if (data.showWeekNumbers) View.VISIBLE else View.GONE)
+            views.removeAllViews(weekNumId)
+            if (data.showWeekNumbers && week < data.weekNumbers.size) {
+                val num = RemoteViews(packageName, R.layout.widget_week_num)
+                num.setTextViewText(R.id.week_num_text, data.weekNumbers[week].first)
+                num.setTextColor(R.id.week_num_text, data.weekNumbers[week].second)
+                num.setTextViewTextSize(R.id.week_num_text, android.util.TypedValue.COMPLEX_UNIT_SP, pillSp)
+                views.addView(weekNumId, num)
+            }
         }
-        for (i in days.indices) {
+
+        val fullCell = context.config.shiftFullCell
+        for (i in 0 until 42) {
             val id = res.getIdentifier("day_$i", "id", packageName)
-            setupDayOpenIntent(context, views, id, days[i].code)
+            val dayCode = days.getOrNull(i)?.code ?: continue
+            setupDayOpenIntent(context, views, id, dayCode)
+            views.removeAllViews(id)
+            val day = data.days.getOrNull(i) ?: continue
+
+            val cell = RemoteViews(packageName, R.layout.widget_day_cell)
+            val number = android.text.SpannableString(day.number)
+            if (day.bold) {
+                number.setSpan(android.text.style.StyleSpan(android.graphics.Typeface.BOLD), 0, number.length, 0)
+            }
+            cell.setTextViewText(R.id.cell_number, number)
+            cell.setTextColor(R.id.cell_number, day.numberColor)
+            cell.setTextViewTextSize(R.id.cell_number, android.util.TypedValue.COMPLEX_UNIT_SP, numberSp)
+
+            if (day.bandColor != null) {
+                cell.setInt(if (fullCell) R.id.cell_root else R.id.cell_band, "setBackgroundColor", day.bandColor)
+            }
+            if (data.showGrid) {
+                cell.setViewVisibility(R.id.cell_grid_bottom, View.VISIBLE)
+                cell.setInt(R.id.cell_grid_bottom, "setBackgroundColor", data.gridColor)
+            }
+            cell.setViewVisibility(R.id.cell_today_line, if (day.isToday) View.VISIBLE else View.INVISIBLE)
+
+            // only the icons that fit next to the number
+            val numberWidth = numberPx * 0.62f * day.number.length
+            val maxIcons = Math.floor(((cellW - 6 * dp - numberWidth) / (iconPx + dp)).toDouble()).toInt().coerceAtLeast(0)
+            val iconIds = intArrayOf(R.id.cell_icon_a, R.id.cell_icon_b, R.id.cell_icon_c)
+            day.icons.take(maxIcons).forEachIndexed { n, icon ->
+                cell.setViewVisibility(iconIds[n], View.VISIBLE)
+                cell.setImageViewBitmap(iconIds[n], iconBitmap(context, icon.resId, icon.color, iconPx))
+            }
+
+            val tooMany = day.pills.size > fitPills
+            val shown = if (tooMany) (fitPills - 1).coerceAtLeast(0) else day.pills.size
+            day.pills.take(shown).forEach { pill ->
+                val v = RemoteViews(packageName, R.layout.widget_pill)
+                val sb = android.text.SpannableStringBuilder()
+                if (pill.isTask) sb.append(if (pill.strike) "\u2611 " else "\u2610 ")
+                if (pill.initial != null) {
+                    val start = sb.length
+                    sb.append(pill.initial).append(' ')
+                    sb.setSpan(android.text.style.StyleSpan(android.graphics.Typeface.BOLD), start, sb.length, 0)
+                }
+                val titleStart = sb.length
+                sb.append(pill.title)
+                if (pill.strike) {
+                    sb.setSpan(android.text.style.StrikethroughSpan(), titleStart, sb.length, 0)
+                }
+                v.setTextViewText(R.id.pill_text, sb)
+                v.setTextColor(R.id.pill_text, pill.textColor)
+                v.setTextViewTextSize(R.id.pill_text, android.util.TypedValue.COMPLEX_UNIT_SP, pillSp)
+                v.setInt(R.id.pill_bg, "setColorFilter", pill.fillRgb or 0xFF000000.toInt())
+                v.setInt(R.id.pill_bg, "setImageAlpha", pill.alpha)
+                cell.addView(R.id.cell_pills, v)
+            }
+            if (tooMany) {
+                val more = RemoteViews(packageName, R.layout.widget_pill_more)
+                more.setTextColor(R.id.pill_more, context.config.widgetTextColor)
+                more.setTextViewTextSize(R.id.pill_more, android.util.TypedValue.COMPLEX_UNIT_SP, pillSp)
+                cell.addView(R.id.cell_pills, more)
+            }
+
+            views.addView(id, cell)
         }
     }
 

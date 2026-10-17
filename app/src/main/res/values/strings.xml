@@ -464,6 +464,7 @@
     <string name="fs_none">—</string>
     <string name="fs_clear">Clear</string>
     <string name="icon_food">Meals</string>
+    <string name="icon_crane">Crane</string>
     <string name="task_name_hint">Task title</string>
     <string name="task_comment_hint">Task description</string>
     <string name="sec_appearance">Appearance</string>

@@ -43,7 +43,6 @@ class MonthView(context: Context, attrs: AttributeSet?, defStyle: Int) : View(co
         private const val EVENT_DOT_COLUMN_COUNT = 3
         private const val EVENT_DOT_ROW_COUNT = 1
         private const val TEXT_SCALE = 0.8f
-        private const val VISIBLE_ROWS = 5
     }
 
     private var textPaint: Paint
@@ -81,9 +80,6 @@ class MonthView(context: Context, attrs: AttributeSet?, defStyle: Int) : View(co
     private var dayVerticalOffsets = SparseIntArray()
     private var selectedDayCoords = Point(-1, -1)
     private var selectedDayIndex = -1
-    private var rowShift = 0
-    private var wantShift = false
-    private var userMovedRows = false
     private var panelHeight = 0f
     private var panelEvents = ArrayList<Event>()
     private var panelHiddenCount = 0
@@ -181,12 +177,6 @@ class MonthView(context: Context, attrs: AttributeSet?, defStyle: Int) : View(co
     fun updateDays(newDays: ArrayList<DayMonthly>, isMonthDayView: Boolean) {
         this.isMonthDayView = isMonthDayView
         days = newDays
-        if (!userMovedRows && canShiftRows()) {
-            // when today is in the sixth week, start with that week in view
-            val todayIndex = days.indexOfFirst { it.isToday && it.isThisMonth }
-            wantShift = todayIndex >= VISIBLE_ROWS * 7
-        }
-        rowShift = if (wantShift && canShiftRows()) 1 else 0
         showWeekNumbers = config.showWeekNumbers
         highlightWeekends = config.highlightWeekends
         weekDaysLetterHeight = if (highlightWeekends) 0 else headerHeightFull
@@ -440,7 +430,6 @@ class MonthView(context: Context, attrs: AttributeSet?, defStyle: Int) : View(co
             for (event in allEvents) {
                 drawEvent(event, canvas)
             }
-            drawRowHint(canvas)
         }
 
         drawPanel(canvas)
@@ -538,44 +527,17 @@ class MonthView(context: Context, attrs: AttributeSet?, defStyle: Int) : View(co
         return DayMarks(hasJuntsEvent(day), own?.drawable, other?.drawable)
     }
 
-    // ---- rows: five rows are always shown, in a six week month the sixth one is reached by dragging up
+    // ---- rows: every week of the month is always shown (five or six rows)
 
-    private fun canShiftRows() = forcedRows == 0 && !isMonthDayView && days.size > VISIBLE_ROWS * 7 && days[VISIBLE_ROWS * 7].isThisMonth
-
-    private fun visibleRows() = if (forcedRows > 0) forcedRows else VISIBLE_ROWS
-
-    private fun isRowVisible(row: Int) = isMonthDayView || (row >= rowShift && row < rowShift + visibleRows())
-
-    fun hasHiddenRow() = canShiftRows()
-
-    fun isShifted() = rowShift > 0
-
-    fun setRowShift(shift: Boolean) {
-        userMovedRows = true
-        wantShift = shift
-        val newShift = if (shift && canShiftRows()) 1 else 0
-        if (newShift != rowShift) {
-            rowShift = newShift
-            // an open day that is no longer visible is closed
-            if (selectedDayIndex >= 0 && !isRowVisible(selectedDayIndex / 7)) {
-                selectedDayIndex = -1
-            }
-            invalidate()
-        }
+    private fun visibleRows() = when {
+        forcedRows > 0 -> forcedRows
+        days.size > 35 && days[35].isThisMonth -> 6
+        else -> 5
     }
 
-    private fun drawRowHint(canvas: Canvas) {
-        if (!canShiftRows()) {
-            return
-        }
+    fun rowsShown() = visibleRows()
 
-        val barWidth = dayWidth * 0.7f
-        val barHeight = max(3f, 3f * resources.displayMetrics.density)
-        val cx = horizontalOffset + (width - horizontalOffset) / 2f
-        val y = if (rowShift == 0) height - barHeight * 1.6f else weekDaysLetterHeight + barHeight * 0.6f
-        shiftPaint.color = textColor.adjustAlpha(0.35f)
-        canvas.drawRoundRect(cx - barWidth / 2, y, cx + barWidth / 2, y + barHeight, barHeight / 2, barHeight / 2, shiftPaint)
-    }
+    private fun isRowVisible(row: Int) = isMonthDayView || row < visibleRows()
 
     // height of the colored band behind the day number
     private fun bandHeight() = circleDiameter()
@@ -706,7 +668,7 @@ class MonthView(context: Context, attrs: AttributeSet?, defStyle: Int) : View(co
 
     private fun expandedRow(): Int = if (panelHeight > 0f) selectedDayIndex / 7 else -1
 
-    private fun firstShownRow() = if (isMonthDayView) 0 else rowShift
+    private fun firstShownRow() = 0
 
     // top of a week row (without the header with the week day letters)
     private fun rowOrigin(row: Int): Float {
@@ -1096,6 +1058,90 @@ class MonthView(context: Context, attrs: AttributeSet?, defStyle: Int) : View(co
         return event.startTS != event.endTS && Formatter.getDateTimeFromTS(event.endTS) == Formatter.getDateTimeFromTS(date.seconds()).withTimeAtStartOfDay()
     }
 
+    /** What the home screen widget needs to build its own native views (no bitmap, so nothing stretches). */
+    fun widgetData(
+        rowCount: Int,
+        widgetTextColor: Int,
+        widgetBgColor: Int,
+        info: HashMap<Long, Pair<String, Int>>,
+        newDays: ArrayList<DayMonthly>
+    ): WidgetData {
+        forcedRows = rowCount
+        bgOverride = widgetBgColor
+        textColor = widgetTextColor
+        weekendsTextColor = config.highlightWeekendsColor
+        calendarInfo = info
+        updateDays(newDays, false)
+
+        val schedule = ShiftHelper.load(config)
+        val perDay = ArrayList<WidgetDay?>()
+        for (i in 0 until 42) {
+            val day = days.getOrNull(i)
+            if (day == null || !day.isThisMonth || i / 7 >= rowCount) {
+                perDay.add(null)
+                continue
+            }
+
+            val shiftColor = schedule?.let { sch -> sch.shiftFor(day.code)?.let { sch.colorFor(it) } }
+            val weekendColor = highlightWeekends && day.isWeekend
+            val numberColor = when {
+                shiftColor != null -> if (weekendColor) weekendsTextColor else shiftColor.getContrastColor()
+                weekendColor -> weekendsTextColor
+                else -> textColor
+            }
+            val iconColor = shiftColor?.getContrastColor() ?: textColor
+            val marks = dayMarksFor(day)
+            val icons = ArrayList<WidgetIcon>()
+            marks.other?.let { icons.add(WidgetIcon(it, iconColor.adjustAlpha(0.55f))) }
+            marks.own?.let { icons.add(WidgetIcon(it, iconColor)) }
+            if (marks.junts) icons.add(WidgetIcon(R.drawable.ic_junts_people, iconColor))
+
+            val pills = allEvents
+                .filter { i >= it.startDayIndex && i < it.startDayIndex + it.daysCnt }
+                .map { event ->
+                    val base = pillBaseColor(event)
+                    WidgetPill(
+                        initial = calendarInitial(event),
+                        title = event.title,
+                        fillRgb = base and 0x00FFFFFF,
+                        alpha = (opacity() * 255).toInt(),
+                        textColor = readableOn(shownColor(base)),
+                        strike = event.shouldStrikeThrough(),
+                        isTask = event.isTask
+                    )
+                }
+
+            perDay.add(
+                WidgetDay(
+                    number = day.value.toString(),
+                    numberColor = numberColor,
+                    bold = day.isWeekend,
+                    bandColor = shiftColor?.let { it or 0xFF000000.toInt() },
+                    icons = icons,
+                    isToday = day.isToday,
+                    pills = pills
+                )
+            )
+        }
+
+        val weekNumbers = (0 until rowCount).map { row ->
+            val weekDays = days.subList(row * 7, row * 7 + 7)
+            val weekOfYear = days.getOrNull(row * 7 + 3)?.weekOfYear ?: 1
+            Pair("$weekOfYear:", if (weekDays.any { it.isToday }) primaryColor else textColor)
+        }
+
+        val letters = (0 until COLUMN_COUNT).map { i ->
+            val color = when {
+                i == currDayOfWeek -> primaryColor
+                highlightWeekends && context.isWeekendIndex(i) -> weekendsTextColor
+                else -> textColor
+            }
+            Pair(dayLetters[i], color)
+        }
+
+        return WidgetData(perDay, weekNumbers, letters, highlightWeekends, showWeekNumbers, config.showGrid, textColor.adjustAlpha(LOWER_ALPHA))
+    }
+
     /** Draws this month into a bitmap, used by the home screen widget. */
     fun renderForWidget(
         rowCount: Int,
@@ -1153,3 +1199,35 @@ class MonthView(context: Context, attrs: AttributeSet?, defStyle: Int) : View(co
         invalidate()
     }
 }
+
+class WidgetIcon(val resId: Int, val color: Int)
+
+class WidgetPill(
+    val initial: String?,
+    val title: String,
+    val fillRgb: Int,
+    val alpha: Int,
+    val textColor: Int,
+    val strike: Boolean,
+    val isTask: Boolean
+)
+
+class WidgetDay(
+    val number: String,
+    val numberColor: Int,
+    val bold: Boolean,
+    val bandColor: Int?,
+    val icons: List<WidgetIcon>,
+    val isToday: Boolean,
+    val pills: List<WidgetPill>
+)
+
+class WidgetData(
+    val days: List<WidgetDay?>,
+    val weekNumbers: List<Pair<String, Int>>,
+    val letters: List<Pair<String, Int>>,
+    val highlightWeekends: Boolean,
+    val showWeekNumbers: Boolean,
+    val showGrid: Boolean,
+    val gridColor: Int
+)
