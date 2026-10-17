@@ -59,10 +59,11 @@ class CalDAVHelper(val context: Context) {
                 val localCalendar =
                     eventsHelper.getCalendarWithCalDAVCalendarId(calendar.id) ?: continue
                 val chosenColor = context.config.getCalendarColorOverride(calendar.id) ?: calendar.color
-                if (calendar.displayName != localCalendar.title || chosenColor != localCalendar.color) {
+                val chosenName = context.config.getCalendarNameOverride(calendar.id) ?: calendar.displayName
+                if (chosenName != localCalendar.title || chosenName != localCalendar.caldavDisplayName || chosenColor != localCalendar.color) {
                     localCalendar.apply {
-                        title = calendar.displayName
-                        caldavDisplayName = calendar.displayName
+                        title = chosenName
+                        caldavDisplayName = chosenName
                         caldavEmail = calendar.accountName
                         color = chosenColor
                         eventsHelper.insertOrUpdateCalendarSync(this)

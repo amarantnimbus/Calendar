@@ -187,6 +187,8 @@ class SettingsActivity : SimpleActivity() {
         super.onCreate(savedInstanceState)
         setContentView(binding.root)
         mStoredPrimaryColor = getProperPrimaryColor()
+        // every section starts closed when Settings is opened
+        config.openSettingSections = HashSet()
 
         setupEdgeToEdge(padBottomSystem = listOf(binding.settingsNestedScrollview))
         setupMaterialScrollListener(
@@ -275,19 +277,11 @@ class SettingsActivity : SimpleActivity() {
 
         arrayOf(
             binding.settingsColorCustomizationSectionLabel,
-            binding.settingsGeneralSettingsLabel,
-            binding.settingsShiftsLabel,
+            binding.settingsMonthlyViewLabel,
+            binding.settingsNewEventsLabel,
             binding.settingsRemindersLabel,
             binding.settingsCaldavLabel,
-            binding.settingsNewEventsLabel,
-            binding.settingsWeeklyViewLabel,
-            binding.settingsMonthlyViewLabel,
-            binding.settingsEventListsLabel,
-            binding.settingsWidgetsLabel,
-            binding.settingsEventsLabel,
-            binding.settingsTasksLabel,
-            binding.settingsBackupsLabel,
-            binding.settingsMigratingLabel,
+            binding.settingsShiftsLabel,
             binding.settingsAppInfoLabel
         ).forEach {
             it.setTextColor(getProperPrimaryColor())
@@ -1424,8 +1418,6 @@ class SettingsActivity : SimpleActivity() {
     }
 
     private fun setupEnableAutomaticBackups() = binding.apply {
-        settingsBackupsLabel.beVisibleIf(isRPlus())
-        settingsBackupsDivider.beVisibleIf(isRPlus())
         settingsEnableAutomaticBackupsHolder.beVisibleIf(isRPlus())
         settingsEnableAutomaticBackups.isChecked = config.autoBackup
         settingsEnableAutomaticBackupsHolder.setOnClickListener {

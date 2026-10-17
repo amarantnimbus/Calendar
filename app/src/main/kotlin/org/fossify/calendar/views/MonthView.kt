@@ -101,6 +101,11 @@ class MonthView(context: Context, attrs: AttributeSet?, defStyle: Int) : View(co
         color = 0xFFD32F2F.toInt()
     }
     private val shiftPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply { style = Paint.Style.FILL }
+    private val framePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        style = Paint.Style.STROKE
+        color = Color.BLACK
+        strokeWidth = max(1.5f, 1.2f * context.resources.displayMetrics.density)
+    }
 
     constructor(context: Context, attrs: AttributeSet?) : this(context, attrs, 0)
 
@@ -279,6 +284,9 @@ class MonthView(context: Context, attrs: AttributeSet?, defStyle: Int) : View(co
                 if (day != null && (isMonthDayView || (isRowVisible(y) && day.isThisMonth))) {
                     val dayNumber = day.value.toString()
                     val textPaint = getTextPaint(day)
+                    if (day.isWeekend && !isPrintVersion) {
+                        textPaint.typeface = Typeface.create(textPaint.typeface, Typeface.BOLD)
+                    }
                     textPaint.getTextBounds(dayNumber, 0, dayNumber.length, dayTextRect)
                     dayVerticalOffsets.put(day.indexOnMonthView, dayVerticalOffsets[day.indexOnMonthView] + weekDaysLetterHeight)
                     val verticalOffset = dayVerticalOffsets[day.indexOnMonthView]
@@ -310,7 +318,7 @@ class MonthView(context: Context, attrs: AttributeSet?, defStyle: Int) : View(co
                             else -> textPaint.color
                         }
                         if (day.isToday && !isPrintVersion && shiftColor == null) {
-                            textPaint.color = textColor
+                            textPaint.color = if (highlightWeekends && day.isWeekend) weekendsTextColor else textColor
                         }
 
                         // icons at the far right: together, own calendar, other calendar
@@ -319,17 +327,22 @@ class MonthView(context: Context, attrs: AttributeSet?, defStyle: Int) : View(co
                         val slotGap = ts * 0.12f
                         val iconColor = shiftColor?.getContrastColor() ?: textColor
                         var iconRight = xPos + dayWidth - sidePad
-                        val drawables = arrayOf(slots.other, slots.own, if (slots.junts) -1 else null)
-                        drawables.forEachIndexed { slot, res ->
+                        // only the icons that fit next to the number are drawn, so they never overlap it
+                        val present = listOfNotNull(
+                            slots.other?.let { Pair(0, it) },
+                            slots.own?.let { Pair(1, it) },
+                            if (slots.junts) Pair(2, -1) else null
+                        )
+                        val room = dayWidth - sidePad * 2 - textPaint.measureText(dayNumber) - ts * 0.3f
+                        val maxIcons = max(0, (room / (iconSize + slotGap)).toInt())
+                        present.take(maxIcons).forEach { (slot, res) ->
                             val iconLeft = iconRight - iconSize
-                            if (res != null) {
-                                val color = if (slot == 0) iconColor.adjustAlpha(0.55f) else iconColor
-                                val resId = if (res == -1) R.drawable.ic_junts_people else res
-                                val icon = resources.getColoredDrawableWithColor(resId, color).mutate()
-                                val iconTop = (centerY - iconSize / 2f).toInt()
-                                icon.setBounds(iconLeft.toInt(), iconTop, (iconLeft + iconSize).toInt(), iconTop + iconSize.toInt())
-                                icon.draw(canvas)
-                            }
+                            val color = if (slot == 0) iconColor.adjustAlpha(0.55f) else iconColor
+                            val resId = if (res == -1) R.drawable.ic_junts_people else res
+                            val icon = resources.getColoredDrawableWithColor(resId, color).mutate()
+                            val iconTop = (centerY - iconSize / 2f).toInt()
+                            icon.setBounds(iconLeft.toInt(), iconTop, (iconLeft + iconSize).toInt(), iconTop + iconSize.toInt())
+                            icon.draw(canvas)
                             iconRight = iconLeft - slotGap
                         }
 
@@ -463,6 +476,12 @@ class MonthView(context: Context, attrs: AttributeSet?, defStyle: Int) : View(co
     }
 
     // a solid, lighter version of the color for events that are already over (no transparency)
+    // black or white, whichever reads better on this (already blended) color
+    private fun readableOn(color: Int): Int {
+        val c = color or 0xFF000000.toInt()
+        return if (ColorUtils.calculateContrast(Color.WHITE, c) >= ColorUtils.calculateContrast(Color.BLACK, c)) Color.WHITE else Color.BLACK
+    }
+
     private fun solidDim(color: Int): Int {
         return ColorUtils.blendARGB(color or 0xFF000000.toInt(), bgColor() or 0xFF000000.toInt(), 0.45f)
     }
@@ -579,6 +598,11 @@ class MonthView(context: Context, attrs: AttributeSet?, defStyle: Int) : View(co
                     if (shiftColor != null) {
                         shiftPaint.color = shiftColor or 0xFF000000.toInt()
                         canvas.drawRect(left, top, left + dayWidth, bottom, shiftPaint)
+                        if (config.shiftFullCell && bgOverride == null && !isPrintVersion) {
+                            // thin black frame around the fully painted cell (not in the widget)
+                            val half = framePaint.strokeWidth / 2f
+                            canvas.drawRect(left + half, top + half, left + dayWidth - half, bottom - half, framePaint)
+                        }
                     }
                 }
                 curId++
@@ -783,7 +807,7 @@ class MonthView(context: Context, attrs: AttributeSet?, defStyle: Int) : View(co
             panelRect.set(left, top, right, top + cardH)
             canvas.drawRoundRect(panelRect, BG_CORNER_RADIUS * 2, BG_CORNER_RADIUS * 2, panelPaint)
 
-            val textColorOnCard = ColorUtils.blendARGB(bgColor() or 0xFF000000.toInt(), fill or 0xFF000000.toInt(), panelOpacity()).getContrastColor()
+            val textColorOnCard = ColorUtils.blendARGB(bgColor() or 0xFF000000.toInt(), fill or 0xFF000000.toInt(), panelOpacity()).let { readableOn(it) }
             val isTaskCard = ev.isTask() || ev.isTaskMarked()
             val isDoneCard = ev.isTaskCompleted() || ev.isTaskMarkedDone()
             timePaint.color = textColorOnCard
@@ -1003,7 +1027,7 @@ class MonthView(context: Context, attrs: AttributeSet?, defStyle: Int) : View(co
     }
 
     private fun getEventTitlePaint(event: MonthViewEvent): Paint {
-        val paintColor = shownColor(pillBaseColor(event)).getContrastColor()
+        val paintColor = readableOn(shownColor(pillBaseColor(event)))
 
         val curPaint = Paint(eventTitlePaint)
         curPaint.color = paintColor
@@ -1074,6 +1098,13 @@ class MonthView(context: Context, attrs: AttributeSet?, defStyle: Int) : View(co
         bgOverride = widgetBgColor
         textColor = widgetTextColor
         weekendsTextColor = config.highlightWeekendsColor
+        // the widget follows the font size chosen in Settings
+        val medium = context.getWidgetMediumFontSize()
+        val scale = (context.getWidgetFontSize() / medium).coerceIn(0.6f, 1.6f)
+        textPaint.textSize = resources.getDimensionPixelSize(org.fossify.commons.R.dimen.normal_text_size) * TEXT_SCALE * scale
+        plusTextPaint.textSize = textPaint.textSize
+        eventTitlePaint.textSize = resources.getDimensionPixelSize(org.fossify.commons.R.dimen.smaller_text_size) * TEXT_SCALE * scale
+        eventTitleHeight = eventTitlePaint.textSize.toInt()
         textPaint.color = textColor
         plusTextPaint.color = textColor
         plusTextPaint.alpha = 175

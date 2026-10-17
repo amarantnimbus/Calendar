@@ -625,6 +625,9 @@ class EventActivity : SimpleActivity() {
                 updateTaskUi()
             }
             eventIconAttach.beVisibleIf(!mIsTaskMarked)
+            eventTitle.hint = getString(if (mIsTaskMarked) R.string.task_name_hint else R.string.event_name_hint)
+            eventDescription.hint = getString(if (mIsTaskMarked) R.string.task_comment_hint else R.string.comment_hint)
+            updateActionBarTitle()
             val saved = mEvent.id != null && mIsTaskMarked && DayIcons.isTask(mEvent.description)
             eventDoneButton.beVisibleIf(saved)
             eventDoneButton.text = getString(
@@ -3329,10 +3332,13 @@ class EventActivity : SimpleActivity() {
     }
 
     private fun updateActionBarTitle() {
-        binding.eventToolbar.title = if (mIsNewEvent) {
-            getString(R.string.new_event)
-        } else {
-            getString(R.string.edit_event)
-        }
+        binding.eventToolbar.title = getString(
+            when {
+                mIsTaskMarked && mIsNewEvent -> R.string.new_task
+                mIsTaskMarked -> R.string.edit_task
+                mIsNewEvent -> R.string.new_event
+                else -> R.string.edit_event
+            }
+        )
     }
 }

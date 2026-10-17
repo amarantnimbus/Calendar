@@ -115,6 +115,7 @@ class EditCalendarDialog(
         calendar!!.title = title
         if (calendar!!.caldavCalendarId != 0) {
             calendar!!.caldavDisplayName = title
+            activity.config.setCalendarNameOverride(calendar!!.caldavCalendarId, title)
         }
 
         if (calendar!!.caldavCalendarId != 0 && calendar!!.color != initialColor) {

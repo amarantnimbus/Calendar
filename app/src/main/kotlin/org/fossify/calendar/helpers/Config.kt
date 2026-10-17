@@ -385,6 +385,14 @@ class Config(context: Context) : BaseConfig(context) {
         prefs.edit().putInt("calendar_color_override_$caldavCalendarId", color).apply()
     }
 
+    /** Name chosen in the app for a synchronized calendar: synchronization must not bring back the server's one. */
+    fun getCalendarNameOverride(caldavCalendarId: Int): String? =
+        prefs.getString("calendar_name_override_$caldavCalendarId", null)?.takeIf { it.isNotEmpty() }
+
+    fun setCalendarNameOverride(caldavCalendarId: Int, name: String) {
+        prefs.edit().putString("calendar_name_override_$caldavCalendarId", name).apply()
+    }
+
     var monthFullText: Boolean
         get() = prefs.getBoolean(MONTH_FULL_TEXT, false)
         set(monthFullText) = prefs.edit().putBoolean(MONTH_FULL_TEXT, monthFullText).apply()

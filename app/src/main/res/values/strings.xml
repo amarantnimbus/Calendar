@@ -463,4 +463,13 @@
     <string name="fs_fact_date">Date of the fact</string>
     <string name="fs_none">—</string>
     <string name="fs_clear">Clear</string>
+    <string name="icon_food">Meals</string>
+    <string name="task_name_hint">Task title</string>
+    <string name="task_comment_hint">Task description</string>
+    <string name="sec_appearance">Appearance</string>
+    <string name="sec_views">Views</string>
+    <string name="sec_events_tasks">Events and tasks</string>
+    <string name="sec_calendars">Calendars and sync</string>
+    <string name="sec_work">Work</string>
+    <string name="sec_app">App</string>
 </resources>
