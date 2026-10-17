@@ -487,7 +487,8 @@ class MonthView(context: Context, attrs: AttributeSet?, defStyle: Int) : View(co
     }
 
     // how much of the event color shows (1 = solid), from the transparency setting
-    private fun bgColor() = bgOverride ?: config.backgroundColor
+    // the real color behind the pills: the widget one, or the one the screen shows now
+    private fun bgColor() = bgOverride ?: context.getProperBackgroundColor()
 
     private fun opacity() = (100 - config.eventTransparency.coerceIn(0, 100)) / 100f
 
@@ -901,6 +902,17 @@ class MonthView(context: Context, attrs: AttributeSet?, defStyle: Int) : View(co
             paint.color = textColor
             canvas.drawText("...", xPosCenter, yPos + verticalOffset - eventTitleHeight / 2, paint)
             return
+        }
+
+        // widget: a pill that would go out of its row is replaced by "..." (never over the next row)
+        if (forcedRows > 0) {
+            val rowBottom = rowOrigin(event.startDayIndex / 7) + weekDaysLetterHeight + dayHeight
+            if (yPos + verticalOffset + smallPadding * 2 > rowBottom) {
+                val paint = getTextPaint(days[event.startDayIndex])
+                paint.color = textColor
+                canvas.drawText("...", xPosCenter, rowBottom - smallPadding * 2, paint)
+                return
+            }
         }
 
         // event background rectangle

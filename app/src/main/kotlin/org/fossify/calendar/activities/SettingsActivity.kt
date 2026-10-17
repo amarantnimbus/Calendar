@@ -884,6 +884,8 @@ class SettingsActivity : SimpleActivity() {
     private fun showDiagnostics() {
         ensureBackgroundThread {
             val sb = StringBuilder("Versió ${org.fossify.calendar.BuildConfig.VERSION_NAME}\n")
+            sb.append("Mida de lletra: ${config.fontSize}\n")
+            sb.append(config.widgetDebug.ifEmpty { "giny: encara no dibuixat" }).append("\n")
             try {
                 eventsDB.getLastUpdatedEvents().forEach { e ->
                     val cal = calendarsDB.getCalendarWithId(e.calendarId)?.getDisplayTitle() ?: "?"

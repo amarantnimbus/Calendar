@@ -111,11 +111,18 @@ class MyWidgetMonthlyProvider : AppWidgetProvider() {
         val heightDp = options.getInt(
             if (landscape) AppWidgetManager.OPTION_APPWIDGET_MIN_HEIGHT else AppWidgetManager.OPTION_APPWIDGET_MAX_HEIGHT, 250
         )
-        val paint = Paint().apply { textSize = context.resources.getDimension(R.dimen.month_text_size) }
+        // the title is drawn with the font size of Settings (+3 sp), so its height changes with it
+        val paint = Paint().apply {
+            textSize = android.util.TypedValue.applyDimension(
+                android.util.TypedValue.COMPLEX_UNIT_SP, context.getWidgetFontSize() + 3f, context.resources.displayMetrics
+            )
+        }
         val titleHeight = (paint.fontMetrics.bottom - paint.fontMetrics.top) +
             2 * context.resources.getDimension(org.fossify.commons.R.dimen.medium_margin)
         val width = (widthDp * density).toInt().coerceAtLeast(200)
         val height = (heightDp * density - titleHeight).toInt().coerceAtLeast(200)
+        context.config.widgetDebug = "giny: ${widthDp}x${heightDp} dp (${landscape.let { if (it) "horitzontal" else "vertical" }}), " +
+            "títol ${titleHeight.toInt()} px, dibuix ${width}x$height px, densitat $density"
         return Pair(width, height)
     }
 

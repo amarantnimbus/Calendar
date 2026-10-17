@@ -393,6 +393,11 @@ class Config(context: Context) : BaseConfig(context) {
         prefs.edit().putString("calendar_name_override_$caldavCalendarId", name).apply()
     }
 
+    /** Last size the monthly widget was drawn with, shown in Diagnostics. */
+    var widgetDebug: String
+        get() = prefs.getString("widget_debug", "") ?: ""
+        set(value) = prefs.edit().putString("widget_debug", value).apply()
+
     var monthFullText: Boolean
         get() = prefs.getBoolean(MONTH_FULL_TEXT, false)
         set(monthFullText) = prefs.edit().putBoolean(MONTH_FULL_TEXT, monthFullText).apply()
