@@ -162,8 +162,8 @@ class MyWidgetMonthlyProvider : AppWidgetProvider() {
         val dp = dm.density
 
         // sizes follow the font size chosen in Settings; they are real sp sizes, so nothing is stretched
-        val numberSp = context.getWidgetFontSize() * 0.4f
-        val pillSp = context.getWidgetFontSize() * 0.33f
+        val numberSp = context.getWidgetFontSize() * 0.5f
+        val pillSp = context.getWidgetFontSize() * 0.42f
         val numberPx = android.util.TypedValue.applyDimension(android.util.TypedValue.COMPLEX_UNIT_SP, numberSp, dm)
         val pillPx = android.util.TypedValue.applyDimension(android.util.TypedValue.COMPLEX_UNIT_SP, pillSp, dm)
         val iconPx = (numberPx * 0.95f).toInt().coerceAtLeast(8)
