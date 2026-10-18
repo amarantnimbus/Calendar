@@ -17,6 +17,7 @@ import org.fossify.calendar.extensions.launchNewEventOrTaskActivity
 import org.fossify.calendar.extensions.widgetsDB
 import org.fossify.calendar.extensions.calendarsDB
 import org.fossify.calendar.extensions.eventsHelper
+import org.fossify.calendar.extensions.seconds
 import org.fossify.calendar.models.Event
 import org.fossify.commons.extensions.*
 import org.fossify.commons.helpers.ensureBackgroundThread
