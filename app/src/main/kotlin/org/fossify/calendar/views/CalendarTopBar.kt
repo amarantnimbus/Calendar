@@ -153,16 +153,11 @@ class CalendarTopBar @JvmOverloads constructor(context: Context, attrs: Attribut
         }
     }
 
+    // no back arrow: the bar shows only the month and the icons (the system back gesture still works)
     fun toggleForceArrowBackIcon(force: Boolean) {
-        forceArrow = force
-        if (force) {
-            toolbar.setNavigationIcon(R.drawable.ic_arrow_back_bar)
-            toolbar.navigationIcon?.applyColorFilter(context.getProperTextColor())
-            toolbar.setNavigationOnClickListener { onNavigateBackClickListener?.invoke() }
-        } else {
-            toolbar.navigationIcon = null
-            toolbar.setNavigationOnClickListener(null)
-        }
+        forceArrow = false
+        toolbar.navigationIcon = null
+        toolbar.setNavigationOnClickListener(null)
     }
 
     fun openSearch() {

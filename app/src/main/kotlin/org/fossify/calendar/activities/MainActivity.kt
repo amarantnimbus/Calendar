@@ -378,7 +378,7 @@ class MainActivity : SimpleActivity(), RefreshRecyclerViewListener {
     // the month name sits where the search pill used to be; other views show no title there
     fun updateMonthTitle() {
         val holder = getCurrentFragment()
-        val title = if (config.storedView == MONTHLY_VIEW && holder is org.fossify.calendar.fragments.MonthFragmentsHolder) {
+        val title = if (holder is org.fossify.calendar.fragments.MonthFragmentsHolder) {
             holder.getCurrentMonthTitle()
         } else {
             ""
@@ -521,7 +521,7 @@ class MainActivity : SimpleActivity(), RefreshRecyclerViewListener {
                 calendarCoordinator.layoutParams = lp
             }
         }
-        mainMenu.onTitleClickListener = { if (config.storedView == MONTHLY_VIEW) showGoToDateDialog() }
+        mainMenu.onTitleClickListener = { if (getCurrentFragment() is org.fossify.calendar.fragments.MonthFragmentsHolder) showGoToDateDialog() }
 
         mainMenu.onSearchTextChangedListener = { text ->
             searchQueryChanged(text)

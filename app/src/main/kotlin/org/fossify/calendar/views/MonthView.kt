@@ -327,7 +327,7 @@ class MonthView(context: Context, attrs: AttributeSet?, defStyle: Int) : View(co
                         val maxIcons = max(0, (room / (iconSize + slotGap)).toInt())
                         present.take(maxIcons).forEach { (slot, res) ->
                             val iconLeft = iconRight - iconSize
-                            val color = if (slot == 0) iconColor.adjustAlpha(0.55f) else iconColor
+                            val color = iconColor
                             val resId = if (res == -1) R.drawable.ic_junts_people else res
                             val icon = resources.getColoredDrawableWithColor(resId, color).mutate()
                             val iconTop = (centerY - iconSize / 2f).toInt()
@@ -1092,7 +1092,7 @@ class MonthView(context: Context, attrs: AttributeSet?, defStyle: Int) : View(co
             val iconColor = shiftColor?.getContrastColor() ?: textColor
             val marks = dayMarksFor(day)
             val icons = ArrayList<WidgetIcon>()
-            marks.other?.let { icons.add(WidgetIcon(it, iconColor.adjustAlpha(0.55f))) }
+            marks.other?.let { icons.add(WidgetIcon(it, iconColor)) }
             marks.own?.let { icons.add(WidgetIcon(it, iconColor)) }
             if (marks.junts) icons.add(WidgetIcon(R.drawable.ic_junts_people, iconColor))
 
