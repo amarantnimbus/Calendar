@@ -91,7 +91,7 @@ class CalendarBubbleDrawable(private val color: Int, private val initial: String
 
     override fun draw(canvas: Canvas) {
         val b = bounds
-        val size = minOf(b.width(), b.height()).toFloat()
+        val size = minOf(b.width(), b.height()).toFloat() * 0.88f
         val cx = b.exactCenterX()
         val cy = b.exactCenterY()
         fill.color = color or 0xFF000000.toInt()
@@ -120,7 +120,7 @@ class TaskToggleDrawable(private val state: Int, private val fg: Int, private va
 
     override fun draw(canvas: Canvas) {
         val b = bounds
-        val size = minOf(b.width(), b.height()).toFloat()
+        val size = minOf(b.width(), b.height()).toFloat() * 0.88f
         val cx = b.exactCenterX()
         val cy = b.exactCenterY()
         val w = maxOf(1.5f, size * 0.09f)

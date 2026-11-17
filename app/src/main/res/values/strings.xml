@@ -476,4 +476,5 @@
     <string name="sec_work">Work</string>
     <string name="sec_app">App</string>
     <string name="night_background">Night background</string>
+    <string name="read_only_calendars">Read-only calendars</string>
 </resources>

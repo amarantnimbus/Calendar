@@ -432,6 +432,11 @@ class Config(context: Context) : BaseConfig(context) {
         get() = prefs.getInt(SHIFT_COLOR_FREE, 0)
         set(shiftColorFree) = prefs.edit().putInt(SHIFT_COLOR_FREE, shiftColorFree).apply()
 
+    // calendars that can only be read: their events cannot be edited, shared or deleted here
+    var readOnlyCalendarIds: Set<String>
+        get() = prefs.getStringSet("read_only_calendar_ids", emptySet()) ?: emptySet()
+        set(value) = prefs.edit().putStringSet("read_only_calendar_ids", HashSet(value)).apply()
+
     // only the phone where this is on writes the shifts; the other one only reads them
     var canEditShifts: Boolean
         get() = prefs.getBoolean(CAN_EDIT_SHIFTS, false)

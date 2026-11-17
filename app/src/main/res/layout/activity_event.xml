@@ -212,7 +212,7 @@
                     android:layout_height="52dp"
                     android:background="?attr/selectableItemBackgroundBorderless"
                 android:contentDescription="@string/reminder"
-                    android:padding="11dp"
+                    android:padding="10dp"
                     android:src="@drawable/ic_bell_outline_vector" />
 
                 <ImageView
@@ -221,7 +221,7 @@
                     android:layout_height="52dp"
                     android:background="?attr/selectableItemBackgroundBorderless"
                 android:contentDescription="@string/attachments"
-                    android:padding="11dp"
+                    android:padding="10dp"
                     android:src="@drawable/ic_attach_clip" />
 
                 <ImageView
@@ -229,7 +229,7 @@
                     android:layout_width="52dp"
                     android:layout_height="52dp"
                     android:background="?attr/selectableItemBackgroundBorderless"
-                    android:padding="11dp"
+                    android:padding="10dp"
                     android:src="@drawable/ic_calendar_vector" />
 
                 <ImageView
@@ -238,7 +238,7 @@
                     android:layout_height="52dp"
                     android:background="?attr/selectableItemBackgroundBorderless"
                 android:contentDescription="@string/color"
-                    android:padding="11dp"
+                    android:padding="10dp"
                     android:src="@drawable/ic_color_outline_vector" />
 
                 <ImageView
@@ -247,7 +247,7 @@
                     android:layout_height="52dp"
                     android:background="?attr/selectableItemBackgroundBorderless"
                 android:contentDescription="@string/day_icon"
-                    android:padding="11dp"
+                    android:padding="10dp"
                     android:src="@drawable/ic_icon_pick" />
 
                 <ImageView
@@ -256,7 +256,7 @@
                     android:layout_height="52dp"
                     android:background="?attr/selectableItemBackgroundBorderless"
                 android:contentDescription="@string/event_date_time"
-                    android:padding="11dp"
+                    android:padding="10dp"
                     android:src="@drawable/ic_clock_outline_vector" />
 
                 <ImageView
@@ -265,7 +265,7 @@
                     android:layout_height="52dp"
                     android:background="?attr/selectableItemBackgroundBorderless"
                 android:contentDescription="@string/task"
-                    android:padding="11dp"
+                    android:padding="10dp"
                     android:src="@drawable/ic_task_vector" />
 
                 <View

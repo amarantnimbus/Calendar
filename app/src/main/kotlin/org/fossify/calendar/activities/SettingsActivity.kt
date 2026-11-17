@@ -216,7 +216,7 @@ class SettingsActivity : SimpleActivity() {
         hiddenBySections.clear()
         closedViews.clear()
         setupCustomizeColors()
-        setupNightBackground()
+        setupReadOnlyCalendars()
         setupCustomizeNotifications()
         setupUseEnglish()
         setupLanguage()
@@ -372,31 +372,43 @@ class SettingsActivity : SimpleActivity() {
         }
     }
 
-    private val nightBackgrounds = listOf(
-        Pair("Actual", 0xFF1B1B1B.toInt()),
-        Pair("A", 0xFF242427.toInt()),
-        Pair("B", 0xFF2B2B2F.toInt()),
-        Pair("C", 0xFF323236.toInt())
-    )
-
-    // the background is stored directly, so the change always shows up
-    private fun setupNightBackground() {
-        fun label() = nightBackgrounds.firstOrNull { it.second == config.backgroundColor }?.first
-            ?: String.format("#%06X", config.backgroundColor and 0xFFFFFF)
-
-        binding.settingsNightBackground.text = label()
-        binding.settingsNightBackgroundHolder.setOnClickListener {
-            val items = nightBackgrounds.map { (name, color) ->
-                val line = android.text.SpannableString("\u25A0  $name  (" + String.format("#%06X", color and 0xFFFFFF) + ")")
-                line.setSpan(android.text.style.ForegroundColorSpan(color or 0xFF000000.toInt()), 0, 1, 0)
-                line as CharSequence
-            }
-            showItemsDialog(R.string.night_background, items) { index ->
-                config.backgroundColor = nightBackgrounds[index].second
-                binding.settingsNightBackground.text = label()
-                recreate()
+    private fun setupReadOnlyCalendars() {
+        fun refreshValue() {
+            ensureBackgroundThread {
+                val ids = config.readOnlyCalendarIds
+                val names = calendarsDB.getCalendars()
+                    .filter { ids.contains((it.id ?: -1L).toString()) }
+                    .map { it.caldavDisplayName.ifEmpty { it.title } }
+                runOnUiThread {
+                    binding.settingsReadOnlyCalendars.text = if (names.isEmpty()) "-" else names.joinToString(", ")
+                }
             }
         }
+
+        fun showPicker() {
+            ensureBackgroundThread {
+                val calendars = calendarsDB.getCalendars().filter { it.id != null }
+                runOnUiThread {
+                    val ids = config.readOnlyCalendarIds
+                    val items = calendars.map {
+                        val name = it.caldavDisplayName.ifEmpty { it.title }
+                        val on = ids.contains(it.id.toString())
+                        (if (on) "\u2611  " else "\u2610  ") + name as CharSequence
+                    }
+                    showItemsDialog(R.string.read_only_calendars, items) { index ->
+                        val key = calendars[index].id.toString()
+                        val now = HashSet(config.readOnlyCalendarIds)
+                        if (!now.remove(key)) now.add(key)
+                        config.readOnlyCalendarIds = now
+                        refreshValue()
+                        showPicker()
+                    }
+                }
+            }
+        }
+
+        refreshValue()
+        binding.settingsReadOnlyCalendarsHolder.setOnClickListener { showPicker() }
     }
 
     private fun setupCustomizeColors() {

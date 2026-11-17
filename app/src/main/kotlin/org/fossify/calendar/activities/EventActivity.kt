@@ -614,13 +614,10 @@ class EventActivity : SimpleActivity() {
         binding.eventConfirmFab.setColorFilter(org.fossify.calendar.helpers.EventCards.readableOn(color))
     }
 
-    // only events of the own and the shared (Junts) calendar can be edited; the rest is read-only
+    // events of the calendars marked as read-only in the settings cannot be edited
     private fun canEditCurrent(): Boolean {
         if (!::mEvent.isInitialized || mEvent.id == null) return true
-        val own = config.ownCalendarId
-        if (own <= 0L) return true
-        val id = mEvent.calendarId
-        return id == own || id == config.juntsCalendarId || id == LOCAL_CALENDAR_ID
+        return !config.readOnlyCalendarIds.contains(mEvent.calendarId.toString())
     }
 
     private var mReadOnly = false

@@ -4,4 +4,5 @@
     <color name="default_birthdays_color">@color/md_blue_800</color>
     <color name="default_holidays_color">@color/md_green_700</color>
     <color name="default_anniversaries_color">@color/md_red_400_dark</color>
+    <color name="theme_dark_background_color">#2B2B2F</color>
 </resources>
