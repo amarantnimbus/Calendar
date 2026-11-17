@@ -134,7 +134,9 @@ class MyWidgetListProvider : AppWidgetProvider() {
         var events = ArrayList<Event>()
         context.eventsHelper.getEventsSync(fromTS, toTS, applyTypeFilter = true) { events = ArrayList(it) }
         val replaceDescription = config.replaceDescription
-        val sorted = events.sortedWith(compareBy<Event> { e ->
+        val sorted = events.sortedWith(compareBy<Event> { e -> Formatter.getDayCodeFromTS(e.startTS) }.thenBy { e ->
+            if (e.isTask() || e.isTaskMarked()) 1 else 0
+        }.thenBy { e ->
             if (e.getIsAllDay()) Formatter.getDayStartTS(Formatter.getDayCodeFromTS(e.startTS)) - 1 else e.startTS
         }.thenBy { e ->
             if (e.getIsAllDay()) Formatter.getDayEndTS(Formatter.getDayCodeFromTS(e.endTS)) else e.endTS
@@ -197,22 +199,24 @@ class MyWidgetListProvider : AppWidgetProvider() {
 
                     val isTask = e.isTask() || e.isTaskMarked()
                     val done = e.isTaskCompleted() || e.isTaskMarkedDone()
-                    val strike = done || e.isAttendeeInviteDeclined() || e.isEventCanceled()
-                    val dim = if (isTask) config.dimCompletedTasks && done else config.dimPastEvents && e.isPastEvent
-                    val base = if (dim) {
+                    val strike = !isTask && (e.isAttendeeInviteDeclined() || e.isEventCanceled())
+                    val dim = if (isTask) false else config.dimPastEvents && e.isPastEvent
+                    val base = if (isTask) {
+                        TaskColors.card(done)
+                    } else if (dim) {
                         androidx.core.graphics.ColorUtils.blendARGB(e.color or 0xFF000000.toInt(), bgColor, 0.45f)
                     } else e.color or 0xFF000000.toInt()
                     val shown = androidx.core.graphics.ColorUtils.blendARGB(bgColor, base, opacity)
                     val ink = readableOn(shown)
 
                     val sb = android.text.SpannableStringBuilder()
-                    if (isTask) sb.append(if (done) "\u2611 " else "\u2610 ")
                     val initial = names[e.calendarId]?.takeIf { it.isNotEmpty() }?.substring(0, 1)?.uppercase()
                     if (initial != null) {
                         val st = sb.length
                         sb.append(initial).append(' ')
                         sb.setSpan(android.text.style.StyleSpan(android.graphics.Typeface.BOLD), st, sb.length, 0)
                     }
+                    if (isTask) sb.append(if (done) "\u25C9 " else "\u25CB ")
                     if (!e.getIsAllDay()) {
                         sb.append(Formatter.getTimeFromTS(context, e.startTS)).append(' ')
                     }

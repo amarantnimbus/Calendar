@@ -14,7 +14,10 @@ data class ListEvent(
     var isTask: Boolean,
     var isTaskCompleted: Boolean,
     var isAttendeeInviteDeclined: Boolean,
-    var isEventCanceled: Boolean
+    var isEventCanceled: Boolean,
+    var isMarkedTask: Boolean = false,
+    var isMarkedDone: Boolean = false,
+    var calendarId: Long = 0L
 ) : ListItem() {
 
     companion object {

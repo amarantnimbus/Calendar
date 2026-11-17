@@ -58,7 +58,7 @@ class CalendarTopBar @JvmOverloads constructor(context: Context, attrs: Attribut
         holder.addView(toolbar, FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, barHeight))
 
         titleView.apply {
-            setTextSize(TypedValue.COMPLEX_UNIT_SP, 22f)
+            setTextSize(TypedValue.COMPLEX_UNIT_SP, 25f)
             maxLines = 1
             ellipsize = TextUtils.TruncateAt.END
             gravity = Gravity.CENTER_VERTICAL
@@ -118,6 +118,21 @@ class CalendarTopBar @JvmOverloads constructor(context: Context, attrs: Attribut
     }
 
     fun requireToolbar(): Toolbar = toolbar
+
+    override fun onAttachedToWindow() {
+        super.onAttachedToWindow()
+        refreshInsets()
+    }
+
+    /** Some views swallow the insets dispatch; ask for them again so the bar never sits under the status bar. */
+    fun refreshInsets() {
+        val insets = ViewCompat.getRootWindowInsets(this)
+        if (insets != null) {
+            val top = insets.getInsets(WindowInsetsCompat.Type.systemBars() or WindowInsetsCompat.Type.displayCutout()).top
+            if (paddingTop != top) setPadding(0, top, 0, 0)
+        }
+        ViewCompat.requestApplyInsets(this)
+    }
 
     fun setTitle(text: String) {
         titleView.text = text

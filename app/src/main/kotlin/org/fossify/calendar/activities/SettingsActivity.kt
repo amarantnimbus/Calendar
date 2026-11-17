@@ -678,6 +678,23 @@ class SettingsActivity : SimpleActivity() {
             setupShiftColor(settingsShiftColorOffDuty, settingsShiftColorOffDutyHolder, { config.shiftColorOffDuty }) {
                 config.shiftColorOffDuty = it
             }
+
+            setupShiftColor(settingsShiftColorFree, settingsShiftColorFreeHolder, { config.shiftColorFree }) {
+                config.shiftColorFree = it
+            }
+
+            // a long press takes the color of free days away again
+            settingsShiftColorFreeHolder.setOnLongClickListener {
+                config.shiftColorFree = 0
+                settingsShiftColorFree.setFillWithStroke(0, getProperBackgroundColor())
+                true
+            }
+
+            settingsCanEditShifts.isChecked = config.canEditShifts
+            settingsCanEditShiftsHolder.setOnClickListener {
+                settingsCanEditShifts.toggle()
+                config.canEditShifts = settingsCanEditShifts.isChecked
+            }
         }
 
         setupShiftStartDate()

@@ -247,12 +247,13 @@ class MyWidgetMonthlyProvider : AppWidgetProvider() {
             day.pills.take(shown).forEach { pill ->
                 val v = RemoteViews(packageName, R.layout.widget_pill)
                 val sb = android.text.SpannableStringBuilder()
-                if (pill.isTask) sb.append(if (pill.strike) "\u2611 " else "\u2610 ")
                 if (pill.initial != null) {
                     val start = sb.length
                     sb.append(pill.initial).append(' ')
                     sb.setSpan(android.text.style.StyleSpan(android.graphics.Typeface.BOLD), start, sb.length, 0)
                 }
+                // tasks: an empty circle while pending, a full one when done
+                if (pill.isTask) sb.append(if (pill.done) "\u25C9 " else "\u25CB ")
                 val titleStart = sb.length
                 sb.append(pill.title)
                 if (pill.strike) {

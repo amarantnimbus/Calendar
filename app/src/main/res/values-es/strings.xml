@@ -278,6 +278,8 @@
     <string name="shifts_show_in_month_view">Función de turnos</string>
     <string name="shift_color_day">Día</string>
     <string name="shift_color_night">Noche</string>
+    <string name="shift_color_free">Libre</string>
+    <string name="can_edit_shifts">Puedo editar los turnos</string>
     <string name="shift_color_off_duty">Descanso</string>
     <string name="shift_start_date">Fecha de inicio del ciclo</string>
     <string name="shift_cycle">Ciclo de turnos</string>

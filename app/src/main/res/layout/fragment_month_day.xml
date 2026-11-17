@@ -41,6 +41,7 @@
             android:paddingTop="@dimen/normal_margin"
             android:paddingBottom="@dimen/small_margin"
             android:textSize="22sp"
+            android:visibility="gone"
             tools:text="November 19" />
 
         <org.fossify.commons.views.MyTextView

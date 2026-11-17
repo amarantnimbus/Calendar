@@ -18,6 +18,8 @@ import org.fossify.calendar.helpers.EVENT_ID
 import org.fossify.calendar.helpers.EVENT_OCCURRENCE_TS
 import org.fossify.calendar.helpers.Formatter
 import org.fossify.calendar.helpers.IS_TASK_COMPLETED
+import org.fossify.calendar.helpers.PeriodCycle
+import org.fossify.calendar.helpers.TaskColors
 import org.fossify.calendar.helpers.getActivityToOpen
 import org.fossify.calendar.helpers.ROW_COUNT
 import org.fossify.calendar.helpers.ShiftHelper
@@ -43,6 +45,7 @@ class MonthView(context: Context, attrs: AttributeSet?, defStyle: Int) : View(co
         private const val EVENT_DOT_COLUMN_COUNT = 3
         private const val EVENT_DOT_ROW_COUNT = 1
         private const val TEXT_SCALE = 0.8f
+        private const val FADED_ALPHA = 110
     }
 
     private var textPaint: Paint
@@ -83,6 +86,9 @@ class MonthView(context: Context, attrs: AttributeSet?, defStyle: Int) : View(co
     private var panelHeight = 0f
     private var panelEvents = ArrayList<Event>()
     private var panelHiddenCount = 0
+    private var leafDays: Set<String> = emptySet()
+    private var pillsLeft = IntArray(42)
+    private var overflowed = BooleanArray(42)
     private var calendarInfo = HashMap<Long, Pair<String, Int>>()
     private val panelPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply { style = Paint.Style.FILL }
     private val panelRect = RectF()
@@ -184,18 +190,33 @@ class MonthView(context: Context, attrs: AttributeSet?, defStyle: Int) : View(co
         initWeekDayLetters()
         setupCurrentDayOfWeekIndex()
         groupAllEvents()
+        loadLeafDays(newDays)
         invalidate()
+    }
+
+    // the leaf days are worked out in the background; the screen is drawn again when they are ready
+    private fun loadLeafDays(forDays: ArrayList<DayMonthly>) {
+        if (forDays.isEmpty()) {
+            leafDays = emptySet()
+            return
+        }
+
+        val snapshot = ArrayList(forDays)
+        ensureBackgroundThread {
+            val result = PeriodCycle.leafDays(context, snapshot)
+            post {
+                if (result != leafDays) {
+                    leafDays = result
+                    invalidate()
+                }
+            }
+        }
     }
 
     private fun groupAllEvents() {
         allEvents = ArrayList()
         val lastMonthIndex = days.indexOfLast { it.isThisMonth }
         days.forEach { day ->
-            // days of other months stay empty in the month view
-            if (!isMonthDayView && !day.isThisMonth) {
-                return@forEach
-            }
-
             val dayIndexOnMonthView = day.indexOnMonthView
 
             day.dayEvents.forEach { event ->
@@ -211,12 +232,12 @@ class MonthView(context: Context, attrs: AttributeSet?, defStyle: Int) : View(co
                 if (shouldAddEvent && !validDayEvent) {
                     var daysCnt = getEventLastingDaysCount(event)
                     if (!isMonthDayView) {
-                        // the event may have started on a hidden day of the previous month
+                        // the event may have started before the days that are on the screen
                         val screenStart = Formatter.getDateTimeFromCode(days.first().code).toLocalDate()
                         val eventStart = Formatter.getDateTimeFromTS(event.startTS).toLocalDate()
                         val startIndex = max(0, Days.daysBetween(screenStart, eventStart).days)
                         daysCnt = max(1, daysCnt - max(0, dayIndexOnMonthView - startIndex))
-                        if (lastMonthIndex >= 0) {
+                        if (forcedRows > 0 && lastMonthIndex >= 0) {
                             daysCnt = min(daysCnt, lastMonthIndex - dayIndexOnMonthView + 1)
                         }
                     }
@@ -244,7 +265,7 @@ class MonthView(context: Context, attrs: AttributeSet?, defStyle: Int) : View(co
         }
 
         allEvents = allEvents.asSequence().sortedWith(
-            compareBy({ -it.daysCnt }, { !it.isAllDay }, { it.startTS }, { it.endTS }, { it.startDayIndex }, { it.title })
+            compareBy({ -it.daysCnt }, { it.isTask }, { !it.isAllDay }, { it.startTS }, { it.endTS }, { it.startDayIndex }, { it.title })
         ).toMutableList() as ArrayList<MonthViewEvent>
     }
 
@@ -271,7 +292,7 @@ class MonthView(context: Context, attrs: AttributeSet?, defStyle: Int) : View(co
         for (y in 0 until ROW_COUNT) {
             for (x in 0 until COLUMN_COUNT) {
                 val day = days.getOrNull(curId)
-                if (day != null && (isMonthDayView || (isRowVisible(y) && day.isThisMonth))) {
+                if (day != null && (isMonthDayView || isRowVisible(y))) {
                     val dayNumber = day.value.toString()
                     val textPaint = getTextPaint(day)
                     if (day.isWeekend && !isPrintVersion) {
@@ -284,6 +305,13 @@ class MonthView(context: Context, attrs: AttributeSet?, defStyle: Int) : View(co
                     val yPos = rowOrigin(y) + verticalOffset
                     val textY = yPos + textPaint.textSize
                     val xPosCenter = xPos + dayWidth / 2
+
+                    // days of the previous and next month are shown faded
+                    val fadeLayer = if (!isMonthDayView && !day.isThisMonth) {
+                        canvas.saveLayerAlpha(xPos, rowOrigin(y), xPos + dayWidth, rowOrigin(y) + weekDaysLetterHeight + dayHeight, FADED_ALPHA)
+                    } else {
+                        -1
+                    }
 
                     val isDaySelected = selectedDayCoords.x != -1 && x == selectedDayCoords.x && y == selectedDayCoords.y
                     val isExpandedDay = isExpandEnabled() && selectedDayIndex == curId
@@ -302,8 +330,7 @@ class MonthView(context: Context, attrs: AttributeSet?, defStyle: Int) : View(co
                         numberBaseline = centerY + dayTextRect.height() / 2f
                         textPaint.color = when {
                             shiftColor != null -> {
-                                val base = if (highlightWeekends && day.isWeekend) weekendsTextColor else shiftColor.getContrastColor()
-                                if (day.isThisMonth) base else base.adjustAlpha(MEDIUM_ALPHA)
+                                if (highlightWeekends && day.isWeekend) weekendColorOn(shiftColor) else shiftColor.getContrastColor()
                             }
                             else -> textPaint.color
                         }
@@ -421,12 +448,25 @@ class MonthView(context: Context, attrs: AttributeSet?, defStyle: Int) : View(co
                         verticalOffset + bandHeight() + eventTitleHeight + smallPadding * 2
                     }
                     dayVerticalOffsets.put(day.indexOnMonthView, nextOffset.toInt())
+                    if (fadeLayer != -1) {
+                        canvas.restoreToCount(fadeLayer)
+                    }
                 }
                 curId++
             }
         }
 
         if (!isMonthDayView) {
+            // how many pills each day still has to draw, so the last one that fits can become "…"
+            pillsLeft = IntArray(42)
+            overflowed = BooleanArray(42)
+            for (event in allEvents) {
+                for (i in event.startDayIndex until min(42, event.startDayIndex + event.daysCnt)) {
+                    if (i >= 0) {
+                        pillsLeft[i]++
+                    }
+                }
+            }
             for (event in allEvents) {
                 drawEvent(event, canvas)
             }
@@ -498,10 +538,12 @@ class MonthView(context: Context, attrs: AttributeSet?, defStyle: Int) : View(co
     }
 
     private fun pillBaseColor(event: MonthViewEvent): Int {
-        val dim = when {
-            event.isTask -> dimCompletedTasks && event.isTaskCompleted
-            else -> dimPastEvents && event.isPastEvent && !isPrintVersion
+        if (event.isTask) {
+            // tasks are red while pending and green when done, whatever their calendar color is
+            return TaskColors.pill(event.isTaskCompleted)
         }
+
+        val dim = dimPastEvents && event.isPastEvent && !isPrintVersion
         return if (dim) solidDim(event.color) else event.color or 0xFF000000.toInt()
     }
 
@@ -524,7 +566,13 @@ class MonthView(context: Context, attrs: AttributeSet?, defStyle: Int) : View(co
             other = null
         }
 
-        return DayMarks(hasJuntsEvent(day), own?.drawable, other?.drawable)
+        // the drop and the leaf of the cycle always win over the other icons of the day
+        val hasDrop = withIcon.any { it.second.key == PeriodCycle.DROP_KEY }
+        val leaf = if (!hasDrop && leafDays.contains(day.code)) DayIcons.byKey(PeriodCycle.LEAF_KEY) else null
+        val drop = if (hasDrop) DayIcons.byKey(PeriodCycle.DROP_KEY) else null
+        val shownOwn = drop ?: leaf ?: own
+
+        return DayMarks(hasJuntsEvent(day), shownOwn?.drawable, if (drop != null || leaf != null) null else other?.drawable)
     }
 
     // ---- rows: every week of the month is always shown (five or six rows)
@@ -552,7 +600,7 @@ class MonthView(context: Context, attrs: AttributeSet?, defStyle: Int) : View(co
         for (y in 0 until ROW_COUNT) {
             for (x in 0 until COLUMN_COUNT) {
                 val day = days.getOrNull(curId)
-                if (day != null && isRowVisible(y) && (isMonthDayView || day.isThisMonth)) {
+                if (day != null && isRowVisible(y)) {
                     val shift = schedule.shiftFor(day.code)
                     val shiftColor = if (shift != null) schedule.colorFor(shift) else null
                     val left = x * dayWidth + horizontalOffset
@@ -560,7 +608,9 @@ class MonthView(context: Context, attrs: AttributeSet?, defStyle: Int) : View(co
                     val bottom = if (config.shiftFullCell) top + dayHeight else top + bandHeight()
                     if (shiftColor != null) {
                         shiftPaint.color = shiftColor or 0xFF000000.toInt()
+                        shiftPaint.alpha = if (!isMonthDayView && !day.isThisMonth) FADED_ALPHA else 255
                         canvas.drawRect(left, top, left + dayWidth, bottom, shiftPaint)
+                        shiftPaint.alpha = 255
                         if (config.shiftFullCell && bgOverride == null && !isPrintVersion) {
                             // thin black frame around the fully painted cell (not in the widget)
                             val half = framePaint.strokeWidth / 2f
@@ -593,7 +643,7 @@ class MonthView(context: Context, attrs: AttributeSet?, defStyle: Int) : View(co
             if (i == currDayOfWeek && !isPrintVersion) {
                 weekDayLetterPaint = getColoredPaint(primaryColor)
             } else if (highlightWeekends && context.isWeekendIndex(i)) {
-                weekDayLetterPaint = getColoredPaint(weekendsTextColor)
+                weekDayLetterPaint = getColoredPaint(weekendColorOn(bgColor()))
             }
             canvas.drawText(dayLetters[i], xPos, weekDaysLetterHeight * 0.7f, weekDayLetterPaint)
         }
@@ -655,7 +705,9 @@ class MonthView(context: Context, attrs: AttributeSet?, defStyle: Int) : View(co
             return
         }
 
-        val sorted = day.dayEvents.sortedWith(compareBy({ !it.getIsAllDay() }, { it.startTS }, { it.endTS }, { it.title }))
+        val sorted = day.dayEvents.sortedWith(
+            compareBy({ it.isTask() || it.isTaskMarked() }, { !it.getIsAllDay() }, { it.startTS }, { it.endTS }, { it.title })
+        )
         val maxPanel = (viewHeight - weekDaysLetterHeight) * 0.45f
         val step = cardHeight() + cardGap()
         val maxCards = max(1, ((maxPanel - cardGap()) / step).toInt())
@@ -680,8 +732,8 @@ class MonthView(context: Context, attrs: AttributeSet?, defStyle: Int) : View(co
     fun getCellRect(x: Int, y: Int): RectF {
         measureDaySize(width, height)
         val day = days.getOrNull(y * 7 + x)
-        if (!isMonthDayView && (!isRowVisible(y) || day == null || !day.isThisMonth)) {
-            // hidden rows and days of other months cannot be tapped
+        if (!isMonthDayView && (!isRowVisible(y) || day == null)) {
+            // hidden rows cannot be tapped
             return RectF(0f, 0f, 0f, 0f)
         }
         val left = x * dayWidth + horizontalOffset
@@ -764,13 +816,16 @@ class MonthView(context: Context, attrs: AttributeSet?, defStyle: Int) : View(co
             val taskCard = ev.isTask() || ev.isTaskMarked()
             val doneCard = ev.isTaskCompleted() || ev.isTaskMarkedDone()
             // finished tasks get the same lighter color as in the month cell
-            val baseColor = if (taskCard && doneCard && dimCompletedTasks) solidDim(ev.color) else ev.color
-            val fill = desaturate(baseColor)
-            panelPaint.color = withPanelOpacity(fill)
+            val fill = if (taskCard) TaskColors.card(doneCard) else desaturate(ev.color)
+            panelPaint.color = if (taskCard) fill else withPanelOpacity(fill)
             panelRect.set(left, top, right, top + cardH)
             canvas.drawRoundRect(panelRect, BG_CORNER_RADIUS * 2, BG_CORNER_RADIUS * 2, panelPaint)
 
-            val textColorOnCard = ColorUtils.blendARGB(bgColor() or 0xFF000000.toInt(), fill or 0xFF000000.toInt(), panelOpacity()).let { readableOn(it) }
+            val textColorOnCard = if (taskCard) {
+                readableOn(fill)
+            } else {
+                ColorUtils.blendARGB(bgColor() or 0xFF000000.toInt(), fill or 0xFF000000.toInt(), panelOpacity()).let { readableOn(it) }
+            }
             val isTaskCard = ev.isTask() || ev.isTaskMarked()
             val isDoneCard = ev.isTaskCompleted() || ev.isTaskMarkedDone()
             timePaint.color = textColorOnCard
@@ -779,29 +834,23 @@ class MonthView(context: Context, attrs: AttributeSet?, defStyle: Int) : View(co
             val textLeft = left + smallPadding * 6f
             val textRight = right - smallPadding * 6f
             val centerY = top + cardH / 2
-            val iconSize = eventTitleHeight
-            val slotWidth = iconSize + smallPadding * 2f
-
-            // the task symbol goes first; events keep the same empty slot so everything lines up
-            if (isTaskCard) {
-                val iconColor = if (isDoneCard) textColorOnCard else textColorOnCard.adjustAlpha(MEDIUM_ALPHA)
-                val icon = resources.getColoredDrawableWithColor(R.drawable.ic_task_vector, iconColor).mutate()
-                val iconLeft = textLeft.toInt()
-                icon.setBounds(iconLeft, (centerY - iconSize / 2).toInt(), iconLeft + iconSize, (centerY + iconSize / 2).toInt())
-                icon.draw(canvas)
-            }
+            val markSize = eventTitleHeight * 0.95f
 
             val timeText = if (ev.getIsAllDay()) "" else Formatter.getTimeFromTS(context, ev.startTS) + "  "
             val timeWidth = if (timeText.isEmpty()) 0f else timePaint.measureText(timeText)
             val textY = centerY + size * 0.35f
 
-            // the initial of the calendar, in bold
+            // the initial of the calendar comes first, in bold; tasks then get their round mark
             val initial = calendarInfo[ev.calendarId]?.first?.takeIf { it.isNotEmpty() }?.substring(0, 1)?.uppercase()
-            var contentLeft = textLeft + slotWidth
+            var contentLeft = textLeft
             if (initial != null) {
                 titlePaint.isStrikeThruText = false
                 canvas.drawText(initial, contentLeft, textY, titlePaint)
                 contentLeft += titlePaint.measureText("$initial ")
+            }
+            if (isTaskCard) {
+                drawTaskMark(canvas, contentLeft + markSize / 2f, centerY, markSize, isDoneCard, textColorOnCard, fill)
+                contentLeft += markSize + smallPadding * 3f
             }
 
             if (timeText.isNotEmpty()) {
@@ -811,7 +860,7 @@ class MonthView(context: Context, attrs: AttributeSet?, defStyle: Int) : View(co
             val titleLeft = contentLeft + timeWidth
             val titleSpace = max(0f, textRight - titleLeft)
             val title = TextUtils.ellipsize(ev.title, TextPaint(titlePaint), titleSpace, TextUtils.TruncateAt.END)
-            titlePaint.isStrikeThruText = isTaskCard && isDoneCard
+            titlePaint.isStrikeThruText = false
             canvas.drawText(title, 0, title.length, titleLeft, textY, titlePaint)
 
             // first line of the comment, on the same line, only if the whole title fits
@@ -841,7 +890,21 @@ class MonthView(context: Context, attrs: AttributeSet?, defStyle: Int) : View(co
         }
     }
 
+    // pills that start on a day of another month are shown faded, like the rest of that day
     private fun drawEvent(event: MonthViewEvent, canvas: Canvas) {
+        val faded = forcedRows == 0 && days.getOrNull(event.startDayIndex)?.isThisMonth == false
+        if (!faded) {
+            drawEventInner(event, canvas)
+            return
+        }
+
+        val row = event.startDayIndex / 7
+        val layer = canvas.saveLayerAlpha(0f, rowOrigin(row), width.toFloat(), rowOrigin(row) + weekDaysLetterHeight + dayHeight, FADED_ALPHA)
+        drawEventInner(event, canvas)
+        canvas.restoreToCount(layer)
+    }
+
+    private fun drawEventInner(event: MonthViewEvent, canvas: Canvas) {
         if (!isRowVisible(event.startDayIndex / 7)) {
             // this part of the event is in a row that is not shown
             val nextIndex = (event.startDayIndex / 7 + 1) * 7
@@ -859,22 +922,40 @@ class MonthView(context: Context, attrs: AttributeSet?, defStyle: Int) : View(co
         val yPos = rowOrigin(event.startDayIndex / 7)
         val xPosCenter = xPos + dayWidth / 2
 
-        if (verticalOffset - eventTitleHeight * 2 > dayHeight) {
-            val paint = getTextPaint(days[event.startDayIndex])
-            paint.color = textColor
-            canvas.drawText("...", xPosCenter, yPos + verticalOffset - eventTitleHeight / 2, paint)
+        // the days this piece of the event covers, and how many pills still come after it
+        val coverEnd = min(42, event.startDayIndex + min(event.daysCnt, 7 - event.startDayIndex % 7))
+        var pillsAfter = 0
+        var alreadyCut = false
+        for (i in event.startDayIndex until coverEnd) {
+            pillsAfter = max(pillsAfter, pillsLeft[i] - 1)
+            if (overflowed[i]) {
+                alreadyCut = true
+            }
+        }
+        for (i in event.startDayIndex until coverEnd) {
+            pillsLeft[i] = max(0, pillsLeft[i] - 1)
+        }
+        if (alreadyCut) {
+            // a "..." was already drawn on one of these days
             return
         }
 
-        // widget: a pill that would go out of its row is replaced by "..." (never over the next row)
-        if (forcedRows > 0) {
-            val rowBottom = rowOrigin(event.startDayIndex / 7) + weekDaysLetterHeight + dayHeight
-            if (yPos + verticalOffset + smallPadding * 2 > rowBottom) {
-                val paint = getTextPaint(days[event.startDayIndex])
-                paint.color = textColor
-                canvas.drawText("...", xPosCenter, rowBottom - smallPadding * 2, paint)
-                return
+        // a pill never goes over the next week or the open day: if there is no room for the next one,
+        // this one is drawn as "..." and the rest of the day is left out
+        val rowBottom = rowOrigin(event.startDayIndex / 7) + weekDaysLetterHeight + dayHeight
+        val thisFits = yPos + verticalOffset + smallPadding * 2 <= rowBottom
+        val nextStep = eventTitleHeight + smallPadding * 2
+        val nextFits = yPos + verticalOffset + nextStep + smallPadding * 2 <= rowBottom
+        if (!thisFits || (pillsAfter > 0 && !nextFits)) {
+            val paint = getTextPaint(days[event.startDayIndex])
+            paint.color = textColor
+            paint.textAlign = Paint.Align.CENTER
+            val baseline = if (thisFits) yPos + verticalOffset else rowBottom - smallPadding * 2
+            canvas.drawText("\u2026", xPosCenter, baseline, paint)
+            for (i in event.startDayIndex until coverEnd) {
+                overflowed[i] = true
             }
+            return
         }
 
         // event background rectangle
@@ -892,7 +973,9 @@ class MonthView(context: Context, attrs: AttributeSet?, defStyle: Int) : View(co
         }
 
         val specificEventTitlePaint = getEventTitlePaint(event)
-        val taskIconWidth = if (event.isTask) eventTitleHeight + smallPadding else 0
+        // tasks show a round mark after the initial: empty while pending, with a check when done
+        val taskCircleSize = eventTitleHeight * 0.85f
+        val taskIconWidth = if (event.isTask) (taskCircleSize + smallPadding * 2).toInt() else 0
         val initialPaint = Paint(specificEventTitlePaint).apply {
             typeface = Typeface.create(specificEventTitlePaint.typeface, Typeface.BOLD)
         }
@@ -907,32 +990,65 @@ class MonthView(context: Context, attrs: AttributeSet?, defStyle: Int) : View(co
         bgRectF.set(bgLeft, bgTop, bgRight, bgBottom)
         canvas.drawRoundRect(bgRectF, BG_CORNER_RADIUS, BG_CORNER_RADIUS, getEventBackgroundColor(event))
 
-        if (event.isTask) {
-            val taskIcon = resources.getColoredDrawableWithColor(R.drawable.ic_task_vector, specificEventTitlePaint.color).mutate()
-            val taskIconY = yPos.toInt() + verticalOffset - eventTitleHeight + smallPadding * 2
-            taskIcon.setBounds(xPos.toInt() + smallPadding * 2, taskIconY, xPos.toInt() + eventTitleHeight + smallPadding * 2, taskIconY + eventTitleHeight)
-            taskIcon.draw(canvas)
-        }
-
-        // the initial of the calendar, in bold, black or white depending on the pill
-        val textX = xPos + taskIconWidth + smallPadding * 2
+        // the initial of the calendar comes first, in bold, black or white depending on the pill
+        val textX = xPos + smallPadding * 2
         val baseY = yPos + verticalOffset
         if (initial != null) {
             canvas.drawText(initial, textX, baseY, initialPaint)
         }
 
+        if (event.isTask) {
+            drawTaskMark(
+                canvas,
+                textX + initialWidth + taskCircleSize / 2f,
+                baseY - eventTitleHeight * 0.33f,
+                taskCircleSize,
+                event.isTaskCompleted,
+                specificEventTitlePaint.color,
+                pillBaseColor(event)
+            )
+        }
+
+        val titleX = textX + initialWidth + taskIconWidth
         if (fullLines != null) {
             fullLines.forEachIndexed { index, line ->
-                val lineX = if (index == 0) textX + initialWidth else textX
+                val lineX = if (index == 0) titleX else textX
                 canvas.drawText(line, lineX, baseY + index * lineStep, specificEventTitlePaint)
             }
         } else {
             val ellipsized = TextUtils.ellipsize(event.title, eventTitlePaint, max(0f, textWidth - initialWidth), TextUtils.TruncateAt.END)
-            canvas.drawText(ellipsized, 0, ellipsized.length, textX + initialWidth, baseY, specificEventTitlePaint)
+            canvas.drawText(ellipsized, 0, ellipsized.length, titleX, baseY, specificEventTitlePaint)
         }
 
         for (i in 0 until min(event.daysCnt, 7 - event.startDayIndex % 7)) {
             dayVerticalOffsets.put(event.startDayIndex + i, verticalOffset + eventTitleHeight + smallPadding * 2 + extraHeight)
+        }
+    }
+
+    private val markStrokePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply { style = Paint.Style.STROKE }
+    private val markFillPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply { style = Paint.Style.FILL }
+    private val checkPath = Path()
+
+    /** A round mark: an empty circle for a pending task, a filled one with a check for a done task. */
+    private fun drawTaskMark(canvas: Canvas, cx: Float, cy: Float, size: Float, done: Boolean, color: Int, checkColor: Int) {
+        val stroke = max(1f, size * 0.11f)
+        val r = size / 2f - stroke / 2f
+        if (done) {
+            markFillPaint.color = color
+            canvas.drawCircle(cx, cy, r + stroke / 2f, markFillPaint)
+            markStrokePaint.color = checkColor or 0xFF000000.toInt()
+            markStrokePaint.strokeWidth = max(1.2f, size * 0.13f)
+            markStrokePaint.strokeCap = Paint.Cap.ROUND
+            markStrokePaint.strokeJoin = Paint.Join.ROUND
+            checkPath.reset()
+            checkPath.moveTo(cx - size * 0.24f, cy + size * 0.02f)
+            checkPath.lineTo(cx - size * 0.06f, cy + size * 0.20f)
+            checkPath.lineTo(cx + size * 0.26f, cy - size * 0.18f)
+            canvas.drawPath(checkPath, markStrokePaint)
+        } else {
+            markStrokePaint.color = color
+            markStrokePaint.strokeWidth = stroke
+            canvas.drawCircle(cx, cy, r, markStrokePaint)
         }
     }
 
@@ -979,15 +1095,23 @@ class MonthView(context: Context, attrs: AttributeSet?, defStyle: Int) : View(co
     private fun getTextPaint(startDay: DayMonthly): Paint {
         var paintColor = when {
             !isPrintVersion && startDay.isToday -> primaryColor.getContrastColor()
-            highlightWeekends && startDay.isWeekend -> weekendsTextColor
+            highlightWeekends && startDay.isWeekend -> weekendColorOn(bgColor())
             else -> textColor
         }
 
-        if (!startDay.isThisMonth) {
+        // in the plain month list view days of other months are lighter; in the month grid the whole cell is faded
+        if (!startDay.isThisMonth && isMonthDayView) {
             paintColor = paintColor.adjustAlpha(MEDIUM_ALPHA)
         }
 
         return getColoredPaint(paintColor)
+    }
+
+    // the weekend color the person chose, unless it cannot be read on this background (black on a dark theme)
+    private fun weekendColorOn(background: Int): Int {
+        val bg = background or 0xFF000000.toInt()
+        val chosen = weekendsTextColor or 0xFF000000.toInt()
+        return if (ColorUtils.calculateContrast(chosen, bg) >= 3.0) weekendsTextColor else readableOn(bg)
     }
 
     private fun getColoredPaint(color: Int): Paint {
@@ -997,15 +1121,17 @@ class MonthView(context: Context, attrs: AttributeSet?, defStyle: Int) : View(co
     }
 
     private fun getEventBackgroundColor(event: MonthViewEvent): Paint {
-        return getColoredPaint(withOpacity(pillBaseColor(event)))
+        val base = pillBaseColor(event)
+        return getColoredPaint(if (event.isTask) base else withOpacity(base))
     }
 
     private fun getEventTitlePaint(event: MonthViewEvent): Paint {
-        val paintColor = readableOn(shownColor(pillBaseColor(event)))
+        val base = pillBaseColor(event)
+        val paintColor = readableOn(if (event.isTask) base else shownColor(base))
 
         val curPaint = Paint(eventTitlePaint)
         curPaint.color = paintColor
-        curPaint.isStrikeThruText = event.shouldStrikeThrough()
+        curPaint.isStrikeThruText = event.shouldStrikeThrough() && !event.isTask
         return curPaint
     }
 
@@ -1072,6 +1198,8 @@ class MonthView(context: Context, attrs: AttributeSet?, defStyle: Int) : View(co
         weekendsTextColor = config.highlightWeekendsColor
         calendarInfo = info
         updateDays(newDays, false)
+        // this runs on a background thread, so the leaf days can be worked out right here
+        leafDays = PeriodCycle.leafDays(context, newDays)
 
         val schedule = ShiftHelper.load(config)
         val perDay = ArrayList<WidgetDay?>()
@@ -1085,8 +1213,8 @@ class MonthView(context: Context, attrs: AttributeSet?, defStyle: Int) : View(co
             val shiftColor = schedule?.let { sch -> sch.shiftFor(day.code)?.let { sch.colorFor(it) } }
             val weekendColor = highlightWeekends && day.isWeekend
             val numberColor = when {
-                shiftColor != null -> if (weekendColor) weekendsTextColor else shiftColor.getContrastColor()
-                weekendColor -> weekendsTextColor
+                shiftColor != null -> if (weekendColor) weekendColorOn(shiftColor) else shiftColor.getContrastColor()
+                weekendColor -> weekendColorOn(widgetBgColor)
                 else -> textColor
             }
             val iconColor = shiftColor?.getContrastColor() ?: textColor
@@ -1104,10 +1232,11 @@ class MonthView(context: Context, attrs: AttributeSet?, defStyle: Int) : View(co
                         initial = calendarInitial(event),
                         title = event.title,
                         fillRgb = base and 0x00FFFFFF,
-                        alpha = (opacity() * 255).toInt(),
-                        textColor = readableOn(shownColor(base)),
-                        strike = event.shouldStrikeThrough(),
-                        isTask = event.isTask
+                        alpha = if (event.isTask) 255 else (opacity() * 255).toInt(),
+                        textColor = readableOn(if (event.isTask) base else shownColor(base)),
+                        strike = event.shouldStrikeThrough() && !event.isTask,
+                        isTask = event.isTask,
+                        done = event.isTaskCompleted
                     )
                 }
 
@@ -1209,7 +1338,8 @@ class WidgetPill(
     val alpha: Int,
     val textColor: Int,
     val strike: Boolean,
-    val isTask: Boolean
+    val isTask: Boolean,
+    val done: Boolean = false
 )
 
 class WidgetDay(

@@ -5,6 +5,8 @@ import android.app.TimePickerDialog
 import android.content.Intent
 import org.fossify.calendar.helpers.AttachmentStore
 import org.fossify.calendar.helpers.DayIcons
+import org.fossify.calendar.helpers.CalendarBubbleDrawable
+import org.fossify.calendar.helpers.TaskToggleDrawable
 import org.fossify.calendar.helpers.showItemsDialog
 import android.graphics.drawable.Drawable
 import android.graphics.drawable.LayerDrawable
@@ -625,6 +627,11 @@ class EventActivity : SimpleActivity() {
                 updateTaskUi()
             }
             eventIconAttach.beVisibleIf(!mIsTaskMarked)
+            eventIconTask.setImageDrawable(TaskToggleDrawable(mIsTaskMarked, getProperTextColor(), getProperBackgroundColor()))
+            eventIconTask.setOnClickListener {
+                mIsTaskMarked = !mIsTaskMarked
+                updateTaskUi()
+            }
             eventTitle.hint = getString(if (mIsTaskMarked) R.string.task_name_hint else R.string.event_name_hint)
             eventDescription.hint = getString(if (mIsTaskMarked) R.string.task_comment_hint else R.string.comment_hint)
             updateActionBarTitle()
@@ -2589,7 +2596,6 @@ class EventActivity : SimpleActivity() {
             eventColorImage,
             eventIconTime,
             eventIconReminder,
-            eventIconCalendar,
             eventIconColor
         ).forEach {
             it.applyColorFilter(textColor)
@@ -2623,6 +2629,13 @@ class EventActivity : SimpleActivity() {
         eventFsDetails.setOnClickListener { showEntryDetailsDialog() }
         eventIconAttach.setOnClickListener { showAttachmentsDialog() }
         eventIconDay.setOnClickListener { showDayIconDialog() }
+        eventConfirmFab.setOnClickListener { saveCurrentEvent() }
+        eventConfirmFab.post {
+            val bottom = androidx.core.view.ViewCompat.getRootWindowInsets(eventConfirmFab)
+                ?.getInsets(androidx.core.view.WindowInsetsCompat.Type.systemBars() or androidx.core.view.WindowInsetsCompat.Type.ime())?.bottom ?: 0
+            (eventConfirmFab.layoutParams as android.view.ViewGroup.MarginLayoutParams).bottomMargin = dp(20) + bottom
+            eventConfirmFab.requestLayout()
+        }
         val textColor = getProperTextColor()
         eventHeaderDate.setTextColor(textColor)
         eventHeaderTime.setTextColor(textColor)
@@ -3308,27 +3321,12 @@ class EventActivity : SimpleActivity() {
         }
     }
 
+    // the calendar icon is a bubble with the color and the initial of the chosen calendar
     private fun updateJuntsCheckbox(current: CalendarEntity) {
-        val junts = findJuntsCalendar()
-        val icon = binding.eventJunts
-        icon.beVisibleIf(junts != null)
-        if (junts != null) {
-            icon.applyColorFilter(if (current.id == junts.id) getProperTextColor() else getProperTextColor().adjustAlpha(0.4f))
-            icon.setOnClickListener {
-                if (mCalendarId == junts.id) {
-                    val previous = mCalendarBeforeJunts
-                        ?: mStoredCalendars.firstOrNull { it.id == config.ownCalendarId && it.id != junts.id }
-                        ?: mStoredCalendars.firstOrNull { it.id != junts.id && it.id != LOCAL_CALENDAR_ID }
-                    if (previous != null) {
-                        applyCalendarSelection(previous)
-                    }
-                } else {
-                    mCalendarBeforeJunts = mStoredCalendars.firstOrNull { it.id == mCalendarId }
-                    config.juntsCalendarId = junts.id ?: -1L
-                    applyCalendarSelection(junts)
-                }
-            }
-        }
+        val name = current.caldavDisplayName.ifEmpty { current.title }
+        val initial = if (name.isNotEmpty()) name.substring(0, 1).uppercase() else "?"
+        binding.eventIconCalendar.setImageDrawable(CalendarBubbleDrawable(current.color, initial))
+        binding.eventIconCalendar.contentDescription = name
     }
 
     private fun updateActionBarTitle() {

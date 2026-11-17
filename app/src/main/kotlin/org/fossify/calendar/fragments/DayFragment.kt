@@ -73,7 +73,7 @@ class DayFragment : Fragment() {
             contentDescription = getString(R.string.accessibility_next_day)
         }
 
-        val day = Formatter.getDayTitle(requireContext(), mDayCode)
+        val day = Formatter.getDayNumberAndWeekday(mDayCode)
         topNavigationBinding.topValue.apply {
             text = day
             contentDescription = text
@@ -100,7 +100,7 @@ class DayFragment : Fragment() {
         lastHash = newHash
 
         val replaceDescription = requireContext().config.replaceDescription
-        val sorted = ArrayList(events.sortedWith(compareBy({ !it.getIsAllDay() }, { it.startTS }, { it.endTS }, { it.title }, {
+        val sorted = ArrayList(events.sortedWith(compareBy({ it.isTask() || it.isTaskMarked() }, { !it.getIsAllDay() }, { it.startTS }, { it.endTS }, { it.title }, {
             if (replaceDescription) it.location else it.description
         })))
 

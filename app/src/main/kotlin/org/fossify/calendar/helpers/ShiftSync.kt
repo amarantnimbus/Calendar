@@ -25,7 +25,7 @@ object ShiftSync {
     private const val HEADER = "FOSSIFY-TORNS-V1"
     private const val NOTE = "Aquest esdeveniment guarda els torns i l'app el mostra amagat. No l'esborris."
 
-    private val KNOWN_KEYS = setOf("start", "cycle", "overrides", "color_day", "color_night", "color_rest", "cal_colors")
+    private val KNOWN_KEYS = setOf("start", "cycle", "overrides", "color_day", "color_night", "color_rest", "color_free", "cal_colors")
 
     const val JUNTS = "Junts"
 
@@ -53,6 +53,7 @@ object ShiftSync {
         values["color_day"] = config.shiftColorDay.toString()
         values["color_night"] = config.shiftColorNight.toString()
         values["color_rest"] = config.shiftColorOffDuty.toString()
+        values["color_free"] = config.shiftColorFree.toString()
         values["cal_colors"] = calendarColors(context)
         return values
     }
@@ -118,6 +119,7 @@ object ShiftSync {
         values["color_day"]?.toIntOrNull()?.let { config.shiftColorDay = it }
         values["color_night"]?.toIntOrNull()?.let { config.shiftColorNight = it }
         values["color_rest"]?.toIntOrNull()?.let { config.shiftColorOffDuty = it }
+        values["color_free"]?.toIntOrNull()?.let { config.shiftColorFree = it }
         values["cal_colors"]?.let { applyCalendarColors(context, it) }
     }
 
@@ -139,7 +141,21 @@ object ShiftSync {
             val localText = canonical(currentValues(context))
             val syncedText = config.shiftSyncedPayload
 
-            if (syncedText.isEmpty()) {
+            if (!config.canEditShifts) {
+                // this phone only reads: what is on the server is what is shown, and nothing is written
+                if (remoteValues == null) {
+                    false
+                } else {
+                    val local = currentValues(context)
+                    val differs = remoteValues.any { (key, value) -> key != "cal_colors" && local[key] != value }
+                    if (remoteText != syncedText || differs) {
+                        applyRemote(context, remoteValues)
+                        true
+                    } else {
+                        false
+                    }
+                }
+            } else if (syncedText.isEmpty()) {
                 // first time on this phone: what is already on the server wins
                 if (remoteValues != null) {
                     applyRemote(context, remoteValues)
@@ -171,7 +187,7 @@ object ShiftSync {
         if (!config.shiftsEnabled) {
             config.shiftsEnabled = true
         }
-        config.shiftSyncedPayload = canonical(currentValues(context))
+        config.shiftSyncedPayload = canonical(values)
     }
 
     private fun push(context: Context, existing: Event?, text: String) {

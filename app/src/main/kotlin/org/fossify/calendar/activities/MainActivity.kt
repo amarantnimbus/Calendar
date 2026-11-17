@@ -197,19 +197,8 @@ class MainActivity : SimpleActivity(), RefreshRecyclerViewListener {
         checkWhatsNewDialog()
         binding.calendarFab.beVisibleIf(config.storedView != YEARLY_VIEW && config.storedView != WEEKLY_VIEW)
         binding.calendarFab.setOnClickListener {
-            if (config.allowCreatingTasks) {
-                if (binding.fabExtendedOverlay.isVisible()) {
-                    openNewEvent()
-
-                    Handler().postDelayed({
-                        hideExtendedFab()
-                    }, 300)
-                } else {
-                    showExtendedFab()
-                }
-            } else {
-                openNewEvent()
-            }
+            // straight to the new-event screen; a task is switched on there with its icon
+            openNewEvent()
         }
         binding.fabEventLabel.setOnClickListener { openNewEvent() }
         binding.fabTaskLabel.setOnClickListener { openNewTask() }
@@ -267,6 +256,7 @@ class MainActivity : SimpleActivity(), RefreshRecyclerViewListener {
     }
 
     override fun onResume() {
+        org.fossify.calendar.helpers.DarkBackground.apply(this)
         super.onResume()
         watchNetworkForTailscaleIcon()
         mSearchHandler.removeCallbacks(mSearchWatcher)
@@ -378,12 +368,14 @@ class MainActivity : SimpleActivity(), RefreshRecyclerViewListener {
     // the month name sits where the search pill used to be; other views show no title there
     fun updateMonthTitle() {
         val holder = getCurrentFragment()
-        val title = if (holder is org.fossify.calendar.fragments.MonthFragmentsHolder) {
-            holder.getCurrentMonthTitle()
-        } else {
-            ""
+        val title = when (holder) {
+            is org.fossify.calendar.fragments.MonthFragmentsHolder -> holder.getCurrentMonthTitle()
+            is DayFragmentsHolder -> holder.getCurrentMonthTitle()
+            is MonthDayFragmentsHolder -> holder.getCurrentMonthTitle()
+            else -> ""
         }
         binding.mainMenu.setTitle(title)
+        binding.mainMenu.refreshInsets()
     }
 
     private var mTailscaleCallback: ConnectivityManager.NetworkCallback? = null

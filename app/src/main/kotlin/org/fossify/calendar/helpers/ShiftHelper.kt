@@ -134,11 +134,13 @@ object ShiftHelper {
             return null
         }
 
-        val colors = mapOf(
-            Shift.DAY to config.shiftColorDay,
-            Shift.NIGHT to config.shiftColorNight,
-            Shift.OFF_DUTY to config.shiftColorOffDuty
-        )
+        val colors = HashMap<Shift, Int>()
+        colors[Shift.DAY] = config.shiftColorDay
+        colors[Shift.NIGHT] = config.shiftColorNight
+        colors[Shift.OFF_DUTY] = config.shiftColorOffDuty
+        if (config.shiftColorFree != 0) {
+            colors[Shift.FREE] = config.shiftColorFree
+        }
 
         return ShiftSchedule(
             startEpochDay = epochDayFromCode(config.shiftStartDate),

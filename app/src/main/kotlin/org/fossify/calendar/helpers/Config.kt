@@ -427,6 +427,16 @@ class Config(context: Context) : BaseConfig(context) {
         get() = prefs.getInt(SHIFT_COLOR_OFF_DUTY, 0xFF4CAF50.toInt())
         set(shiftColorOffDuty) = prefs.edit().putInt(SHIFT_COLOR_OFF_DUTY, shiftColorOffDuty).apply()
 
+    // 0 = free days have no color (the default)
+    var shiftColorFree: Int
+        get() = prefs.getInt(SHIFT_COLOR_FREE, 0)
+        set(shiftColorFree) = prefs.edit().putInt(SHIFT_COLOR_FREE, shiftColorFree).apply()
+
+    // only the phone where this is on writes the shifts; the other one only reads them
+    var canEditShifts: Boolean
+        get() = prefs.getBoolean(CAN_EDIT_SHIFTS, false)
+        set(canEditShifts) = prefs.edit().putBoolean(CAN_EDIT_SHIFTS, canEditShifts).apply()
+
     // Day code of the first day of the cycle, formatted as yyyyMMdd. Empty when not set yet.
     var shiftStartDate: String
         get() = prefs.getString(SHIFT_START_DATE, "")!!

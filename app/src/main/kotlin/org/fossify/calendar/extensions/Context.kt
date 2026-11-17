@@ -842,7 +842,9 @@ fun Context.getEventListItems(
     val replaceDescription = config.replaceDescription
 
     // move all-day events in front of others
-    val sorted = events.sortedWith(compareBy<Event> {
+    val sorted = events.sortedWith(compareBy<Event> { Formatter.getDayCodeFromTS(it.startTS) }.thenBy {
+        if (it.isTask() || it.isTaskMarked()) 1 else 0
+    }.thenBy {
         if (it.getIsAllDay()) {
             Formatter.getDayStartTS(Formatter.getDayCodeFromTS(it.startTS)) - 1
         } else {
@@ -895,7 +897,10 @@ fun Context.getEventListItems(
                 it.isTask(),
                 it.isTaskCompleted(),
                 it.isAttendeeInviteDeclined(),
-                it.isEventCanceled()
+                it.isEventCanceled(),
+                it.isTaskMarked(),
+                it.isTaskMarkedDone(),
+                it.calendarId
             )
         listItems.add(listEvent)
     }

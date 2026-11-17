@@ -50,6 +50,21 @@ object Formatter {
             date
     }
 
+    /** "16 Dilluns": day number and capitalised weekday, for the day view. */
+    fun getDayNumberAndWeekday(dayCode: String): String {
+        val t = getDateDayTitle(dayCode)
+        val i = t.indexOf(' ')
+        return if (i < 0) t else t.substring(0, i) + " " + t.substring(i + 1).replaceFirstChar { it.uppercase() }
+    }
+
+    /** "Octubre", or "Octubre 2027" when it is not the current year. */
+    fun getMonthTitleWithYear(context: Context, dayCode: String): String {
+        if (dayCode.length < 6) return ""
+        val name = getMonthName(context, dayCode.substring(4, 6).toInt()).replaceFirstChar { it.uppercase() }
+        val year = dayCode.substring(0, 4)
+        return if (year != getTodayCode().substring(0, 4)) "$name $year" else name
+    }
+
     fun getDateDayTitle(dayCode: String): String {
         val dateTime = getDateTimeFromCode(dayCode)
         return dateTime.toString(DATE_DAY_PATTERN)

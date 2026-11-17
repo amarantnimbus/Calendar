@@ -42,8 +42,14 @@ class EventListAdapter(
     private var isPrintVersion = false
     private val mediumMargin = activity.resources.getDimension(org.fossify.commons.R.dimen.medium_margin).toInt()
 
+    private var initials: Map<Long, String> = emptyMap()
+
     init {
         setupDragListener(true)
+        EventCards.loadInitials(activity) {
+            initials = it
+            notifyDataSetChanged()
+        }
         val firstNonPastSectionIndex = listItems.indexOfFirst { it is ListSectionDay && !it.isPastSection }
         if (firstNonPastSectionIndex != -1) {
             activity.runOnUiThread {
@@ -134,9 +140,14 @@ class EventListAdapter(
     private fun setupListEvent(view: View, listEvent: ListEvent) {
         EventListItemBinding.bind(view).apply {
             eventItemHolder.isSelected = selectedKeys.contains(listEvent.hashCode())
-            eventItemHolder.background.applyColorFilter(textColor)
+            val taskLike = listEvent.isTask || listEvent.isMarkedTask
+            val taskDone = listEvent.isTaskCompleted || listEvent.isMarkedDone
+            val cardColor = EventCards.background(listEvent.color, taskLike, taskDone)
+            eventItemHolder.setBackgroundColor(cardColor)
+            val onCard = EventCards.readableOn(cardColor)
             eventItemTitle.text = listEvent.title
-            eventItemTitle.checkViewStrikeThrough(listEvent.shouldStrikeThrough())
+            eventItemInitial.text = initials[listEvent.calendarId] ?: ""
+            eventItemInitial.beVisibleIf(eventItemInitial.text.isNotEmpty())
             eventItemTime.text = if (listEvent.isAllDay) allDayString else Formatter.getTimeFromTS(activity, listEvent.startTS)
             if (listEvent.startTS != listEvent.endTS) {
                 if (!listEvent.isAllDay) {
@@ -152,39 +163,24 @@ class EventListAdapter(
 
             eventItemDescription.text = if (replaceDescription) listEvent.location else org.fossify.calendar.helpers.DayIcons.visibleText(listEvent.description).replace("\n", " ")
             eventItemDescription.beVisibleIf(displayDescription && eventItemDescription.text.isNotEmpty())
-            eventItemColorBar.background.applyColorFilter(listEvent.color)
-
-            var newTextColor = textColor
+            var newTextColor = onCard
             if (listEvent.isAllDay || listEvent.startTS <= now && listEvent.endTS <= now) {
-                if (listEvent.isAllDay && Formatter.getDayCodeFromTS(listEvent.startTS) == Formatter.getDayCodeFromTS(now) && !isPrintVersion) {
-                    newTextColor = properPrimaryColor
-                }
-
-                val adjustAlpha = if (listEvent.isTask) {
-                    dimCompletedTasks && listEvent.isTaskCompleted
+                val adjustAlpha = if (taskLike) {
+                    false
                 } else {
                     dimPastEvents && listEvent.isPastEvent && !isPrintVersion
                 }
                 if (adjustAlpha) {
                     newTextColor = newTextColor.adjustAlpha(MEDIUM_ALPHA)
                 }
-            } else if (listEvent.startTS <= now && listEvent.endTS >= now && !isPrintVersion) {
-                newTextColor = properPrimaryColor
             }
 
             eventItemTime.setTextColor(newTextColor)
             eventItemTitle.setTextColor(newTextColor)
             eventItemDescription.setTextColor(newTextColor)
-            eventItemTaskImage.applyColorFilter(newTextColor)
-            eventItemTaskImage.beVisibleIf(listEvent.isTask)
-
-            val startMargin = if (listEvent.isTask) {
-                0
-            } else {
-                mediumMargin
-            }
-
-            (eventItemTitle.layoutParams as ConstraintLayout.LayoutParams).marginStart = startMargin
+            eventItemInitial.setTextColor(newTextColor)
+            eventItemTaskImage.setImageDrawable(TaskMarkDrawable(taskDone, onCard, cardColor))
+            eventItemTaskImage.beVisibleIf(taskLike)
         }
     }
 

@@ -1163,6 +1163,32 @@
                 </RelativeLayout>
 
                 <RelativeLayout
+                    android:id="@+id/settings_shift_color_free_holder"
+                    style="@style/SettingsHolderTextViewStyle"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content">
+
+                    <org.fossify.commons.views.MyTextView
+                        android:id="@+id/settings_shift_color_free_label"
+                        style="@style/SettingsTextLabelStyle"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_alignTop="@+id/settings_shift_color_free"
+                        android:layout_alignBottom="@+id/settings_shift_color_free"
+                        android:layout_toStartOf="@+id/settings_shift_color_free"
+                        android:gravity="center_vertical|start"
+                        android:text="@string/shift_color_free" />
+
+                    <ImageView
+                        android:id="@+id/settings_shift_color_free"
+                        android:layout_width="@dimen/color_sample_size"
+                        android:layout_height="@dimen/color_sample_size"
+                        android:layout_alignParentEnd="true"
+                        android:clickable="false" />
+
+                </RelativeLayout>
+
+                <RelativeLayout
                     android:id="@+id/settings_shift_start_date_holder"
                     style="@style/SettingsHolderTextViewStyle"
                     android:layout_width="match_parent"
@@ -1203,6 +1229,21 @@
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:layout_below="@+id/settings_shift_cycle_label" />
+
+                </RelativeLayout>
+
+                <RelativeLayout
+                    android:id="@+id/settings_can_edit_shifts_holder"
+                    style="@style/SettingsHolderSwitchStyle"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content">
+
+                    <org.fossify.commons.views.MyMaterialSwitch
+                        android:id="@+id/settings_can_edit_shifts"
+                        style="@style/SettingsSwitchStyle"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="@string/can_edit_shifts" />
 
                 </RelativeLayout>
 

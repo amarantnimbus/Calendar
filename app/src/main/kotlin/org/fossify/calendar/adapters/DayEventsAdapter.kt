@@ -3,13 +3,14 @@ package org.fossify.calendar.adapters
 import android.view.Menu
 import android.view.View
 import android.view.ViewGroup
-import androidx.constraintlayout.widget.ConstraintLayout
 import org.fossify.calendar.R
 import org.fossify.calendar.activities.SimpleActivity
 import org.fossify.calendar.databinding.EventListItemBinding
 import org.fossify.calendar.dialogs.DeleteEventDialog
 import org.fossify.calendar.extensions.*
+import org.fossify.calendar.helpers.EventCards
 import org.fossify.calendar.helpers.Formatter
+import org.fossify.calendar.helpers.TaskMarkDrawable
 import org.fossify.calendar.models.Event
 import org.fossify.commons.adapters.MyRecyclerViewAdapter
 import org.fossify.commons.extensions.adjustAlpha
@@ -31,8 +32,14 @@ class DayEventsAdapter(activity: SimpleActivity, val events: ArrayList<Event>, r
     private var isPrintVersion = false
     private val mediumMargin = activity.resources.getDimension(org.fossify.commons.R.dimen.medium_margin).toInt()
 
+    private var initials: Map<Long, String> = emptyMap()
+
     init {
         setupDragListener(true)
+        EventCards.loadInitials(activity) {
+            initials = it
+            notifyDataSetChanged()
+        }
     }
 
     override fun getActionMenuId() = R.menu.cab_day
@@ -88,9 +95,14 @@ class DayEventsAdapter(activity: SimpleActivity, val events: ArrayList<Event>, r
     private fun setupView(view: View, event: Event) {
         EventListItemBinding.bind(view).apply {
             eventItemHolder.isSelected = selectedKeys.contains(event.id?.toInt())
-            eventItemHolder.background.applyColorFilter(textColor)
+            val taskLike = event.isTask() || event.isTaskMarked()
+            val taskDone = event.isTaskCompleted() || event.isTaskMarkedDone()
+            val cardColor = EventCards.background(event.color, taskLike, taskDone)
+            eventItemHolder.setBackgroundColor(cardColor)
+            val onCard = EventCards.readableOn(cardColor)
             eventItemTitle.text = event.title
-            eventItemTitle.checkViewStrikeThrough(event.shouldStrikeThrough())
+            eventItemInitial.text = initials[event.calendarId] ?: ""
+            eventItemInitial.beVisibleIf(eventItemInitial.text.isNotEmpty())
             eventItemTime.text = if (event.getIsAllDay()) allDayString else Formatter.getTimeFromTS(activity, event.startTS)
             if (event.startTS != event.endTS) {
                 val startDayCode = Formatter.getDayCodeFromTS(event.startTS)
@@ -110,12 +122,10 @@ class DayEventsAdapter(activity: SimpleActivity, val events: ArrayList<Event>, r
 
             eventItemDescription.text = if (replaceDescriptionWithLocation) event.location else org.fossify.calendar.helpers.DayIcons.visibleText(event.description).replace("\n", " ")
             eventItemDescription.beVisibleIf(displayDescription && eventItemDescription.text.isNotEmpty())
-            eventItemColorBar.background.applyColorFilter(event.color)
+            var newTextColor = onCard
 
-            var newTextColor = textColor
-
-            val adjustAlpha = if (event.isTask()) {
-                dimCompletedTasks && event.isTaskCompleted()
+            val adjustAlpha = if (taskLike) {
+                false
             } else {
                 dimPastEvents && event.isPastEvent && !isPrintVersion
             }
@@ -127,16 +137,9 @@ class DayEventsAdapter(activity: SimpleActivity, val events: ArrayList<Event>, r
             eventItemTime.setTextColor(newTextColor)
             eventItemTitle.setTextColor(newTextColor)
             eventItemDescription.setTextColor(newTextColor)
-            eventItemTaskImage.applyColorFilter(newTextColor)
-            eventItemTaskImage.beVisibleIf(event.isTask())
-
-            val startMargin = if (event.isTask()) {
-                0
-            } else {
-                mediumMargin
-            }
-
-            (eventItemTitle.layoutParams as ConstraintLayout.LayoutParams).marginStart = startMargin
+            eventItemInitial.setTextColor(newTextColor)
+            eventItemTaskImage.setImageDrawable(TaskMarkDrawable(taskDone, onCard, cardColor))
+            eventItemTaskImage.beVisibleIf(taskLike)
         }
     }
 

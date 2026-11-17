@@ -187,7 +187,7 @@ class MonthViewWrapper(
                     items.add(RadioItem(TYPE_TASK, context.getString(R.string.task)))
                 }
 
-                if (context.config.shiftsEnabled) {
+                if (context.config.shiftsEnabled && context.config.canEditShifts) {
                     items.add(RadioItem(TYPE_SHIFT, context.getString(R.string.change_shift)))
                 }
 
