@@ -111,7 +111,7 @@ class CalendarTopBar @JvmOverloads constructor(context: Context, attrs: Attribut
 
         ViewCompat.setOnApplyWindowInsetsListener(this) { v, insets ->
             val top = insets.getInsets(WindowInsetsCompat.Type.systemBars() or WindowInsetsCompat.Type.displayCutout()).top
-            v.setPadding(0, top, 0, 0)
+            v.setPadding(0, maxOf(top, statusBarHeight()), 0, 0)
             insets
         }
         updateColors()
@@ -119,8 +119,15 @@ class CalendarTopBar @JvmOverloads constructor(context: Context, attrs: Attribut
 
     fun requireToolbar(): Toolbar = toolbar
 
+    private fun statusBarHeight(): Int {
+        val id = resources.getIdentifier("status_bar_height", "dimen", "android")
+        return if (id > 0) resources.getDimensionPixelSize(id) else 0
+    }
+
     override fun onAttachedToWindow() {
         super.onAttachedToWindow()
+        // the bar never scrolls away with the lists below it
+        (layoutParams as? androidx.coordinatorlayout.widget.CoordinatorLayout.LayoutParams)?.behavior = null
         refreshInsets()
     }
 
@@ -129,7 +136,10 @@ class CalendarTopBar @JvmOverloads constructor(context: Context, attrs: Attribut
         val insets = ViewCompat.getRootWindowInsets(this)
         if (insets != null) {
             val top = insets.getInsets(WindowInsetsCompat.Type.systemBars() or WindowInsetsCompat.Type.displayCutout()).top
-            if (paddingTop != top) setPadding(0, top, 0, 0)
+            val padTop = maxOf(top, statusBarHeight())
+            if (paddingTop != padTop) setPadding(0, padTop, 0, 0)
+        } else if (paddingTop < statusBarHeight()) {
+            setPadding(0, statusBarHeight(), 0, 0)
         }
         ViewCompat.requestApplyInsets(this)
     }

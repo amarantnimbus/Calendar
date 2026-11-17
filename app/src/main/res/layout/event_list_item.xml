@@ -22,9 +22,10 @@
 
         <TextView
             android:id="@+id/event_item_initial"
-            android:layout_width="wrap_content"
+            android:layout_width="22dp"
             android:layout_height="wrap_content"
             android:layout_marginEnd="@dimen/small_margin"
+            android:gravity="center"
             android:includeFontPadding="false"
             android:textSize="@dimen/day_text_size"
             android:textStyle="bold"
@@ -36,7 +37,7 @@
             android:layout_height="18dp"
             android:layout_marginEnd="@dimen/small_margin"
             android:contentDescription="@string/task"
-            android:visibility="gone" />
+            android:visibility="invisible" />
 
         <TextView
             android:id="@+id/event_item_title"

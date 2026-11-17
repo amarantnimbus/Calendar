@@ -62,20 +62,16 @@ class TaskMarkDrawable(private val done: Boolean, private val color: Int, privat
         val cy = b.exactCenterY()
         val w = maxOf(1f, size * 0.11f)
         val r = size / 2f - w / 2f
+        stroke.color = color
+        stroke.strokeWidth = w
+        canvas.drawCircle(cx, cy, r, stroke)
         if (done) {
-            fill.color = color
-            canvas.drawCircle(cx, cy, r + w / 2f, fill)
-            stroke.color = checkColor
-            stroke.strokeWidth = maxOf(1.2f, size * 0.13f)
+            stroke.strokeWidth = maxOf(1.2f, size * 0.12f)
             path.reset()
-            path.moveTo(cx - size * 0.24f, cy + size * 0.02f)
-            path.lineTo(cx - size * 0.06f, cy + size * 0.20f)
-            path.lineTo(cx + size * 0.26f, cy - size * 0.18f)
+            path.moveTo(cx - size * 0.22f, cy + size * 0.02f)
+            path.lineTo(cx - size * 0.06f, cy + size * 0.18f)
+            path.lineTo(cx + size * 0.23f, cy - size * 0.16f)
             canvas.drawPath(path, stroke)
-        } else {
-            stroke.color = color
-            stroke.strokeWidth = w
-            canvas.drawCircle(cx, cy, r, stroke)
         }
     }
 
@@ -112,8 +108,8 @@ class CalendarBubbleDrawable(private val color: Int, private val initial: String
     override fun getOpacity() = PixelFormat.TRANSLUCENT
 }
 
-/** Task icon of the event screen: circle with a check; colors inverted (filled) while the task is on. */
-class TaskToggleDrawable(private val active: Boolean, private val fg: Int, private val bg: Int) : Drawable() {
+/** Task icon of the event screen. state 0 = plain event (grey), 1 = task (white), 2 = task done (white, colors inverted). */
+class TaskToggleDrawable(private val state: Int, private val fg: Int, private val bg: Int) : Drawable() {
     private val fill = Paint(Paint.ANTI_ALIAS_FLAG).apply { style = Paint.Style.FILL }
     private val stroke = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         style = Paint.Style.STROKE
@@ -129,15 +125,16 @@ class TaskToggleDrawable(private val active: Boolean, private val fg: Int, priva
         val cy = b.exactCenterY()
         val w = maxOf(1.5f, size * 0.09f)
         val r = size / 2f - w / 2f
-        if (active) {
+        val ink = if (state == 0) ColorUtils.setAlphaComponent(fg, 110) else fg
+        if (state == 2) {
             fill.color = fg
             canvas.drawCircle(cx, cy, r + w / 2f, fill)
         } else {
-            stroke.color = fg
+            stroke.color = ink
             stroke.strokeWidth = w
             canvas.drawCircle(cx, cy, r, stroke)
         }
-        stroke.color = if (active) bg else fg
+        stroke.color = if (state == 2) bg else ink
         stroke.strokeWidth = maxOf(1.8f, size * 0.10f)
         path.reset()
         path.moveTo(cx - size * 0.22f, cy + size * 0.02f)

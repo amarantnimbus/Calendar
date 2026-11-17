@@ -17,6 +17,7 @@ import org.fossify.commons.extensions.adjustAlpha
 import org.fossify.commons.extensions.applyColorFilter
 import org.fossify.commons.extensions.beVisibleIf
 import org.fossify.commons.extensions.getProperTextColor
+import org.fossify.commons.extensions.getProperBackgroundColor
 import org.fossify.commons.helpers.MEDIUM_ALPHA
 import org.fossify.commons.helpers.ensureBackgroundThread
 import org.fossify.commons.views.MyRecyclerView
@@ -97,13 +98,14 @@ class DayEventsAdapter(activity: SimpleActivity, val events: ArrayList<Event>, r
             eventItemHolder.isSelected = selectedKeys.contains(event.id?.toInt())
             val taskLike = event.isTask() || event.isTaskMarked()
             val taskDone = event.isTaskCompleted() || event.isTaskMarkedDone()
-            val cardColor = EventCards.background(event.color, taskLike, taskDone)
+            val dimCard = !taskLike && dimPastEvents && event.isPastEvent && !isPrintVersion
+            val baseCard = EventCards.background(event.color, taskLike, taskDone)
+            val cardColor = if (dimCard) androidx.core.graphics.ColorUtils.blendARGB(baseCard, activity.getProperBackgroundColor() or 0xFF000000.toInt(), 0.55f) else baseCard
             eventItemHolder.setBackgroundColor(cardColor)
-            val onCard = EventCards.readableOn(cardColor)
+            val onCard = EventCards.readableOn(baseCard)
             eventItemTitle.text = event.title
             eventItemInitial.text = initials[event.calendarId] ?: ""
-            eventItemInitial.beVisibleIf(eventItemInitial.text.isNotEmpty())
-            eventItemTime.text = if (event.getIsAllDay()) allDayString else Formatter.getTimeFromTS(activity, event.startTS)
+                        eventItemTime.text = if (event.getIsAllDay()) allDayString else Formatter.getTimeFromTS(activity, event.startTS)
             if (event.startTS != event.endTS) {
                 val startDayCode = Formatter.getDayCodeFromTS(event.startTS)
                 val endDayCode = Formatter.getDayCodeFromTS(event.endTS)
@@ -124,22 +126,13 @@ class DayEventsAdapter(activity: SimpleActivity, val events: ArrayList<Event>, r
             eventItemDescription.beVisibleIf(displayDescription && eventItemDescription.text.isNotEmpty())
             var newTextColor = onCard
 
-            val adjustAlpha = if (taskLike) {
-                false
-            } else {
-                dimPastEvents && event.isPastEvent && !isPrintVersion
-            }
-
-            if (adjustAlpha) {
-                newTextColor = newTextColor.adjustAlpha(MEDIUM_ALPHA)
-            }
 
             eventItemTime.setTextColor(newTextColor)
             eventItemTitle.setTextColor(newTextColor)
             eventItemDescription.setTextColor(newTextColor)
             eventItemInitial.setTextColor(newTextColor)
             eventItemTaskImage.setImageDrawable(TaskMarkDrawable(taskDone, onCard, cardColor))
-            eventItemTaskImage.beVisibleIf(taskLike)
+            eventItemTaskImage.visibility = if (taskLike) View.VISIBLE else View.INVISIBLE
         }
     }
 

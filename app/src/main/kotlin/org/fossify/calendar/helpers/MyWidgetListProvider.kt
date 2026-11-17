@@ -216,7 +216,7 @@ class MyWidgetListProvider : AppWidgetProvider() {
                         sb.append(initial).append(' ')
                         sb.setSpan(android.text.style.StyleSpan(android.graphics.Typeface.BOLD), st, sb.length, 0)
                     }
-                    if (isTask) sb.append(if (done) "\u25C9 " else "\u25CB ")
+                    if (isTask) sb.append(if (done) "\u2611 " else "\u2610 ")
                     if (!e.getIsAllDay()) {
                         sb.append(Formatter.getTimeFromTS(context, e.startTS)).append(' ')
                     }

@@ -253,7 +253,7 @@ class MyWidgetMonthlyProvider : AppWidgetProvider() {
                     sb.setSpan(android.text.style.StyleSpan(android.graphics.Typeface.BOLD), start, sb.length, 0)
                 }
                 // tasks: an empty circle while pending, a full one when done
-                if (pill.isTask) sb.append(if (pill.done) "\u25C9 " else "\u25CB ")
+                if (pill.isTask) sb.append(if (pill.done) "\u2611 " else "\u2610 ")
                 val titleStart = sb.length
                 sb.append(pill.title)
                 if (pill.strike) {

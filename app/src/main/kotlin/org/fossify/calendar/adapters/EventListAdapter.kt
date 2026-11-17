@@ -21,6 +21,7 @@ import org.fossify.commons.extensions.adjustAlpha
 import org.fossify.commons.extensions.applyColorFilter
 import org.fossify.commons.extensions.beVisibleIf
 import org.fossify.commons.extensions.getProperTextColor
+import org.fossify.commons.extensions.getProperBackgroundColor
 import org.fossify.commons.helpers.MEDIUM_ALPHA
 import org.fossify.commons.helpers.ensureBackgroundThread
 import org.fossify.commons.interfaces.RefreshRecyclerViewListener
@@ -142,13 +143,14 @@ class EventListAdapter(
             eventItemHolder.isSelected = selectedKeys.contains(listEvent.hashCode())
             val taskLike = listEvent.isTask || listEvent.isMarkedTask
             val taskDone = listEvent.isTaskCompleted || listEvent.isMarkedDone
-            val cardColor = EventCards.background(listEvent.color, taskLike, taskDone)
+            val dimCard = !taskLike && dimPastEvents && listEvent.isPastEvent && !isPrintVersion
+            val baseCard = EventCards.background(listEvent.color, taskLike, taskDone)
+            val cardColor = if (dimCard) androidx.core.graphics.ColorUtils.blendARGB(baseCard, activity.getProperBackgroundColor() or 0xFF000000.toInt(), 0.55f) else baseCard
             eventItemHolder.setBackgroundColor(cardColor)
-            val onCard = EventCards.readableOn(cardColor)
+            val onCard = EventCards.readableOn(baseCard)
             eventItemTitle.text = listEvent.title
             eventItemInitial.text = initials[listEvent.calendarId] ?: ""
-            eventItemInitial.beVisibleIf(eventItemInitial.text.isNotEmpty())
-            eventItemTime.text = if (listEvent.isAllDay) allDayString else Formatter.getTimeFromTS(activity, listEvent.startTS)
+                        eventItemTime.text = if (listEvent.isAllDay) allDayString else Formatter.getTimeFromTS(activity, listEvent.startTS)
             if (listEvent.startTS != listEvent.endTS) {
                 if (!listEvent.isAllDay) {
                     eventItemTime.text = "${eventItemTime.text} - ${Formatter.getTimeFromTS(activity, listEvent.endTS)}"
@@ -164,23 +166,12 @@ class EventListAdapter(
             eventItemDescription.text = if (replaceDescription) listEvent.location else org.fossify.calendar.helpers.DayIcons.visibleText(listEvent.description).replace("\n", " ")
             eventItemDescription.beVisibleIf(displayDescription && eventItemDescription.text.isNotEmpty())
             var newTextColor = onCard
-            if (listEvent.isAllDay || listEvent.startTS <= now && listEvent.endTS <= now) {
-                val adjustAlpha = if (taskLike) {
-                    false
-                } else {
-                    dimPastEvents && listEvent.isPastEvent && !isPrintVersion
-                }
-                if (adjustAlpha) {
-                    newTextColor = newTextColor.adjustAlpha(MEDIUM_ALPHA)
-                }
-            }
-
             eventItemTime.setTextColor(newTextColor)
             eventItemTitle.setTextColor(newTextColor)
             eventItemDescription.setTextColor(newTextColor)
             eventItemInitial.setTextColor(newTextColor)
             eventItemTaskImage.setImageDrawable(TaskMarkDrawable(taskDone, onCard, cardColor))
-            eventItemTaskImage.beVisibleIf(taskLike)
+            eventItemTaskImage.visibility = if (taskLike) View.VISIBLE else View.INVISIBLE
         }
     }
 

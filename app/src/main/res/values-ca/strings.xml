@@ -420,4 +420,5 @@
     <string name="sec_calendars">Calendaris i sincronització</string>
     <string name="sec_work">Feina</string>
     <string name="sec_app">Aplicació</string>
+    <string name="night_background">Fons de nit</string>
 </resources>

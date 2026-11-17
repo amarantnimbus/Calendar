@@ -256,7 +256,6 @@ class MainActivity : SimpleActivity(), RefreshRecyclerViewListener {
     }
 
     override fun onResume() {
-        org.fossify.calendar.helpers.DarkBackground.apply(this)
         super.onResume()
         watchNetworkForTailscaleIcon()
         mSearchHandler.removeCallbacks(mSearchWatcher)

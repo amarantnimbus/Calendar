@@ -5,6 +5,15 @@
     android:orientation="vertical"
     android:padding="24dp">
 
+    <ImageView
+        android:id="@+id/dt_clock"
+        android:layout_width="32dp"
+        android:layout_height="32dp"
+        android:layout_gravity="center_horizontal"
+        android:layout_marginBottom="12dp"
+        android:contentDescription="@string/event_date_time"
+        android:src="@drawable/ic_clock_outline_vector" />
+
     <org.fossify.commons.views.MyMaterialSwitch
         android:id="@+id/dt_all_day"
         android:layout_width="match_parent"
@@ -25,6 +34,7 @@
         android:id="@+id/dt_start_label"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
+        android:visibility="gone"
         android:layout_marginTop="20dp"
         android:text="@string/event_starts"
         android:textSize="14sp" />
@@ -60,6 +70,7 @@
         android:id="@+id/dt_end_label"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
+        android:visibility="gone"
         android:layout_marginTop="16dp"
         android:text="@string/event_ends"
         android:textSize="14sp" />

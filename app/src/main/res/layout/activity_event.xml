@@ -201,7 +201,7 @@
                 <LinearLayout
                     android:id="@+id/event_icon_row"
                     android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
+                    android:layout_height="match_parent"
                     android:layout_marginStart="@dimen/small_margin"
                     android:layout_marginEnd="@dimen/small_margin"
                     android:orientation="vertical">
@@ -267,6 +267,22 @@
                 android:contentDescription="@string/task"
                     android:padding="11dp"
                     android:src="@drawable/ic_task_vector" />
+
+                <View
+                    android:layout_width="match_parent"
+                    android:layout_height="0dp"
+                    android:layout_weight="1" />
+
+                <ImageView
+                    android:id="@+id/event_confirm_fab"
+                    android:layout_width="44dp"
+                    android:layout_height="44dp"
+                    android:layout_gravity="center_horizontal"
+                    android:layout_marginTop="@dimen/small_margin"
+                    android:layout_marginBottom="@dimen/activity_margin"
+                    android:contentDescription="@string/save"
+                    android:padding="10dp"
+                    android:src="@drawable/ic_check_vector" />
 
                 </LinearLayout>
             </LinearLayout>
@@ -918,15 +934,4 @@
         </LinearLayout>
     </androidx.core.widget.NestedScrollView>
 
-    <org.fossify.commons.views.MyFloatingActionButton
-        android:id="@+id/event_confirm_fab"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_gravity="bottom|end"
-        android:layout_marginEnd="@dimen/activity_margin"
-        android:layout_marginBottom="@dimen/activity_margin"
-        android:contentDescription="@string/save"
-        android:src="@drawable/ic_check_vector"
-        app:backgroundTint="@color/color_primary"
-        app:rippleColor="@color/pressed_item_foreground" />
 </androidx.coordinatorlayout.widget.CoordinatorLayout>

@@ -604,18 +604,62 @@ class EventActivity : SimpleActivity() {
         showOrHideTimeZone()
     }
 
+    private fun updateConfirmButton(color: Int) {
+        val bg = android.graphics.drawable.GradientDrawable().apply {
+            shape = android.graphics.drawable.GradientDrawable.RECTANGLE
+            cornerRadius = dp(10).toFloat()
+            setColor(color or 0xFF000000.toInt())
+        }
+        binding.eventConfirmFab.background = bg
+        binding.eventConfirmFab.setColorFilter(org.fossify.calendar.helpers.EventCards.readableOn(color))
+    }
+
+    // only events of the own and the shared (Junts) calendar can be edited; the rest is read-only
+    private fun canEditCurrent(): Boolean {
+        if (!::mEvent.isInitialized || mEvent.id == null) return true
+        val own = config.ownCalendarId
+        if (own <= 0L) return true
+        val id = mEvent.calendarId
+        return id == own || id == config.juntsCalendarId || id == LOCAL_CALENDAR_ID
+    }
+
+    private var mReadOnly = false
+
+    private fun applyReadOnly() = binding.apply {
+        mReadOnly = true
+        listOf<android.view.View>(
+            eventTitle, eventDescription, eventHeaderDate, eventHeaderTime, eventTimeRow,
+            eventIconReminder, eventIconAttach, eventIconCalendar, eventIconColor, eventIconDay, eventIconTime,
+            eventIconTask, eventConfirmFab, eventIconProject, eventProject, eventProjectType, eventFsDetails
+        ).forEach {
+            it.isEnabled = false
+            it.isClickable = false
+            it.isLongClickable = false
+            it.alpha = 0.35f
+        }
+        eventToolbar.menu.apply {
+            findItem(R.id.delete)?.isEnabled = false
+            findItem(R.id.share)?.isEnabled = false
+            findItem(R.id.delete)?.icon?.mutate()?.alpha = 90
+            findItem(R.id.share)?.icon?.mutate()?.alpha = 90
+        }
+    }
+
     private fun refreshMenuItems() {
         if (::mEvent.isInitialized) {
             binding.eventToolbar.menu.apply {
                 findItem(R.id.delete).isVisible = mEvent.id != null
                 findItem(R.id.share).isVisible = mEvent.id != null
-                findItem(R.id.duplicate).isVisible = mEvent.id != null
+                findItem(R.id.duplicate).isVisible = false
+                findItem(R.id.save).isVisible = false
             }
             updateTaskUi()
+            if (!canEditCurrent()) applyReadOnly()
         }
     }
 
     private var mTaskUiReady = false
+    private var mTaskDone = false
 
     // the "Task" switch of the editor: a task is an event with the hidden marker [[TK]]
     private fun updateTaskUi() {
@@ -627,16 +671,28 @@ class EventActivity : SimpleActivity() {
                 updateTaskUi()
             }
             eventIconAttach.beVisibleIf(!mIsTaskMarked)
-            eventIconTask.setImageDrawable(TaskToggleDrawable(mIsTaskMarked, getProperTextColor(), getProperBackgroundColor()))
+            // grey = plain event, white = task, white and inverted = task done
+            val taskState = if (!mIsTaskMarked) 0 else if (mTaskDone) 2 else 1
+            eventIconTask.setImageDrawable(TaskToggleDrawable(taskState, getProperTextColor(), getProperBackgroundColor()))
             eventIconTask.setOnClickListener {
-                mIsTaskMarked = !mIsTaskMarked
+                if (!mIsTaskMarked) {
+                    mIsTaskMarked = true
+                    mTaskDone = false
+                } else {
+                    mTaskDone = !mTaskDone
+                }
                 updateTaskUi()
+            }
+            eventIconTask.setOnLongClickListener {
+                mIsTaskMarked = false
+                mTaskDone = false
+                updateTaskUi()
+                true
             }
             eventTitle.hint = getString(if (mIsTaskMarked) R.string.task_name_hint else R.string.event_name_hint)
             eventDescription.hint = getString(if (mIsTaskMarked) R.string.task_comment_hint else R.string.comment_hint)
             updateActionBarTitle()
-            val saved = mEvent.id != null && mIsTaskMarked && DayIcons.isTask(mEvent.description)
-            eventDoneButton.beVisibleIf(saved)
+            eventDoneButton.beGone()
             eventDoneButton.text = getString(
                 if (DayIcons.isDone(mEvent.description)) R.string.mark_task_pending else R.string.mark_task_done
             )
@@ -681,6 +737,7 @@ class EventActivity : SimpleActivity() {
                 return@setOnMenuItemClickListener true
             }
 
+            if (mReadOnly) return@setOnMenuItemClickListener true
             when (menuItem.itemId) {
                 R.id.save -> saveCurrentEvent()
                 R.id.delete -> deleteEvent()
@@ -766,7 +823,7 @@ class EventActivity : SimpleActivity() {
         val reminders = getReminders()
         return binding.eventTitle.text.toString() != mEvent.title ||
                 binding.eventLocation.text.toString() != mEvent.location ||
-                FacturaScripts.withMarker(DayIcons.withIcon(binding.eventDescription.text.toString(), mDayIconKey, mIsUnscheduled, mEventColor, mIsTaskMarked, DayIcons.isDone(mEvent.description)), mProject, mProjectType, mFsExtras) != mEvent.description ||
+                FacturaScripts.withMarker(DayIcons.withIcon(binding.eventDescription.text.toString(), mDayIconKey, mIsUnscheduled, mEventColor, mIsTaskMarked, mTaskDone), mProject, mProjectType, mFsExtras) != mEvent.description ||
                 binding.eventTimeZone.text != mEvent.getTimeZoneString() ||
                 reminders != mEvent.getReminders() ||
                 mRepeatInterval != mEvent.repeatInterval ||
@@ -848,6 +905,7 @@ class EventActivity : SimpleActivity() {
         mFsExtras = FacturaScripts.markerExtras(mEvent.description)
         mDayIconKey = DayIcons.keyOf(mEvent.description)
         mIsTaskMarked = DayIcons.isTask(mEvent.description)
+        mTaskDone = mIsTaskMarked && DayIcons.isDone(mEvent.description)
         updateProjectRow()
         updateDayIcon()
         updateAttachIcon()
@@ -1585,6 +1643,7 @@ class EventActivity : SimpleActivity() {
 
     private fun updateEventColorInfo(defaultColor: Int) {
         val eventColor = if (mEventColor == 0) defaultColor else mEventColor
+        updateConfirmButton(eventColor)
         binding.eventColor.setFillWithStroke(eventColor, getProperBackgroundColor())
     }
 
@@ -1828,7 +1887,7 @@ class EventActivity : SimpleActivity() {
             startTS = newStartTS
             endTS = newEndTS
             title = newTitle
-            description = FacturaScripts.withMarker(DayIcons.withIcon(binding.eventDescription.value, mDayIconKey, mIsUnscheduled, mEventColor, mIsTaskMarked, DayIcons.isDone(mEvent.description)), mProject, mProjectType, mFsExtras)
+            description = FacturaScripts.withMarker(DayIcons.withIcon(binding.eventDescription.value, mDayIconKey, mIsUnscheduled, mEventColor, mIsTaskMarked, mTaskDone), mProject, mProjectType, mFsExtras)
             reminder1Minutes = reminder1.minutes
             reminder2Minutes = reminder2.minutes
             reminder3Minutes = reminder3.minutes
@@ -2630,12 +2689,6 @@ class EventActivity : SimpleActivity() {
         eventIconAttach.setOnClickListener { showAttachmentsDialog() }
         eventIconDay.setOnClickListener { showDayIconDialog() }
         eventConfirmFab.setOnClickListener { saveCurrentEvent() }
-        eventConfirmFab.post {
-            val bottom = androidx.core.view.ViewCompat.getRootWindowInsets(eventConfirmFab)
-                ?.getInsets(androidx.core.view.WindowInsetsCompat.Type.systemBars() or androidx.core.view.WindowInsetsCompat.Type.ime())?.bottom ?: 0
-            (eventConfirmFab.layoutParams as android.view.ViewGroup.MarginLayoutParams).bottomMargin = dp(20) + bottom
-            eventConfirmFab.requestLayout()
-        }
         val textColor = getProperTextColor()
         eventHeaderDate.setTextColor(textColor)
         eventHeaderTime.setTextColor(textColor)
@@ -2685,11 +2738,10 @@ class EventActivity : SimpleActivity() {
             allDay, unscheduled, startDate, startTime, endDate, endTime, timeZone,
             view.findViewById(R.id.dt_start_label), view.findViewById(R.id.dt_end_label)
         ).forEach { it.setTextColor(dialogTextColor) }
+        view.findViewById<android.widget.ImageView>(R.id.dt_clock).applyColorFilter(dialogTextColor)
         val rowsToHide = listOf<android.view.View>(
             allDay,
-            view.findViewById(R.id.dt_start_label),
             view.findViewById(R.id.dt_start_row),
-            view.findViewById(R.id.dt_end_label),
             view.findViewById(R.id.dt_end_row)
         )
 
@@ -2757,8 +2809,7 @@ class EventActivity : SimpleActivity() {
             .apply {
                 setupDialogStuff(
                     view = view,
-                    dialog = this,
-                    titleId = R.string.event_date_time
+                    dialog = this
                 ) { alertDialog ->
                     alertDialog.getButton(androidx.appcompat.app.AlertDialog.BUTTON_NEGATIVE).setOnClickListener {
                         mDateTimeRefresh = null

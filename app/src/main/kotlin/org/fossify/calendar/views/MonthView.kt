@@ -556,23 +556,29 @@ class MonthView(context: Context, attrs: AttributeSet?, defStyle: Int) : View(co
             .mapNotNull { event -> DayIcons.iconOf(event.description)?.let { icon -> Pair(event, icon) } }
 
         val ownId = config.ownCalendarId
-        val own: DayIcons.Icon?
-        val other: DayIcons.Icon?
+        val hasDrop = withIcon.any { it.second.key == PeriodCycle.DROP_KEY }
+        val cycle = if (hasDrop) {
+            DayIcons.byKey(PeriodCycle.DROP_KEY)
+        } else if (leafDays.contains(day.code)) {
+            DayIcons.byKey(PeriodCycle.LEAF_KEY)
+        } else null
+
+        // the icons of the events themselves (own calendar first); the cycle icons are not repeated here
+        val candidates = withIcon.filter { it.second.key != PeriodCycle.DROP_KEY && it.second.key != PeriodCycle.LEAF_KEY }
+        val eventIcons = ArrayList<DayIcons.Icon>()
         if (ownId != -1L) {
-            own = withIcon.firstOrNull { it.first.calendarId == ownId }?.second
-            other = withIcon.firstOrNull { it.first.calendarId != ownId }?.second
+            candidates.firstOrNull { it.first.calendarId == ownId }?.let { eventIcons.add(it.second) }
+            candidates.firstOrNull { it.first.calendarId != ownId }?.let { if (!eventIcons.contains(it.second)) eventIcons.add(it.second) }
         } else {
-            own = withIcon.firstOrNull()?.second
-            other = null
+            candidates.forEach { if (eventIcons.size < 2 && !eventIcons.contains(it.second)) eventIcons.add(it.second) }
         }
 
-        // the drop and the leaf of the cycle always win over the other icons of the day
-        val hasDrop = withIcon.any { it.second.key == PeriodCycle.DROP_KEY }
-        val leaf = if (!hasDrop && leafDays.contains(day.code)) DayIcons.byKey(PeriodCycle.LEAF_KEY) else null
-        val drop = if (hasDrop) DayIcons.byKey(PeriodCycle.DROP_KEY) else null
-        val shownOwn = drop ?: leaf ?: own
-
-        return DayMarks(hasJuntsEvent(day), shownOwn?.drawable, if (drop != null || leaf != null) null else other?.drawable)
+        // never more than two icons a day: with the drop or the leaf only one event icon is left
+        if (cycle != null) {
+            return DayMarks(false, eventIcons.firstOrNull()?.drawable, cycle.drawable)
+        }
+        val junts = hasJuntsEvent(day) && eventIcons.size < 2
+        return DayMarks(junts, eventIcons.getOrNull(0)?.drawable, eventIcons.getOrNull(1)?.drawable)
     }
 
     // ---- rows: every week of the month is always shown (five or six rows)
@@ -846,7 +852,7 @@ class MonthView(context: Context, attrs: AttributeSet?, defStyle: Int) : View(co
             if (initial != null) {
                 titlePaint.isStrikeThruText = false
                 canvas.drawText(initial, contentLeft, textY, titlePaint)
-                contentLeft += titlePaint.measureText("$initial ")
+                contentLeft += titlePaint.measureText("M ")
             }
             if (isTaskCard) {
                 drawTaskMark(canvas, contentLeft + markSize / 2f, centerY, markSize, isDoneCard, textColorOnCard, fill)
@@ -1031,24 +1037,21 @@ class MonthView(context: Context, attrs: AttributeSet?, defStyle: Int) : View(co
 
     /** A round mark: an empty circle for a pending task, a filled one with a check for a done task. */
     private fun drawTaskMark(canvas: Canvas, cx: Float, cy: Float, size: Float, done: Boolean, color: Int, checkColor: Int) {
+        // line only, never filled: an empty circle while pending, the same circle with a check once done
         val stroke = max(1f, size * 0.11f)
         val r = size / 2f - stroke / 2f
+        markStrokePaint.color = color
+        markStrokePaint.strokeWidth = stroke
+        markStrokePaint.strokeCap = Paint.Cap.ROUND
+        markStrokePaint.strokeJoin = Paint.Join.ROUND
+        canvas.drawCircle(cx, cy, r, markStrokePaint)
         if (done) {
-            markFillPaint.color = color
-            canvas.drawCircle(cx, cy, r + stroke / 2f, markFillPaint)
-            markStrokePaint.color = checkColor or 0xFF000000.toInt()
-            markStrokePaint.strokeWidth = max(1.2f, size * 0.13f)
-            markStrokePaint.strokeCap = Paint.Cap.ROUND
-            markStrokePaint.strokeJoin = Paint.Join.ROUND
+            markStrokePaint.strokeWidth = max(1.2f, size * 0.12f)
             checkPath.reset()
-            checkPath.moveTo(cx - size * 0.24f, cy + size * 0.02f)
-            checkPath.lineTo(cx - size * 0.06f, cy + size * 0.20f)
-            checkPath.lineTo(cx + size * 0.26f, cy - size * 0.18f)
+            checkPath.moveTo(cx - size * 0.22f, cy + size * 0.02f)
+            checkPath.lineTo(cx - size * 0.06f, cy + size * 0.18f)
+            checkPath.lineTo(cx + size * 0.23f, cy - size * 0.16f)
             canvas.drawPath(checkPath, markStrokePaint)
-        } else {
-            markStrokePaint.color = color
-            markStrokePaint.strokeWidth = stroke
-            canvas.drawCircle(cx, cy, r, markStrokePaint)
         }
     }
 

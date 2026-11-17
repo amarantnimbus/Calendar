@@ -7,7 +7,6 @@ import org.fossify.commons.FossifyApp
 class App : FossifyApp() {
     override fun onCreate() {
         super.onCreate()
-        org.fossify.calendar.helpers.DarkBackground.apply(this)
         if (!hasDummyAlarm()) {
             AppStartupWorker.start(this)
         }
