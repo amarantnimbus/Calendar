@@ -28,7 +28,8 @@ object ShiftSync {
     private const val HEADER = "FOSSIFY-TORNS-V1"
     private const val NOTE = "Aquest esdeveniment guarda els torns i l'app el mostra amagat. No l'esborris."
 
-    private val KNOWN_KEYS = setOf("start", "cycle", "overrides", "color_day", "color_night", "color_rest", "color_free", "cal_colors")
+    // the colours of the shifts are not shared: each phone keeps its own
+    private val KNOWN_KEYS = setOf("start", "cycle", "overrides", "cal_colors")
 
     const val JUNTS = "Junts"
 
@@ -53,10 +54,6 @@ object ShiftSync {
         values["start"] = config.shiftStartDate
         values["cycle"] = config.shiftCycle
         values["overrides"] = config.shiftOverrides
-        values["color_day"] = config.shiftColorDay.toString()
-        values["color_night"] = config.shiftColorNight.toString()
-        values["color_rest"] = config.shiftColorOffDuty.toString()
-        values["color_free"] = config.shiftColorFree.toString()
         values["cal_colors"] = calendarColors(context)
         return values
     }
@@ -119,10 +116,6 @@ object ShiftSync {
         values["start"]?.let { config.shiftStartDate = it }
         values["cycle"]?.let { if (ShiftHelper.parseCycle(it) != null) config.shiftCycle = it }
         values["overrides"]?.let { config.shiftOverrides = it }
-        values["color_day"]?.toIntOrNull()?.let { config.shiftColorDay = it }
-        values["color_night"]?.toIntOrNull()?.let { config.shiftColorNight = it }
-        values["color_rest"]?.toIntOrNull()?.let { config.shiftColorOffDuty = it }
-        values["color_free"]?.toIntOrNull()?.let { config.shiftColorFree = it }
         values["cal_colors"]?.let { applyCalendarColors(context, it) }
     }
 
