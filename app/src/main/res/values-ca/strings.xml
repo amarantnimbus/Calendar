@@ -422,4 +422,21 @@
     <string name="sec_app">Aplicació</string>
     <string name="night_background">Fons de nit</string>
     <string name="read_only_calendars">Calendaris de només lectura</string>
+    <string name="shift_sync_status">Estat de la sincronització</string>
+    <string name="shift_sync_now">Sincronitza els torns ara</string>
+    <string name="shift_syncing">Sincronitzant els torns…</string>
+    <string name="shift_status_event">Esdeveniment de configuració en aquest mòbil: %1$s</string>
+    <string name="shift_status_yes">sí</string>
+    <string name="shift_status_no">no</string>
+    <string name="shift_status_duplicates">Còpies de l\'esdeveniment de configuració: %1$d (n\'hauria de ser 1)</string>
+    <string name="shift_status_event_date">Esdeveniment modificat: %1$s</string>
+    <string name="shift_status_push">Darrer enviament (push): %1$s</string>
+    <string name="shift_status_pull">Darrera recepció (pull): %1$s</string>
+    <string name="shift_status_error">Error: %1$s</string>
+    <string name="shift_force_vpn_fail">No s\'ha pogut activar Tailscale. </string>
+    <string name="shift_force_vpn_ok">Tailscale activat. </string>
+    <string name="shift_force_applied">Resultat: s\'han rebut i aplicat els torns de l\'altre mòbil.</string>
+    <string name="shift_force_pushed">Resultat: s\'han enviat els torns d\'aquest mòbil al servidor.</string>
+    <string name="shift_force_nothing">Resultat: res a canviar, els torns estan al dia.</string>
+    <string name="shift_force_no_caldav">La sincronització CalDAV no està activada.</string>
 </resources>

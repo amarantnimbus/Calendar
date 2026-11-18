@@ -1745,10 +1745,17 @@ class EventActivity : SimpleActivity() {
 
                 runOnUiThread {
                     hideKeyboard()
-                    finish()
+                    pushAndFinish()
                 }
             }
         }
+    }
+
+    /** Closes the screen and, in the background, sends the change to the server (Tailscale on and off by itself). */
+    private fun pushAndFinish() {
+        val app = applicationContext
+        ensureBackgroundThread { org.fossify.calendar.helpers.TailscaleSync.pushChanges(app) }
+        finish()
     }
 
     private fun duplicateEvent() {
@@ -1974,7 +1981,7 @@ class EventActivity : SimpleActivity() {
                     }
                 }
 
-                finish()
+                pushAndFinish()
             }
         } else {
             if (mRepeatInterval > 0 && wasRepeatable) {
@@ -1984,7 +1991,7 @@ class EventActivity : SimpleActivity() {
             } else {
                 hideKeyboard()
                 eventsHelper.updateEvent(mEvent, updateAtCalDAV = true, showToasts = true) {
-                    finish()
+                    pushAndFinish()
                 }
             }
         }
@@ -2003,7 +2010,7 @@ class EventActivity : SimpleActivity() {
                         eventOccurrenceTS = mEventOccurrenceTS,
                         showToasts = true
                     ) {
-                        finish()
+                        pushAndFinish()
                     }
                 }
 
@@ -2013,7 +2020,7 @@ class EventActivity : SimpleActivity() {
                         eventOccurrenceTS = mEventOccurrenceTS,
                         showToasts = true
                     ) {
-                        finish()
+                        pushAndFinish()
                     }
                 }
 
@@ -2024,7 +2031,7 @@ class EventActivity : SimpleActivity() {
                         originalEndTS = mOriginalEndTS,
                         showToasts = true
                     ) {
-                        finish()
+                        pushAndFinish()
                     }
                 }
             }

@@ -20,6 +20,18 @@ class Config(context: Context) : BaseConfig(context) {
         get() = prefs.getString(SHIFT_SYNCED_PAYLOAD, "") ?: ""
         set(shiftSyncedPayload) = prefs.edit().putString(SHIFT_SYNCED_PAYLOAD, shiftSyncedPayload).apply()
 
+    var shiftLastPush: Long
+        get() = prefs.getLong(SHIFT_LAST_PUSH, 0L)
+        set(shiftLastPush) = prefs.edit().putLong(SHIFT_LAST_PUSH, shiftLastPush).apply()
+
+    var shiftLastPull: Long
+        get() = prefs.getLong(SHIFT_LAST_PULL, 0L)
+        set(shiftLastPull) = prefs.edit().putLong(SHIFT_LAST_PULL, shiftLastPull).apply()
+
+    var shiftLastError: String
+        get() = prefs.getString(SHIFT_LAST_ERROR, "") ?: ""
+        set(shiftLastError) = prefs.edit().putString(SHIFT_LAST_ERROR, shiftLastError).apply()
+
     var shiftFullCell: Boolean
         get() = prefs.getBoolean(SHIFT_FULL_CELL, false)
         set(shiftFullCell) = prefs.edit().putBoolean(SHIFT_FULL_CELL, shiftFullCell).apply()

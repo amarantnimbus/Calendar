@@ -223,7 +223,7 @@ class MonthViewWrapper(
             ShiftHelper.setOverride(context.config, day.code, shift)
             binding.monthView.invalidate()
             if (context.config.caldavSync) {
-                ensureBackgroundThread { ShiftSync.sync(context) }
+                ensureBackgroundThread { ShiftSync.syncAndPush(context) }
             }
         }
     }

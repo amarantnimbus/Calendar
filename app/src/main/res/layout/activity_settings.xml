@@ -99,28 +99,6 @@
             </RelativeLayout>
 
             <RelativeLayout
-                android:id="@+id/settings_read_only_calendars_holder"
-                style="@style/SettingsHolderTextViewStyle"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content">
-
-                <org.fossify.commons.views.MyTextView
-                    android:id="@+id/settings_read_only_calendars_label"
-                    style="@style/SettingsTextLabelStyle"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="@string/read_only_calendars" />
-
-                <org.fossify.commons.views.MyTextView
-                    android:id="@+id/settings_read_only_calendars"
-                    style="@style/SettingsTextValueStyle"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_below="@+id/settings_read_only_calendars_label" />
-
-            </RelativeLayout>
-
-            <RelativeLayout
                 android:id="@+id/settings_night_background_holder"
                 android:visibility="gone"
                 style="@style/SettingsHolderTextViewStyle"
@@ -956,6 +934,28 @@
             </RelativeLayout>
 
             <RelativeLayout
+                android:id="@+id/settings_read_only_calendars_holder"
+                style="@style/SettingsHolderTextViewStyle"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content">
+
+                <org.fossify.commons.views.MyTextView
+                    android:id="@+id/settings_read_only_calendars_label"
+                    style="@style/SettingsTextLabelStyle"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="@string/read_only_calendars" />
+
+                <org.fossify.commons.views.MyTextView
+                    android:id="@+id/settings_read_only_calendars"
+                    style="@style/SettingsTextValueStyle"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_below="@+id/settings_read_only_calendars_label" />
+
+            </RelativeLayout>
+
+            <RelativeLayout
                 android:id="@+id/settings_enable_automatic_backups_holder"
                 style="@style/SettingsHolderSwitchStyle"
                 android:layout_width="match_parent"
@@ -1304,6 +1304,43 @@
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:text="@string/shift_full_cell" />
+
+                </RelativeLayout>
+
+                <RelativeLayout
+                    android:id="@+id/settings_shift_status_holder"
+                    style="@style/SettingsHolderTextViewStyle"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content">
+
+                    <org.fossify.commons.views.MyTextView
+                        android:id="@+id/settings_shift_status_label"
+                        style="@style/SettingsTextLabelStyle"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="@string/shift_sync_status" />
+
+                    <org.fossify.commons.views.MyTextView
+                        android:id="@+id/settings_shift_status"
+                        style="@style/SettingsTextValueStyle"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_below="@+id/settings_shift_status_label" />
+
+                </RelativeLayout>
+
+                <RelativeLayout
+                    android:id="@+id/settings_shift_sync_now_holder"
+                    style="@style/SettingsHolderTextViewOneLinerStyle"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content">
+
+                    <org.fossify.commons.views.MyTextView
+                        android:id="@+id/settings_shift_sync_now"
+                        style="@style/SettingsTextLabelStyle"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="@string/shift_sync_now" />
 
                 </RelativeLayout>
 

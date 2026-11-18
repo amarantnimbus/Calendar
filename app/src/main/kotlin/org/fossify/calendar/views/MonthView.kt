@@ -617,8 +617,8 @@ class MonthView(context: Context, attrs: AttributeSet?, defStyle: Int) : View(co
                         shiftPaint.alpha = if (!isMonthDayView && !day.isThisMonth) FADED_ALPHA else 255
                         canvas.drawRect(left, top, left + dayWidth, bottom, shiftPaint)
                         shiftPaint.alpha = 255
-                        if (config.shiftFullCell && bgOverride == null && !isPrintVersion) {
-                            // thin black frame around the fully painted cell (not in the widget)
+                        if (config.shiftFullCell && config.showGrid && bgOverride == null && !isPrintVersion) {
+                            // thin black frame around the fully painted cell, only with the grid on (not in the widget)
                             val half = framePaint.strokeWidth / 2f
                             canvas.drawRect(left + half, top + half, left + dayWidth - half, bottom - half, framePaint)
                         }
@@ -986,7 +986,8 @@ class MonthView(context: Context, attrs: AttributeSet?, defStyle: Int) : View(co
             typeface = Typeface.create(specificEventTitlePaint.typeface, Typeface.BOLD)
         }
         val initial = calendarInitial(event)
-        val initialWidth = if (initial != null) initialPaint.measureText("$initial ") else 0f
+        // fixed slot for the initial (as wide as an "M" plus a small gap) so every title and task circle lines up
+        val initialWidth = if (initial != null) initialPaint.measureText("M") + smallPadding else 0f
         val textWidth = bgRight - bgLeft - smallPadding * 2 - taskIconWidth
         val lineStep = eventTitleHeight + smallPadding
         val fullLines = if (config.monthFullText) wrapTitle(event.title, textWidth - initialWidth, textWidth) else null

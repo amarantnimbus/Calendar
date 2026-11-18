@@ -422,4 +422,21 @@
     <string name="sec_app">Aplicación</string>
     <string name="night_background">Fondo de noche</string>
     <string name="read_only_calendars">Calendarios de solo lectura</string>
+    <string name="shift_sync_status">Estado de la sincronización</string>
+    <string name="shift_sync_now">Sincronizar los turnos ahora</string>
+    <string name="shift_syncing">Sincronizando los turnos…</string>
+    <string name="shift_status_event">Evento de configuración en este móvil: %1$s</string>
+    <string name="shift_status_yes">sí</string>
+    <string name="shift_status_no">no</string>
+    <string name="shift_status_duplicates">Copias del evento de configuración: %1$d (debería ser 1)</string>
+    <string name="shift_status_event_date">Evento modificado: %1$s</string>
+    <string name="shift_status_push">Último envío (push): %1$s</string>
+    <string name="shift_status_pull">Última recepción (pull): %1$s</string>
+    <string name="shift_status_error">Error: %1$s</string>
+    <string name="shift_force_vpn_fail">No se pudo activar Tailscale. </string>
+    <string name="shift_force_vpn_ok">Tailscale activado. </string>
+    <string name="shift_force_applied">Resultado: se recibieron y aplicaron los turnos del otro móvil.</string>
+    <string name="shift_force_pushed">Resultado: se enviaron los turnos de este móvil al servidor.</string>
+    <string name="shift_force_nothing">Resultado: nada que cambiar, los turnos están al día.</string>
+    <string name="shift_force_no_caldav">La sincronización CalDAV no está activada.</string>
 </resources>

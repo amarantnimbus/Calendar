@@ -327,7 +327,8 @@ class SettingsActivity : SimpleActivity() {
         super.onPause()
         mStoredPrimaryColor = getProperPrimaryColor()
         if (config.caldavSync) {
-            ensureBackgroundThread { ShiftSync.sync(this) }
+            val app = applicationContext
+            ensureBackgroundThread { ShiftSync.syncAndPush(app) }
         }
     }
 
@@ -687,6 +688,18 @@ class SettingsActivity : SimpleActivity() {
         }
     }
 
+    private fun refreshShiftStatus() {
+        val app = applicationContext
+        ensureBackgroundThread {
+            val text = ShiftSync.statusText(app)
+            runOnUiThread {
+                if (!isDestroyed) {
+                    binding.settingsShiftStatus.text = text
+                }
+            }
+        }
+    }
+
     private fun setupShifts() {
         binding.apply {
             settingsShiftsEnabled.isChecked = config.shiftsEnabled
@@ -699,6 +712,27 @@ class SettingsActivity : SimpleActivity() {
                     setupShiftStartDate()
                 }
                 settingsShiftsDetailsHolder.beVisibleIf(config.shiftsEnabled)
+            }
+
+            refreshShiftStatus()
+            settingsShiftStatusHolder.setOnClickListener { refreshShiftStatus() }
+            settingsShiftSyncNowHolder.setOnClickListener {
+                toast(R.string.shift_syncing)
+                val app = applicationContext
+                ensureBackgroundThread {
+                    val result = ShiftSync.forceSync(app)
+                    runOnUiThread {
+                        if (isDestroyed || isFinishing) {
+                            return@runOnUiThread
+                        }
+                        refreshShiftStatus()
+                        AlertDialog.Builder(this@SettingsActivity)
+                            .setTitle(R.string.shift_sync_now)
+                            .setMessage(result)
+                            .setPositiveButton(org.fossify.commons.R.string.ok, null)
+                            .show()
+                    }
+                }
             }
 
             settingsShiftFullCell.isChecked = config.shiftFullCell

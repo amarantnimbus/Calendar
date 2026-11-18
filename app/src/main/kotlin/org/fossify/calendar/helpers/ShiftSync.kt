@@ -5,6 +5,8 @@ import org.fossify.calendar.extensions.calDAVHelper
 import org.fossify.calendar.extensions.config
 import org.fossify.calendar.extensions.eventsDB
 import org.fossify.calendar.extensions.eventsHelper
+import org.fossify.calendar.extensions.refreshCalDAVCalendars
+import org.fossify.calendar.R
 import org.fossify.calendar.extensions.seconds
 import org.fossify.calendar.models.Event
 import org.joda.time.DateTime
@@ -177,8 +179,107 @@ object ShiftSync {
                 false
             }
         } catch (e: Exception) {
+            config.shiftLastError = (e.javaClass.simpleName + ": " + (e.message ?: "")).take(200)
             false
         }
+    }
+
+    /** Same as [sync], and when something was written asks the server to receive it (Tailscale on and off by itself). */
+    fun syncAndPush(context: Context) {
+        val before = context.config.shiftLastPush
+        sync(context)
+        if (context.config.canEditShifts && context.config.shiftLastPush != before) {
+            TailscaleSync.pushChanges(context)
+        }
+    }
+
+    /** Something readable about the hidden event and the last exchanges, for the settings row. */
+    fun statusText(context: Context): String {
+        val config = context.config
+        val sb = StringBuilder()
+        try {
+            val events = context.eventsDB.getEventsWithTitle(TITLE)
+            val newest = events.maxByOrNull { it.lastUpdated }
+            sb.append(context.getString(R.string.shift_status_event, if (newest == null) context.getString(R.string.shift_status_no) else context.getString(R.string.shift_status_yes)))
+            if (events.size > 1) {
+                sb.append("\n").append(context.getString(R.string.shift_status_duplicates, events.size))
+            }
+            if (newest != null) {
+                sb.append("\n").append(context.getString(R.string.shift_status_event_date, formatTime(newest.lastUpdated)))
+            }
+        } catch (e: Exception) {
+            sb.append(e.javaClass.simpleName)
+        }
+        sb.append("\n").append(context.getString(R.string.shift_status_push, formatTime(config.shiftLastPush)))
+        sb.append("\n").append(context.getString(R.string.shift_status_pull, formatTime(config.shiftLastPull)))
+        if (config.shiftLastError.isNotEmpty()) {
+            sb.append("\n").append(context.getString(R.string.shift_status_error, config.shiftLastError))
+        }
+        return sb.toString()
+    }
+
+    private fun formatTime(ms: Long): String {
+        if (ms <= 0L) {
+            return "—"
+        }
+        return DateTime(ms).toString("dd/MM HH:mm:ss")
+    }
+
+    /**
+     * Must run on a background thread. Forces the exchange: turns Tailscale on if needed, asks the
+     * server for news, applies what came and pushes what changed, and returns a text with the result.
+     */
+    fun forceSync(context: Context): String {
+        val app = context.applicationContext
+        val config = app.config
+        val report = StringBuilder()
+        if (!config.caldavSync) {
+            return app.getString(R.string.shift_force_no_caldav)
+        }
+
+        config.shiftLastError = ""
+        val installed = TailscaleSync.isInstalled(app)
+        val wasActive = installed && TailscaleSync.isActive(app)
+        try {
+            if (installed && !wasActive) {
+                TailscaleSync.connect(app)
+                val ok = TailscaleSync.waitUntil(25_000L) { TailscaleSync.isActive(app) }
+                report.append(app.getString(if (ok) R.string.shift_force_vpn_ok else R.string.shift_force_vpn_fail)).append("\n")
+                if (ok) {
+                    Thread.sleep(2000)
+                }
+            }
+
+            app.refreshCalDAVCalendars(config.caldavSyncedCalendarIds, false)
+            TailscaleSync.waitForCalendarSync(90_000L)
+
+            val pulledBefore = config.shiftLastPull
+            val pushedBefore = config.shiftLastPush
+            val applied = sync(app)
+            if (config.canEditShifts && config.shiftLastPush != pushedBefore) {
+                app.refreshCalDAVCalendars(config.caldavSyncedCalendarIds, false)
+                TailscaleSync.waitForCalendarSync(60_000L)
+            }
+
+            report.append(
+                app.getString(
+                    when {
+                        applied || config.shiftLastPull != pulledBefore -> R.string.shift_force_applied
+                        config.shiftLastPush != pushedBefore -> R.string.shift_force_pushed
+                        else -> R.string.shift_force_nothing
+                    }
+                )
+            ).append("\n\n")
+        } catch (e: Exception) {
+            config.shiftLastError = (e.javaClass.simpleName + ": " + (e.message ?: "")).take(200)
+        } finally {
+            if (installed && !wasActive) {
+                TailscaleSync.disconnect(app)
+            }
+        }
+
+        report.append(statusText(app))
+        return report.toString()
     }
 
     private fun applyRemote(context: Context, values: Map<String, String>) {
@@ -188,6 +289,7 @@ object ShiftSync {
             config.shiftsEnabled = true
         }
         config.shiftSyncedPayload = canonical(values)
+        config.shiftLastPull = System.currentTimeMillis()
     }
 
     private fun push(context: Context, existing: Event?, text: String) {
@@ -202,6 +304,7 @@ object ShiftSync {
                 enableCalendar = false
             )
             context.config.shiftSyncedPayload = text
+            context.config.shiftLastPush = System.currentTimeMillis()
             return
         }
 
@@ -231,5 +334,6 @@ object ShiftSync {
             enableCalendar = false
         )
         config.shiftSyncedPayload = text
+        config.shiftLastPush = System.currentTimeMillis()
     }
 }

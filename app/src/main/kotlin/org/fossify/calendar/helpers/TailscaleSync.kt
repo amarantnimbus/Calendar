@@ -6,6 +6,9 @@ import android.content.Intent
 import android.net.ConnectivityManager
 import android.net.NetworkCapabilities
 import android.provider.CalendarContract
+import org.fossify.calendar.extensions.config
+import org.fossify.calendar.extensions.refreshCalDAVCalendars
+import java.util.concurrent.atomic.AtomicInteger
 
 /**
  * Turns the Tailscale VPN on and off through the broadcast receiver the Tailscale app exposes,
@@ -46,6 +49,47 @@ object TailscaleSync {
         try {
             val intent = Intent(action).setClassName(PACKAGE, RECEIVER)
             context.sendBroadcast(intent)
+        } catch (ignored: Exception) {
+        }
+    }
+
+    private val pushJobs = AtomicInteger(0)
+    @Volatile
+    private var turnedOnByUs = false
+
+    /**
+     * Must run on a background thread. Used after a change made on this phone (save, delete, shift):
+     * turns Tailscale on if it was off, asks the calendar accounts to sync so the change reaches the
+     * server, waits for it and turns Tailscale off again if it was this who turned it on.
+     * Without connection nothing is lost: the change stays on the phone and goes with the next sync.
+     */
+    fun pushChanges(context: Context) {
+        val app = context.applicationContext
+        try {
+            if (!app.config.caldavSync || !isInstalled(app)) {
+                return
+            }
+
+            pushJobs.incrementAndGet()
+            try {
+                if (!isActive(app)) {
+                    turnedOnByUs = true
+                    connect(app)
+                    val connected = waitUntil(25_000L) { isActive(app) }
+                    if (!connected) {
+                        return
+                    }
+                    Thread.sleep(2000)
+                }
+
+                app.refreshCalDAVCalendars(app.config.caldavSyncedCalendarIds, false)
+                waitForCalendarSync(60_000L)
+            } finally {
+                if (pushJobs.decrementAndGet() == 0 && turnedOnByUs) {
+                    turnedOnByUs = false
+                    disconnect(app)
+                }
+            }
         } catch (ignored: Exception) {
         }
     }

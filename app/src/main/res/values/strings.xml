@@ -477,4 +477,21 @@
     <string name="sec_app">App</string>
     <string name="night_background">Night background</string>
     <string name="read_only_calendars">Read-only calendars</string>
+    <string name="shift_sync_status">Sync status</string>
+    <string name="shift_sync_now">Sync shifts now</string>
+    <string name="shift_syncing">Syncing shifts…</string>
+    <string name="shift_status_event">Config event on this phone: %1$s</string>
+    <string name="shift_status_yes">yes</string>
+    <string name="shift_status_no">no</string>
+    <string name="shift_status_duplicates">Copies of the config event: %1$d (should be 1)</string>
+    <string name="shift_status_event_date">Event last changed: %1$s</string>
+    <string name="shift_status_push">Last push (sent): %1$s</string>
+    <string name="shift_status_pull">Last pull (received): %1$s</string>
+    <string name="shift_status_error">Error: %1$s</string>
+    <string name="shift_force_vpn_fail">Tailscale could not be turned on. </string>
+    <string name="shift_force_vpn_ok">Tailscale turned on. </string>
+    <string name="shift_force_applied">Result: the other phone\'s shifts were received and applied.</string>
+    <string name="shift_force_pushed">Result: the shifts of this phone were sent to the server.</string>
+    <string name="shift_force_nothing">Result: nothing to change, shifts are up to date.</string>
+    <string name="shift_force_no_caldav">CalDAV sync is not enabled.</string>
 </resources>
