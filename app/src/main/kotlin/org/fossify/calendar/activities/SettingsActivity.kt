@@ -279,6 +279,7 @@ class SettingsActivity : SimpleActivity() {
         arrayOf(
             binding.settingsColorCustomizationSectionLabel,
             binding.settingsMonthlyViewLabel,
+            binding.settingsWidgetsLabel,
             binding.settingsNewEventsLabel,
             binding.settingsRemindersLabel,
             binding.settingsCaldavLabel,

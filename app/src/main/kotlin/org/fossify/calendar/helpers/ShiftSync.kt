@@ -205,6 +205,9 @@ object ShiftSync {
                 sb.append("\n").append(context.getString(R.string.shift_status_duplicates, events.size))
             }
             if (newest != null) {
+                val calName = context.eventsHelper.getCalendarsSync().firstOrNull { it.id == newest.calendarId }
+                    ?.let { it.caldavDisplayName.ifEmpty { it.title } } ?: "?"
+                sb.append("\n").append(context.getString(R.string.shift_status_calendar, calName))
                 sb.append("\n").append(context.getString(R.string.shift_status_event_date, formatTime(newest.lastUpdated)))
             }
         } catch (e: Exception) {
@@ -216,6 +219,12 @@ object ShiftSync {
             sb.append("\n").append(context.getString(R.string.shift_status_error, config.shiftLastError))
         }
         return sb.toString()
+    }
+
+    private fun hasConfigEvent(context: Context) = try {
+        context.eventsDB.getEventsWithTitle(TITLE).isNotEmpty()
+    } catch (e: Exception) {
+        false
     }
 
     private fun formatTime(ms: Long): String {
@@ -264,6 +273,7 @@ object ShiftSync {
             report.append(
                 app.getString(
                     when {
+                        !config.canEditShifts && !hasConfigEvent(app) -> R.string.shift_force_missing
                         applied || config.shiftLastPull != pulledBefore -> R.string.shift_force_applied
                         config.shiftLastPush != pushedBefore -> R.string.shift_force_pushed
                         else -> R.string.shift_force_nothing
@@ -294,28 +304,52 @@ object ShiftSync {
 
     private fun push(context: Context, existing: Event?, text: String) {
         val description = "$HEADER\n$text\n\n$NOTE"
-        if (existing != null) {
-            existing.description = description
-            existing.lastUpdated = System.currentTimeMillis()
-            context.eventsHelper.updateEvent(
-                existing,
-                updateAtCalDAV = true,
-                showToasts = false,
-                enableCalendar = false
-            )
-            context.config.shiftSyncedPayload = text
-            context.config.shiftLastPush = System.currentTimeMillis()
-            return
-        }
-
         val config = context.config
         val writable = context.calDAVHelper
             .getCalDAVCalendars(config.caldavSyncedCalendarIds, false)
             .filter { it.canWrite() }
-        val chosen = writable.firstOrNull { it.id == config.lastUsedCaldavCalendarId } ?: writable.firstOrNull() ?: return
+        // the shared calendar ("Junts") first, so the other phone always receives it
+        val chosen = writable.firstOrNull { context.eventsHelper.getCalendarWithCalDAVCalendarId(it.id)?.id == config.juntsCalendarId }
+            ?: writable.firstOrNull { it.id == config.lastUsedCaldavCalendarId }
+            ?: writable.firstOrNull()
+
+        var current = existing
+        if (current != null && chosen != null) {
+            val chosenLocalId = context.eventsHelper.getCalendarWithCalDAVCalendarId(chosen.id)?.id
+            if (chosenLocalId != null && current.calendarId != chosenLocalId && config.juntsCalendarId == chosenLocalId) {
+                // it lives in a calendar the other phone may not receive: make a new one in the shared calendar
+                current.id?.let { context.eventsHelper.deleteEvent(it, true) }
+                current = null
+            }
+        }
+
+        if (current != null) {
+            current.description = description
+            current.lastUpdated = System.currentTimeMillis()
+            if (current.startTS < FAR_START_LIMIT) {
+                // far in the future, so no "ignore old events" setting of the sync app can skip it
+                val start = farStart()
+                current.startTS = start
+                current.endTS = start + 60
+            }
+            context.eventsHelper.updateEvent(
+                current,
+                updateAtCalDAV = true,
+                showToasts = false,
+                enableCalendar = false
+            )
+            config.shiftSyncedPayload = text
+            config.shiftLastPush = System.currentTimeMillis()
+            return
+        }
+
+        if (chosen == null) {
+            config.shiftLastError = context.getString(R.string.shift_error_no_calendar)
+            return
+        }
         val localCalendar = context.eventsHelper.getCalendarWithCalDAVCalendarId(chosen.id) ?: return
 
-        val start = DateTime(2000, 1, 1, 0, 0).seconds()
+        val start = farStart()
         val event = Event(
             id = null,
             startTS = start,
@@ -336,4 +370,7 @@ object ShiftSync {
         config.shiftSyncedPayload = text
         config.shiftLastPush = System.currentTimeMillis()
     }
+
+    private fun farStart() = DateTime(2099, 1, 1, 0, 0).seconds()
+    private val FAR_START_LIMIT = DateTime(2090, 1, 1, 0, 0).seconds()
 }

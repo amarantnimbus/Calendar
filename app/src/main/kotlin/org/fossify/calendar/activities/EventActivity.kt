@@ -2244,13 +2244,12 @@ class EventActivity : SimpleActivity() {
     private fun timeSet(hours: Int, minutes: Int, isStart: Boolean) {
         try {
             if (isStart) {
-                val diff = mEventEndDateTime.seconds() - mEventStartDateTime.seconds()
-
                 mEventStartDateTime =
                     mEventStartDateTime.withHourOfDay(hours).withMinuteOfHour(minutes)
                 updateStartTimeText()
 
-                mEventEndDateTime = mEventStartDateTime.plusSeconds(diff.toInt())
+                // the end follows the start: the next hour, same minutes (it can be changed by hand afterwards)
+                mEventEndDateTime = mEventStartDateTime.plusHours(1)
                 updateEndTexts()
             } else {
                 mEventEndDateTime = mEventEndDateTime.withHourOfDay(hours).withMinuteOfHour(minutes)

@@ -439,4 +439,8 @@
     <string name="shift_force_pushed">Resultat: s\'han enviat els torns d\'aquest mòbil al servidor.</string>
     <string name="shift_force_nothing">Resultat: res a canviar, els torns estan al dia.</string>
     <string name="shift_force_no_caldav">La sincronització CalDAV no està activada.</string>
+    <string name="shift_status_calendar">Calendari de l\'esdeveniment: %1$s</string>
+    <string name="shift_force_missing">Resultat: aquest mòbil no té l\'esdeveniment de torns. Encara no ha arribat del servidor.</string>
+    <string name="shift_error_no_calendar">No hi ha cap calendari sincronitzat editable on guardar els torns.</string>
+    <string name="sec_widgets">Ginys</string>
 </resources>

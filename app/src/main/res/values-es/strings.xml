@@ -439,4 +439,8 @@
     <string name="shift_force_pushed">Resultado: se enviaron los turnos de este móvil al servidor.</string>
     <string name="shift_force_nothing">Resultado: nada que cambiar, los turnos están al día.</string>
     <string name="shift_force_no_caldav">La sincronización CalDAV no está activada.</string>
+    <string name="shift_status_calendar">Calendario del evento: %1$s</string>
+    <string name="shift_force_missing">Resultado: este móvil no tiene el evento de turnos. Aún no ha llegado del servidor.</string>
+    <string name="shift_error_no_calendar">No hay ningún calendario sincronizado editable donde guardar los turnos.</string>
+    <string name="sec_widgets">Widgets</string>
 </resources>

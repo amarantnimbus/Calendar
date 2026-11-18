@@ -428,15 +428,15 @@ class Config(context: Context) : BaseConfig(context) {
         set(shiftsEnabled) = prefs.edit().putBoolean(SHIFTS_ENABLED, shiftsEnabled).apply()
 
     var shiftColorDay: Int
-        get() = prefs.getInt(SHIFT_COLOR_DAY, 0xFFFFEB3B.toInt())
+        get() = prefs.getInt(SHIFT_COLOR_DAY, 0xFFFFF0A8.toInt())
         set(shiftColorDay) = prefs.edit().putInt(SHIFT_COLOR_DAY, shiftColorDay).apply()
 
     var shiftColorNight: Int
-        get() = prefs.getInt(SHIFT_COLOR_NIGHT, 0xFF3F51B5.toInt())
+        get() = prefs.getInt(SHIFT_COLOR_NIGHT, 0xFFD4E2F7.toInt())
         set(shiftColorNight) = prefs.edit().putInt(SHIFT_COLOR_NIGHT, shiftColorNight).apply()
 
     var shiftColorOffDuty: Int
-        get() = prefs.getInt(SHIFT_COLOR_OFF_DUTY, 0xFF4CAF50.toInt())
+        get() = prefs.getInt(SHIFT_COLOR_OFF_DUTY, 0xFFD0F2E1.toInt())
         set(shiftColorOffDuty) = prefs.edit().putInt(SHIFT_COLOR_OFF_DUTY, shiftColorOffDuty).apply()
 
     // 0 = free days have no color (the default)

@@ -142,7 +142,9 @@ class MonthView(context: Context, attrs: AttributeSet?, defStyle: Int) : View(co
         }
 
         gridPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-            color = textColor.adjustAlpha(LOWER_ALPHA)
+            // thinnest line, in the colour opposite to the background
+            strokeWidth = 0f
+            color = textColor
         }
 
         circleStrokePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
@@ -619,7 +621,9 @@ class MonthView(context: Context, attrs: AttributeSet?, defStyle: Int) : View(co
                         shiftPaint.alpha = 255
                         if (config.shiftFullCell && config.showGrid && bgOverride == null && !isPrintVersion) {
                             // thin black frame around the fully painted cell, only with the grid on (not in the widget)
-                            val half = framePaint.strokeWidth / 2f
+                            framePaint.color = textColor
+                            framePaint.strokeWidth = 0f
+                            val half = 0.5f
                             canvas.drawRect(left + half, top + half, left + dayWidth - half, bottom - half, framePaint)
                         }
                     }
@@ -1300,7 +1304,7 @@ class MonthView(context: Context, attrs: AttributeSet?, defStyle: Int) : View(co
         plusTextPaint.color = textColor
         plusTextPaint.alpha = 175
         eventTitlePaint.color = textColor
-        gridPaint.color = textColor.adjustAlpha(LOWER_ALPHA)
+        gridPaint.color = textColor
         calendarInfo = info
         updateDays(newDays, false)
         val bitmap = Bitmap.createBitmap(widthPx, heightPx, Bitmap.Config.ARGB_8888)
@@ -1322,7 +1326,7 @@ class MonthView(context: Context, attrs: AttributeSet?, defStyle: Int) : View(co
         }
 
         textPaint.color = textColor
-        gridPaint.color = textColor.adjustAlpha(LOWER_ALPHA)
+        gridPaint.color = textColor
         invalidate()
         initWeekDayLetters()
     }
