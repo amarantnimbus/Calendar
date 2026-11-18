@@ -498,4 +498,5 @@
     <string name="shift_force_missing">Result: this phone does not have the shifts event. It has not arrived from the server yet.</string>
     <string name="shift_error_no_calendar">No writable synced calendar to keep the shifts in.</string>
     <string name="sec_widgets">Widgets</string>
+    <string name="shift_error_not_saved">The shifts event could not be saved on this phone.</string>
 </resources>

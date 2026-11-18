@@ -443,4 +443,5 @@
     <string name="shift_force_missing">Resultado: este móvil no tiene el evento de turnos. Aún no ha llegado del servidor.</string>
     <string name="shift_error_no_calendar">No hay ningún calendario sincronizado editable donde guardar los turnos.</string>
     <string name="sec_widgets">Widgets</string>
+    <string name="shift_error_not_saved">No se pudo guardar el evento de turnos en este móvil.</string>
 </resources>

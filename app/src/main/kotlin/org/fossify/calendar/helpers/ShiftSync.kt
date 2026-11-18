@@ -7,6 +7,7 @@ import org.fossify.calendar.extensions.eventsDB
 import org.fossify.calendar.extensions.eventsHelper
 import org.fossify.calendar.extensions.refreshCalDAVCalendars
 import org.fossify.calendar.R
+import org.fossify.calendar.models.CalDAVCalendar
 import org.fossify.calendar.extensions.seconds
 import org.fossify.calendar.models.Event
 import org.joda.time.DateTime
@@ -125,6 +126,47 @@ object ShiftSync {
         values["cal_colors"]?.let { applyCalendarColors(context, it) }
     }
 
+    /** All the copies of the hidden event this phone knows of. */
+    private fun configEvents(context: Context): List<Event> = context.eventsDB.getEventsWithTitle(TITLE)
+
+    /**
+     * Picks the right copy when there are several: the ones in the shared calendar first, then the
+     * one furthest in the future (the current ones are at 2099, the old ones at 2000), then the newest.
+     */
+    private fun pickConfigEvent(context: Context, events: List<Event>): Event? {
+        if (events.isEmpty()) {
+            return null
+        }
+        val junts = context.config.juntsCalendarId
+        val inJunts = events.filter { it.calendarId == junts }
+        val pool = if (junts > 0 && inJunts.isNotEmpty()) inJunts else events
+        return pool.sortedWith(compareByDescending<Event> { it.startTS }.thenByDescending { it.lastUpdated }).first()
+    }
+
+    /** The writable synced calendar where the hidden event should live: "Junts" first. */
+    private fun chooseCalendar(context: Context): CalDAVCalendar? {
+        val config = context.config
+        val writable = context.calDAVHelper
+            .getCalDAVCalendars(config.caldavSyncedCalendarIds, false)
+            .filter { it.canWrite() }
+        return writable.firstOrNull { context.eventsHelper.getCalendarWithCalDAVCalendarId(it.id)?.id == config.juntsCalendarId }
+            ?: writable.firstOrNull { it.id == config.lastUsedCaldavCalendarId }
+            ?: writable.firstOrNull()
+    }
+
+    /** True when the copy on this phone should be tidied up by the phone that edits the shifts. */
+    private fun needsCleanup(context: Context, events: List<Event>, picked: Event): Boolean {
+        if (events.size > 1 || picked.startTS < FAR_START_LIMIT) {
+            return true
+        }
+        val junts = context.config.juntsCalendarId
+        if (junts > 0 && picked.calendarId != junts) {
+            val chosen = chooseCalendar(context)
+            return chosen != null && context.eventsHelper.getCalendarWithCalDAVCalendarId(chosen.id)?.id == junts
+        }
+        return false
+    }
+
     /**
      * Must run on a background thread. Returns true when settings coming from the other phone were
      * applied here, so the screen should be refreshed.
@@ -137,7 +179,8 @@ object ShiftSync {
         }
 
         return try {
-            val remoteEvent = context.eventsDB.getEventsWithTitle(TITLE).maxByOrNull { it.lastUpdated }
+            val allCopies = configEvents(context)
+            val remoteEvent = pickConfigEvent(context, allCopies)
             val remoteValues = remoteEvent?.let { parse(it.description) }
             val remoteText = remoteValues?.let { canonical(it) }
             val localText = canonical(currentValues(context))
@@ -172,6 +215,14 @@ object ShiftSync {
                 // changed here: this phone is the one that edits the shifts
                 push(context, remoteEvent, localText)
                 false
+            } else if (remoteEvent == null && config.shiftsEnabled) {
+                // the event is gone (it did not survive a sync): write it again
+                push(context, null, localText)
+                false
+            } else if (remoteEvent != null && needsCleanup(context, allCopies, remoteEvent)) {
+                // old or duplicated copies: leave one, in the shared calendar
+                push(context, remoteEvent, localText)
+                false
             } else if (remoteText != null && remoteText != syncedText) {
                 applyRemote(context, remoteValues)
                 true
@@ -198,8 +249,8 @@ object ShiftSync {
         val config = context.config
         val sb = StringBuilder()
         try {
-            val events = context.eventsDB.getEventsWithTitle(TITLE)
-            val newest = events.maxByOrNull { it.lastUpdated }
+            val events = configEvents(context)
+            val newest = pickConfigEvent(context, events)
             sb.append(context.getString(R.string.shift_status_event, if (newest == null) context.getString(R.string.shift_status_no) else context.getString(R.string.shift_status_yes)))
             if (events.size > 1) {
                 sb.append("\n").append(context.getString(R.string.shift_status_duplicates, events.size))
@@ -262,10 +313,9 @@ object ShiftSync {
             app.refreshCalDAVCalendars(config.caldavSyncedCalendarIds, false)
             TailscaleSync.waitForCalendarSync(90_000L)
 
-            val pulledBefore = config.shiftLastPull
-            val pushedBefore = config.shiftLastPush
+            val startedAt = System.currentTimeMillis()
             val applied = sync(app)
-            if (config.canEditShifts && config.shiftLastPush != pushedBefore) {
+            if (config.canEditShifts && config.shiftLastPush >= startedAt) {
                 app.refreshCalDAVCalendars(config.caldavSyncedCalendarIds, false)
                 TailscaleSync.waitForCalendarSync(60_000L)
             }
@@ -274,8 +324,8 @@ object ShiftSync {
                 app.getString(
                     when {
                         !config.canEditShifts && !hasConfigEvent(app) -> R.string.shift_force_missing
-                        applied || config.shiftLastPull != pulledBefore -> R.string.shift_force_applied
-                        config.shiftLastPush != pushedBefore -> R.string.shift_force_pushed
+                        applied || config.shiftLastPull >= startedAt -> R.string.shift_force_applied
+                        config.shiftLastPush >= startedAt -> R.string.shift_force_pushed
                         else -> R.string.shift_force_nothing
                     }
                 )
@@ -305,21 +355,24 @@ object ShiftSync {
     private fun push(context: Context, existing: Event?, text: String) {
         val description = "$HEADER\n$text\n\n$NOTE"
         val config = context.config
-        val writable = context.calDAVHelper
-            .getCalDAVCalendars(config.caldavSyncedCalendarIds, false)
-            .filter { it.canWrite() }
-        // the shared calendar ("Junts") first, so the other phone always receives it
-        val chosen = writable.firstOrNull { context.eventsHelper.getCalendarWithCalDAVCalendarId(it.id)?.id == config.juntsCalendarId }
-            ?: writable.firstOrNull { it.id == config.lastUsedCaldavCalendarId }
-            ?: writable.firstOrNull()
+        val chosen = chooseCalendar(context)
+        val copies = configEvents(context)
 
         var current = existing
         if (current != null && chosen != null) {
             val chosenLocalId = context.eventsHelper.getCalendarWithCalDAVCalendarId(chosen.id)?.id
             if (chosenLocalId != null && current.calendarId != chosenLocalId && config.juntsCalendarId == chosenLocalId) {
                 // it lives in a calendar the other phone may not receive: make a new one in the shared calendar
-                current.id?.let { context.eventsHelper.deleteEvent(it, true) }
                 current = null
+            }
+        }
+
+        // only one copy stays: the others (old tests, duplicates) are deleted here and on the server
+        copies.filter { it.id != null && it.id != current?.id }.forEach {
+            try {
+                context.eventsHelper.deleteEvent(it.id!!, true)
+            } catch (e: Exception) {
+                config.shiftLastError = (e.javaClass.simpleName + ": " + (e.message ?: "")).take(200)
             }
         }
 
@@ -367,6 +420,12 @@ object ShiftSync {
             showToasts = false,
             enableCalendar = false
         )
+
+        if (configEvents(context).isEmpty()) {
+            // not kept: do not pretend it was sent, so the next sync tries again
+            config.shiftLastError = context.getString(R.string.shift_error_not_saved)
+            return
+        }
         config.shiftSyncedPayload = text
         config.shiftLastPush = System.currentTimeMillis()
     }
