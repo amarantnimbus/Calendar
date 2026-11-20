@@ -111,7 +111,7 @@ class MyWidgetListProvider : AppWidgetProvider() {
         val textColor = config.widgetTextColor
         val bgColor = config.widgetBgColor or 0xFF000000.toInt()
         val fs = context.getWidgetFontSize()
-        val sp1 = fs * 0.85f
+        val sp1 = fs * 0.72f
         val sp2 = fs * 0.7f
         val px1 = android.util.TypedValue.applyDimension(android.util.TypedValue.COMPLEX_UNIT_SP, sp1, dm)
         val px2 = android.util.TypedValue.applyDimension(android.util.TypedValue.COMPLEX_UNIT_SP, sp2, dm)
@@ -199,7 +199,7 @@ class MyWidgetListProvider : AppWidgetProvider() {
                     val e = item.event
                     val comment = FormatMarks.plain(DayIcons.visibleText(if (replaceDescription) e.location else e.description))
                         .lineSequence().map { it.trim() }.firstOrNull { it.isNotEmpty() } ?: ""
-                    val h = px1 * 1.3f + (if (comment.isNotEmpty()) px2 * 1.3f else 0f) + 4 * dp + 2 * dp
+                    val h = px1 * 1.3f + 4 * dp + 2 * dp
                     val rest = if (hasMore) moreHeight else 0f
                     if (used + h + rest > available) {
                         shownAll = false
@@ -232,6 +232,10 @@ class MyWidgetListProvider : AppWidgetProvider() {
                     sb.append(e.title)
                     sb.setSpan(android.text.style.StyleSpan(android.graphics.Typeface.BOLD), titleStart, sb.length, 0)
                     if (strike) sb.setSpan(android.text.style.StrikethroughSpan(), titleStart, sb.length, 0)
+                    DayIcons.progressOf(e.description)?.let { sb.append("  ").append("${it.first}/${it.second}") }
+                    if (comment.isNotEmpty()) {
+                        sb.append("  \u00b7  ").append(comment)
+                    }
 
                     val v = RemoteViews(pkg, R.layout.widget_list_card)
                     if (isTask) {
@@ -244,12 +248,6 @@ class MyWidgetListProvider : AppWidgetProvider() {
                     v.setTextViewText(R.id.card_line1, sb)
                     v.setTextColor(R.id.card_line1, ink)
                     v.setTextViewTextSize(R.id.card_line1, android.util.TypedValue.COMPLEX_UNIT_SP, sp1)
-                    if (comment.isNotEmpty()) {
-                        v.setViewVisibility(R.id.card_line2, View.VISIBLE)
-                        v.setTextViewText(R.id.card_line2, comment)
-                        v.setTextColor(R.id.card_line2, ink)
-                        v.setTextViewTextSize(R.id.card_line2, android.util.TypedValue.COMPLEX_UNIT_SP, sp2)
-                    }
                     v.setInt(R.id.card_bg, "setColorFilter", base)
                     v.setInt(R.id.card_bg, "setImageAlpha", (opacity * 255).toInt())
                     openEventIntent(context, v, R.id.card_holder, e, isTask)

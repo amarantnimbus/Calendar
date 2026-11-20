@@ -451,4 +451,12 @@
     <string name="event_colors">Colors dels esdeveniments</string>
     <string name="event_colors_reset">Restableix els colors per defecte</string>
     <string name="event_color_default">Color del calendari</string>
+    <string name="icon_ticket">Entrades (cine, teatre)</string>
+    <string name="icon_palm">Palmera (vacances)</string>
+    <string name="checklist_add">+ Afegir llista</string>
+    <string name="checklist_title">Llista</string>
+    <string name="checklist_add_item">+ Afegir element</string>
+    <string name="checklist_remove">Treu la llista</string>
+    <string name="checklist_remove_confirm">Vols treure tota la llista?</string>
+    <string name="checklist_item_hint">Element</string>
 </resources>

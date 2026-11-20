@@ -658,6 +658,120 @@ class EventActivity : SimpleActivity() {
     private var mTaskUiReady = false
     private var mTaskDone = false
 
+    // ---- checklist inside the event/task (items travel as hidden lines in the description) ----
+    private val mChecklist = mutableListOf<DayIcons.CheckItem>()
+    private var mChecklistAdapter: org.fossify.calendar.adapters.ChecklistAdapter? = null
+    private var mChecklistTouch: androidx.recyclerview.widget.ItemTouchHelper? = null
+    private var mChecklistShown = false
+
+    private fun setupChecklist() {
+        val rv = binding.eventChecklistList
+        if (mChecklistAdapter == null) {
+            rv.layoutManager = androidx.recyclerview.widget.LinearLayoutManager(this)
+            rv.isNestedScrollingEnabled = false
+            val adapter = org.fossify.calendar.adapters.ChecklistAdapter(
+                context = this,
+                items = mChecklist,
+                textColor = getProperTextColor(),
+                onChanged = { onChecklistChanged() },
+                onEnter = { pos -> addChecklistItem(pos + 1) },
+                startDrag = { holder -> mChecklistTouch?.startDrag(holder) }
+            )
+            mChecklistAdapter = adapter
+            rv.adapter = adapter
+            mChecklistTouch = androidx.recyclerview.widget.ItemTouchHelper(object : androidx.recyclerview.widget.ItemTouchHelper.SimpleCallback(
+                androidx.recyclerview.widget.ItemTouchHelper.UP or androidx.recyclerview.widget.ItemTouchHelper.DOWN,
+                androidx.recyclerview.widget.ItemTouchHelper.LEFT or androidx.recyclerview.widget.ItemTouchHelper.RIGHT
+            ) {
+                override fun isLongPressDragEnabled() = false
+
+                override fun onMove(
+                    recyclerView: androidx.recyclerview.widget.RecyclerView,
+                    viewHolder: androidx.recyclerview.widget.RecyclerView.ViewHolder,
+                    target: androidx.recyclerview.widget.RecyclerView.ViewHolder
+                ): Boolean {
+                    adapter.move(viewHolder.adapterPosition, target.adapterPosition)
+                    return true
+                }
+
+                override fun onSwiped(viewHolder: androidx.recyclerview.widget.RecyclerView.ViewHolder, direction: Int) {
+                    adapter.remove(viewHolder.adapterPosition)
+                    updateChecklistUi()
+                }
+            })
+            mChecklistTouch?.attachToRecyclerView(rv)
+
+            val accent = getProperPrimaryColor()
+            binding.eventChecklistAdd.setTextColor(accent)
+            binding.eventChecklistAddItem.setTextColor(accent)
+            binding.eventChecklistAdd.setOnClickListener {
+                mChecklistShown = true
+                if (mChecklist.isEmpty()) {
+                    addChecklistItem(0)
+                } else {
+                    updateChecklistUi()
+                }
+            }
+            binding.eventChecklistAddItem.setOnClickListener { addChecklistItem(mChecklist.size) }
+            binding.eventChecklistRemove.setOnClickListener {
+                androidx.appcompat.app.AlertDialog.Builder(this)
+                    .setMessage(R.string.checklist_remove_confirm)
+                    .setPositiveButton(android.R.string.ok) { _, _ ->
+                        mChecklist.clear()
+                        mChecklistShown = false
+                        mChecklistAdapter?.notifyDataSetChanged()
+                        updateChecklistUi()
+                        onChecklistChanged()
+                    }
+                    .setNegativeButton(android.R.string.cancel, null)
+                    .show()
+            }
+        }
+        mChecklistShown = mChecklist.isNotEmpty()
+        mChecklistAdapter?.notifyDataSetChanged()
+        updateChecklistUi()
+    }
+
+    private fun addChecklistItem(position: Int) {
+        val pos = position.coerceIn(0, mChecklist.size)
+        mChecklist.add(pos, DayIcons.CheckItem(false, ""))
+        mChecklistAdapter?.focusPosition = pos
+        mChecklistAdapter?.notifyItemInserted(pos)
+        mChecklistShown = true
+        updateChecklistUi()
+        onChecklistChanged()
+        binding.eventChecklistList.scrollToPosition(pos)
+    }
+
+    private fun updateChecklistUi() {
+        val active = mChecklistShown || mChecklist.isNotEmpty()
+        binding.apply {
+            eventChecklistAdd.beGoneIf(active)
+            eventChecklistHeader.beVisibleIf(active)
+            eventChecklistList.beVisibleIf(active)
+            eventChecklistAddItem.beVisibleIf(active)
+            eventChecklistRemove.beVisibleIf(active)
+        }
+        updateChecklistCount()
+    }
+
+    private fun updateChecklistCount() {
+        val items = DayIcons.cleanChecklist(mChecklist)
+        binding.eventChecklistCount.text = if (items.isEmpty()) "" else "${items.count { it.done }}/${items.size}"
+    }
+
+    private fun onChecklistChanged() {
+        updateChecklistCount()
+        if (!mIsTaskMarked) return
+        val items = DayIcons.cleanChecklist(mChecklist)
+        if (items.isEmpty()) return
+        val allDone = items.all { it.done }
+        if (allDone != mTaskDone) {
+            mTaskDone = allDone
+            updateTaskUi()
+        }
+    }
+
     // the "Task" switch of the editor: a task is an event with the hidden marker [[TK]]
     private fun updateTaskUi() {
         binding.apply {
@@ -820,7 +934,7 @@ class EventActivity : SimpleActivity() {
         val reminders = getReminders()
         return binding.eventTitle.text.toString() != mEvent.title ||
                 binding.eventLocation.text.toString() != mEvent.location ||
-                FacturaScripts.withMarker(DayIcons.withIcon(binding.eventDescription.text.toString(), mDayIconKey, mIsUnscheduled, mEventColor, mIsTaskMarked, mTaskDone), mProject, mProjectType, mFsExtras) != mEvent.description ||
+                FacturaScripts.withMarker(DayIcons.withIcon(binding.eventDescription.text.toString(), mDayIconKey, mIsUnscheduled, mEventColor, mIsTaskMarked, mTaskDone, mChecklist), mProject, mProjectType, mFsExtras) != mEvent.description ||
                 binding.eventTimeZone.text != mEvent.getTimeZoneString() ||
                 reminders != mEvent.getReminders() ||
                 mRepeatInterval != mEvent.repeatInterval ||
@@ -903,6 +1017,9 @@ class EventActivity : SimpleActivity() {
         mDayIconKey = DayIcons.keyOf(mEvent.description)
         mIsTaskMarked = DayIcons.isTask(mEvent.description)
         mTaskDone = mIsTaskMarked && DayIcons.isDone(mEvent.description)
+        mChecklist.clear()
+        mChecklist.addAll(DayIcons.checklistOf(mEvent.description))
+        setupChecklist()
         updateProjectRow()
         updateDayIcon()
         updateAttachIcon()
@@ -1870,7 +1987,7 @@ class EventActivity : SimpleActivity() {
             startTS = newStartTS
             endTS = newEndTS
             title = newTitle
-            description = FacturaScripts.withMarker(DayIcons.withIcon(binding.eventDescription.value, mDayIconKey, mIsUnscheduled, mEventColor, mIsTaskMarked, mTaskDone), mProject, mProjectType, mFsExtras)
+            description = FacturaScripts.withMarker(DayIcons.withIcon(binding.eventDescription.value, mDayIconKey, mIsUnscheduled, mEventColor, mIsTaskMarked, mTaskDone, mChecklist), mProject, mProjectType, mFsExtras)
             reminder1Minutes = reminder1.minutes
             reminder2Minutes = reminder2.minutes
             reminder3Minutes = reminder3.minutes

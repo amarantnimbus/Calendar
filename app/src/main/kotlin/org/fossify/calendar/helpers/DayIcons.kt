@@ -28,7 +28,9 @@ object DayIcons {
         Icon("phone", R.drawable.ic_day_phone, R.string.icon_phone),
         Icon("cake", R.drawable.ic_day_cake, R.string.icon_cake),
         Icon("food", R.drawable.ic_day_food, R.string.icon_food),
-        Icon("crane", R.drawable.ic_day_crane, R.string.icon_crane)
+        Icon("crane", R.drawable.ic_day_crane, R.string.icon_crane),
+        Icon("ticket", R.drawable.ic_day_ticket, R.string.icon_ticket),
+        Icon("palm", R.drawable.ic_day_palm, R.string.icon_palm)
     )
 
     private val regex = Regex("\\n?\\[\\[IC:([a-z]+)\\]\\]")
@@ -42,7 +44,7 @@ object DayIcons {
     fun iconOf(description: String): Icon? = byKey(keyOf(description))
 
     // hidden flags that travel in the description too: pending event "[[PD]]" and event color "[[CL:rrggbb]]"
-    private val extraRegex = Regex("\\n?\\[\\[(?:PD|TK|TD|CL:[0-9A-Fa-f]{6}|FX:[^\\]]*)\\]\\]")
+    private val extraRegex = Regex("\\n?\\[\\[(?:PD|TK|TD|CL:[0-9A-Fa-f]{6}|FX:[^\\]]*|CK:[01]:[^\\]\\n]*)\\]\\]")
     private val doneRegex = Regex("\\n?\\[\\[TD\\]\\]")
     const val TASK_MARKER = "[[TK]]"
     const val DONE_MARKER = "[[TD]]"
@@ -76,7 +78,35 @@ object DayIcons {
     /** The description as the person wrote it, without the hidden markers (icon and project). */
     fun visibleText(description: String): String = strip(FacturaScripts.stripMarker(description))
 
-    fun withIcon(description: String, key: String?, pending: Boolean = false, color: Int = 0, task: Boolean = false, done: Boolean = false): String {
+    // checklist items travel as hidden lines "[[CK:0:text]]" (0 = pending, 1 = done), in order
+    data class CheckItem(var done: Boolean, var text: String)
+
+    private val checkRegex = Regex("\\n?\\[\\[CK:([01]):([^\\]\\n]*)\\]\\]")
+
+    fun checklistOf(description: String): List<CheckItem> =
+        checkRegex.findAll(description).map { CheckItem(it.groupValues[1] == "1", it.groupValues[2]) }.toList()
+
+    /** Items with text, as they will be stored. */
+    fun cleanChecklist(items: List<CheckItem>): List<CheckItem> =
+        items.map { CheckItem(it.done, it.text.replace('\n', ' ').replace(']', ')').trim()) }.filter { it.text.isNotEmpty() }
+
+    /** Done / total of a description's checklist, or null when it has none. */
+    fun progressOf(description: String): Pair<Int, Int>? {
+        val items = checklistOf(description)
+        if (items.isEmpty()) return null
+        return Pair(items.count { it.done }, items.size)
+    }
+
+    fun withIcon(
+        description: String,
+        key: String?,
+        pending: Boolean = false,
+        color: Int = 0,
+        task: Boolean = false,
+        done: Boolean = false,
+        checklist: List<CheckItem>? = null
+    ): String {
+        val items = cleanChecklist(checklist ?: checklistOf(description))
         var result = strip(description)
         if (task) {
             result += "\n$TASK_MARKER"
@@ -93,6 +123,7 @@ object DayIcons {
         if (color != 0) {
             result += "\n[[CL:%06X]]".format(color and 0xFFFFFF)
         }
+        items.forEach { result += "\n[[CK:${if (it.done) 1 else 0}:${it.text}]]" }
         return result
     }
 }

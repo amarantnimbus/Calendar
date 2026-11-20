@@ -451,4 +451,12 @@
     <string name="event_colors">Colores de los eventos</string>
     <string name="event_colors_reset">Restablecer los colores por defecto</string>
     <string name="event_color_default">Color del calendario</string>
+    <string name="icon_ticket">Entradas (cine, teatro)</string>
+    <string name="icon_palm">Palmera (vacaciones)</string>
+    <string name="checklist_add">+ Añadir lista</string>
+    <string name="checklist_title">Lista</string>
+    <string name="checklist_add_item">+ Añadir elemento</string>
+    <string name="checklist_remove">Quitar la lista</string>
+    <string name="checklist_remove_confirm">¿Quitar toda la lista?</string>
+    <string name="checklist_item_hint">Elemento</string>
 </resources>

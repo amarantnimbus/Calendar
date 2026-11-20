@@ -145,7 +145,19 @@ class MonthFragmentsHolder : MyFragmentHolder(), NavigationListener {
 
     override fun shouldGoToTodayBeVisible() = currentDayCode.getMonthCode() != todayDayCode.getMonthCode()
 
-    override fun getNewEventDayCode() = if (shouldGoToTodayBeVisible()) currentDayCode else todayDayCode
+    override fun getNewEventDayCode(): String {
+        // the day tapped in this month (month view with "expand day") wins over today / the 1st
+        val tapped = org.fossify.calendar.helpers.ViewSwitchState.selectedDayCode
+        if (!tapped.isNullOrEmpty() && currentDayCode.length >= 8 && tapped.length >= 8) {
+            // days of the neighbouring months shown in the grid count too
+            val monthStart = Formatter.getDateTimeFromCode(currentDayCode).withDayOfMonth(1)
+            val tappedDate = Formatter.getDateTimeFromCode(tapped)
+            if (!tappedDate.isBefore(monthStart.minusDays(7)) && tappedDate.isBefore(monthStart.plusMonths(1).plusDays(7))) {
+                return tapped
+            }
+        }
+        return if (shouldGoToTodayBeVisible()) currentDayCode else todayDayCode
+    }
 
     override fun printView() {
         (viewPager.adapter as? MyMonthPagerAdapter)?.printCurrentView(viewPager.currentItem)

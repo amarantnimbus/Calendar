@@ -163,7 +163,7 @@ class EventListAdapter(
                 }
             }
 
-            eventItemDescription.text = if (replaceDescription) listEvent.location else org.fossify.calendar.helpers.DayIcons.visibleText(listEvent.description).replace("\n", " ")
+            eventItemDescription.text = if (replaceDescription) listEvent.location else (org.fossify.calendar.helpers.DayIcons.progressOf(listEvent.description)?.let { "${it.first}/${it.second}  " } ?: "") + org.fossify.calendar.helpers.DayIcons.visibleText(listEvent.description).replace("\n", " ")
             eventItemDescription.beVisibleIf(displayDescription && eventItemDescription.text.isNotEmpty())
             var newTextColor = onCard
             eventItemTime.setTextColor(newTextColor)

@@ -188,6 +188,85 @@
                 android:textCursorDrawable="@null"
                 android:textSize="@dimen/day_text_size" />
 
+            <LinearLayout
+                android:id="@+id/event_checklist_holder"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="@dimen/activity_margin"
+                android:layout_marginTop="@dimen/small_margin"
+                android:layout_marginEnd="@dimen/activity_margin"
+                android:orientation="vertical">
+
+                <View
+                    android:layout_width="match_parent"
+                    android:layout_height="1dp"
+                    android:layout_marginBottom="@dimen/small_margin"
+                    android:background="@color/divider_grey"
+                    android:importantForAccessibility="no" />
+
+                <LinearLayout
+                    android:id="@+id/event_checklist_header"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:visibility="gone">
+
+                    <org.fossify.commons.views.MyTextView
+                        android:id="@+id/event_checklist_title"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:text="@string/checklist_title"
+                        android:textSize="13sp" />
+
+                    <org.fossify.commons.views.MyTextView
+                        android:id="@+id/event_checklist_count"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:textSize="13sp" />
+
+                </LinearLayout>
+
+                <androidx.recyclerview.widget.RecyclerView
+                    android:id="@+id/event_checklist_list"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:overScrollMode="never"
+                    android:visibility="gone" />
+
+                <org.fossify.commons.views.MyTextView
+                    android:id="@+id/event_checklist_add_item"
+                    android:layout_width="match_parent"
+                    android:layout_height="44dp"
+                    android:background="?attr/selectableItemBackground"
+                    android:gravity="center_vertical"
+                    android:paddingStart="4dp"
+                    android:text="@string/checklist_add_item"
+                    android:textSize="@dimen/day_text_size"
+                    android:visibility="gone" />
+
+                <org.fossify.commons.views.MyTextView
+                    android:id="@+id/event_checklist_remove"
+                    android:layout_width="wrap_content"
+                    android:layout_height="40dp"
+                    android:background="?attr/selectableItemBackground"
+                    android:gravity="center_vertical"
+                    android:paddingEnd="12dp"
+                    android:text="@string/checklist_remove"
+                    android:textSize="13sp"
+                    android:visibility="gone" />
+
+                <org.fossify.commons.views.MyTextView
+                    android:id="@+id/event_checklist_add"
+                    android:layout_width="match_parent"
+                    android:layout_height="44dp"
+                    android:background="?attr/selectableItemBackground"
+                    android:gravity="center_vertical"
+                    android:text="@string/checklist_add"
+                    android:textSize="@dimen/day_text_size" />
+
+            </LinearLayout>
+
                 </LinearLayout>
 
                 <View

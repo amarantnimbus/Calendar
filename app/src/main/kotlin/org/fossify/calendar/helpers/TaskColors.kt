@@ -6,8 +6,8 @@ package org.fossify.calendar.helpers
  * day view, list widget) the softer one.
  */
 object TaskColors {
-    val PILL_PENDING = 0xFFC0504D.toInt()
-    val PILL_DONE = 0xFF5F9E63.toInt()
+    val PILL_PENDING = 0xFFF0B3AE.toInt()
+    val PILL_DONE = 0xFFBEE5C2.toInt()
     val CARD_PENDING = 0xFFD98880.toInt()
     val CARD_DONE = 0xFF8FCF94.toInt()
 

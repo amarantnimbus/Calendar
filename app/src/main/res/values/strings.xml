@@ -506,4 +506,12 @@
     <string name="event_colors">Event colors</string>
     <string name="event_colors_reset">Reset to default colors</string>
     <string name="event_color_default">Calendar color</string>
+    <string name="icon_ticket">Tickets (cinema, theater)</string>
+    <string name="icon_palm">Palm tree (holidays)</string>
+    <string name="checklist_add">+ Add checklist</string>
+    <string name="checklist_title">Checklist</string>
+    <string name="checklist_add_item">+ Add item</string>
+    <string name="checklist_remove">Remove checklist</string>
+    <string name="checklist_remove_confirm">Remove the whole checklist?</string>
+    <string name="checklist_item_hint">Item</string>
 </resources>
