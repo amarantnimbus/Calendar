@@ -7,35 +7,21 @@
     android:layout_height="wrap_content"
     android:paddingTop="@dimen/medium_margin">
 
-    <TextClock
+    <TextView
         android:id="@+id/widget_event_list_today"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_alignTop="@+id/widget_event_go_to_today"
-        android:layout_alignBottom="@+id/widget_event_go_to_today"
-        android:layout_toStartOf="@+id/widget_event_go_to_today"
+        android:layout_alignTop="@+id/widget_event_new_event"
+        android:layout_alignBottom="@+id/widget_event_new_event"
+        android:layout_toStartOf="@+id/widget_event_new_event"
         android:ellipsize="end"
-        android:format12Hour="MMM d yyyy (EEEE)"
-        android:format24Hour="MMM d yyyy (EEEE)"
         android:gravity="center_vertical"
         android:includeFontPadding="false"
         android:maxLines="1"
         android:paddingStart="@dimen/medium_margin"
         android:paddingEnd="@dimen/medium_margin"
         android:textSize="@dimen/normal_text_size"
-        tools:text="May 25 2022 (Wednesday)" />
-
-    <ImageView
-        android:id="@+id/widget_event_go_to_today"
-        style="@style/ArrowStyle"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_alignParentTop="true"
-        android:layout_toStartOf="@+id/widget_event_new_event"
-        android:paddingStart="@dimen/medium_margin"
-        android:paddingEnd="@dimen/medium_margin"
-        android:scaleType="fitCenter"
-        android:src="@drawable/ic_today_vector" />
+        tools:text="18 Dimecres" />
 
     <ImageView
         android:id="@+id/widget_event_new_event"

@@ -15,6 +15,10 @@ import org.fossify.calendar.extensions.config
 import org.fossify.calendar.extensions.getWidgetFontSize
 import org.fossify.calendar.extensions.launchNewEventOrTaskActivity
 import org.fossify.calendar.extensions.widgetsDB
+import org.fossify.calendar.extensions.eventsDB
+import org.fossify.calendar.extensions.updateTaskCompletion
+import org.fossify.calendar.extensions.updateWidgets
+import org.fossify.calendar.extensions.isTaskCompleted
 import org.fossify.calendar.extensions.calendarsDB
 import org.fossify.calendar.extensions.eventsHelper
 import org.fossify.calendar.extensions.seconds
@@ -27,6 +31,7 @@ class MyWidgetListProvider : AppWidgetProvider() {
     private val NEW_EVENT = "new_event"
     private val LAUNCH_CAL = "launch_cal"
     private val GO_TO_TODAY = "go_to_today"
+    private val TOGGLE_TASK = "toggle_task"
 
     override fun onUpdate(context: Context, appWidgetManager: AppWidgetManager, appWidgetIds: IntArray) {
         performUpdate(context)
@@ -53,7 +58,8 @@ class MyWidgetListProvider : AppWidgetProvider() {
                     setTextSize(R.id.widget_event_list_empty, fontSize)
 
                     setTextColor(R.id.widget_event_list_today, textColor)
-                    setTextSize(R.id.widget_event_list_today, fontSize)
+                    setTextSize(R.id.widget_event_list_today, fontSize + 3f)
+                    setTextViewText(R.id.widget_event_list_today, Formatter.getDayNumberAndWeekday(Formatter.getTodayCode()))
 
                     setViewVisibility(R.id.widget_header_include, headerVisibility)
                 }
@@ -66,9 +72,6 @@ class MyWidgetListProvider : AppWidgetProvider() {
                 )
                 setupIntent(context, views, NEW_EVENT, R.id.widget_event_new_event)
                 setupIntent(context, views, LAUNCH_CAL, R.id.widget_event_list_today)
-
-                views.setImageViewBitmap(R.id.widget_event_go_to_today, context.resources.getColoredBitmap(R.drawable.ic_today_vector, textColor))
-                setupIntent(context, views, GO_TO_TODAY, R.id.widget_event_go_to_today)
 
                 fillList(context, views, appWidgetManager, it, widget?.period ?: 0, widget?.header == true)
 
@@ -101,6 +104,7 @@ class MyWidgetListProvider : AppWidgetProvider() {
             if (landscape) AppWidgetManager.OPTION_APPWIDGET_MIN_HEIGHT else AppWidgetManager.OPTION_APPWIDGET_MAX_HEIGHT, 250
         )
         val headerPx = if (header) 46 * dp else 0f
+        val todayCode = Formatter.getTodayCode()
         val available = heightDp * dp - headerPx - 12 * dp
 
         val config = context.config
@@ -149,10 +153,15 @@ class MyWidgetListProvider : AppWidgetProvider() {
         sorted.forEach { e ->
             val code = Formatter.getDayCodeFromTS(e.startTS)
             if (code != prevCode) {
+                prevCode = code
+                // the header already says which day today is
+                if (header && code == todayCode) {
+                    items.add(Card(e))
+                    return@forEach
+                }
                 val title = Formatter.getDateDayTitle(code)
                 val isToday = Formatter.getDayTitle(context, code) == todayTitle
                 items.add(DayHead(code, title, !isToday && e.startTS < nowTs))
-                prevCode = code
             }
             items.add(Card(e))
         }
@@ -216,7 +225,6 @@ class MyWidgetListProvider : AppWidgetProvider() {
                         sb.append(initial).append(' ')
                         sb.setSpan(android.text.style.StyleSpan(android.graphics.Typeface.BOLD), st, sb.length, 0)
                     }
-                    if (isTask) sb.append(if (done) "\u2611 " else "\u2610 ")
                     if (!e.getIsAllDay()) {
                         sb.append(Formatter.getTimeFromTS(context, e.startTS)).append(' ')
                     }
@@ -226,6 +234,13 @@ class MyWidgetListProvider : AppWidgetProvider() {
                     if (strike) sb.setSpan(android.text.style.StrikethroughSpan(), titleStart, sb.length, 0)
 
                     val v = RemoteViews(pkg, R.layout.widget_list_card)
+                    if (isTask) {
+                        v.setViewVisibility(R.id.card_check, View.VISIBLE)
+                        v.setTextViewText(R.id.card_check, if (done) "\u2611" else "\u2610")
+                        v.setTextColor(R.id.card_check, ink)
+                        v.setTextViewTextSize(R.id.card_check, android.util.TypedValue.COMPLEX_UNIT_SP, sp1 * 1.25f)
+                        toggleTaskIntent(context, v, R.id.card_check, e)
+                    }
                     v.setTextViewText(R.id.card_line1, sb)
                     v.setTextColor(R.id.card_line1, ink)
                     v.setTextViewTextSize(R.id.card_line1, android.util.TypedValue.COMPLEX_UNIT_SP, sp1)
@@ -263,6 +278,34 @@ class MyWidgetListProvider : AppWidgetProvider() {
         }
     }
 
+    private fun toggleTaskIntent(context: Context, views: RemoteViews, id: Int, event: Event) {
+        val intent = Intent(context, MyWidgetListProvider::class.java).apply {
+            action = TOGGLE_TASK
+            data = Uri.parse("fossifytask://toggle/${event.id}/${event.startTS}")
+            putExtra(EVENT_ID, event.id ?: 0L)
+            putExtra(EVENT_OCCURRENCE_TS, event.startTS)
+        }
+        val code = ((event.id ?: 0L) * 37 + event.startTS + 1).toInt()
+        views.setOnClickPendingIntent(id, PendingIntent.getBroadcast(context, code, intent, PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT))
+    }
+
+    private fun toggleTask(context: Context, eventId: Long, occurrenceTS: Long) {
+        if (eventId == 0L) return
+        val event = context.eventsDB.getEventWithId(eventId) ?: return
+        if (event.isTaskMarked()) {
+            event.description = DayIcons.withDone(event.description, !DayIcons.isDone(event.description))
+            event.lastUpdated = System.currentTimeMillis()
+            context.eventsHelper.updateEvent(event, updateAtCalDAV = true, showToasts = false) {}
+        } else if (event.isTask()) {
+            val task = context.eventsDB.getTaskWithId(eventId) ?: event
+            val copy = task.copy(startTS = if (occurrenceTS != 0L) occurrenceTS else task.startTS)
+            context.updateTaskCompletion(copy, !context.isTaskCompleted(copy))
+        } else return
+        context.updateWidgets()
+        RefreshBus.changed()
+        TailscaleSync.pushChanges(context)
+    }
+
     private fun openDayIntent(context: Context, views: RemoteViews, id: Int, dayCode: String) {
         (context.getLaunchIntent() ?: Intent(context, SplashActivity::class.java)).apply {
             putExtra(DAY_CODE, dayCode)
@@ -287,6 +330,19 @@ class MyWidgetListProvider : AppWidgetProvider() {
             NEW_EVENT -> context.launchNewEventOrTaskActivity()
             LAUNCH_CAL -> launchCalenderInDefaultView(context)
             GO_TO_TODAY -> goToToday(context)
+            TOGGLE_TASK -> {
+                val id = intent.getLongExtra(EVENT_ID, 0L)
+                val ts = intent.getLongExtra(EVENT_OCCURRENCE_TS, 0L)
+                val pending = goAsync()
+                ensureBackgroundThread {
+                    try {
+                        toggleTask(context.applicationContext, id, ts)
+                    } catch (ignored: Exception) {
+                    } finally {
+                        pending.finish()
+                    }
+                }
+            }
             else -> super.onReceive(context, intent)
         }
     }

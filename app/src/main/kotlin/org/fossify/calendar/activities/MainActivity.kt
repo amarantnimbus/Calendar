@@ -257,6 +257,7 @@ class MainActivity : SimpleActivity(), RefreshRecyclerViewListener {
 
     override fun onResume() {
         super.onResume()
+        org.fossify.calendar.helpers.RefreshBus.listener = { refreshViewPager() }
         watchNetworkForTailscaleIcon()
         mSearchHandler.removeCallbacks(mSearchWatcher)
         mSearchHandler.post(mSearchWatcher)
@@ -327,6 +328,7 @@ class MainActivity : SimpleActivity(), RefreshRecyclerViewListener {
 
     override fun onPause() {
         super.onPause()
+        org.fossify.calendar.helpers.RefreshBus.listener = null
         stopWatchingNetwork()
         mSearchHandler.removeCallbacks(mSearchWatcher)
         storeStateVariables()

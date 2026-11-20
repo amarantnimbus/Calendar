@@ -499,4 +499,11 @@
     <string name="shift_error_no_calendar">No writable synced calendar to keep the shifts in.</string>
     <string name="sec_widgets">Widgets</string>
     <string name="shift_error_not_saved">The shifts event could not be saved on this phone.</string>
+    <string name="shift_restart_cycle">Restart the cycle from this day</string>
+    <string name="save_failed">Could not finish saving. The change stays on this phone and will be tried again.</string>
+    <string name="until_add">Until…</string>
+    <string name="until_remove">Remove \"Until\"</string>
+    <string name="event_colors">Event colors</string>
+    <string name="event_colors_reset">Reset to default colors</string>
+    <string name="event_color_default">Calendar color</string>
 </resources>

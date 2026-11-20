@@ -27,8 +27,12 @@ class ShiftSchedule(
     private val startEpochDay: Long?,
     private val cycle: List<Shift>,
     private val overrides: Map<String, Shift>,
-    private val colors: Map<Shift, Int>
+    private val colors: Map<Shift, Int>,
+    restartEpochDays: List<Long> = emptyList()
 ) {
+
+    // sorted, so the latest restart before a day is found fast
+    private val restarts = restartEpochDays.sorted()
 
     /** Returns the shift of the day with the given code (yyyyMMdd), or null if it is unknown. */
     fun shiftFor(dayCode: String): Shift? {
@@ -40,9 +44,11 @@ class ShiftSchedule(
         }
 
         val day = ShiftHelper.epochDayFromCode(dayCode) ?: return null
+        // the cycle starts again on the latest restart day that is not after this day
+        val anchor = restarts.lastOrNull { it <= day } ?: start
         // floorMod keeps the result positive for days before the start date, so the cycle also
         // repeats towards the past.
-        val index = Math.floorMod(day - start, cycle.size.toLong()).toInt()
+        val index = Math.floorMod(day - anchor, cycle.size.toLong()).toInt()
         return cycle[index]
     }
 
@@ -112,6 +118,21 @@ object ShiftHelper {
         return result
     }
 
+    fun parseRestarts(text: String): List<Long> {
+        return text.split(";").mapNotNull { epochDayFromCode(it.trim()) }
+    }
+
+    /** From this day on the cycle starts again from its first day. */
+    fun addRestart(config: Config, dayCode: String) {
+        val codes = config.shiftRestarts.split(";").map { it.trim() }.filter { it.length == 8 }.toMutableSet()
+        codes.add(dayCode)
+        config.shiftRestarts = codes.sorted().joinToString(";")
+        // the manual changes of that day and the following ones were made for the old sequence
+        val overrides = parseOverrides(config.shiftOverrides)
+        overrides.remove(dayCode)
+        config.shiftOverrides = serializeOverrides(overrides)
+    }
+
     private fun serializeOverrides(overrides: Map<String, Shift>): String {
         return overrides.entries.joinToString(";") { "${it.key}:${it.value.code}" }
     }
@@ -146,7 +167,8 @@ object ShiftHelper {
             startEpochDay = epochDayFromCode(config.shiftStartDate),
             cycle = parseCycle(config.shiftCycle) ?: emptyList(),
             overrides = parseOverrides(config.shiftOverrides),
-            colors = colors
+            colors = colors,
+            restartEpochDays = parseRestarts(config.shiftRestarts)
         )
     }
 

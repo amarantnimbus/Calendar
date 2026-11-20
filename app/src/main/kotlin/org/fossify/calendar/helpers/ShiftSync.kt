@@ -29,7 +29,7 @@ object ShiftSync {
     private const val NOTE = "Aquest esdeveniment guarda els torns i l'app el mostra amagat. No l'esborris."
 
     // the colours of the shifts are not shared: each phone keeps its own
-    private val KNOWN_KEYS = setOf("start", "cycle", "overrides", "cal_colors")
+    private val KNOWN_KEYS = setOf("start", "cycle", "overrides", "restarts", "cal_colors")
 
     const val JUNTS = "Junts"
 
@@ -54,6 +54,9 @@ object ShiftSync {
         values["start"] = config.shiftStartDate
         values["cycle"] = config.shiftCycle
         values["overrides"] = config.shiftOverrides
+        if (config.shiftRestarts.isNotEmpty()) {
+            values["restarts"] = config.shiftRestarts
+        }
         values["cal_colors"] = calendarColors(context)
         return values
     }
@@ -116,6 +119,7 @@ object ShiftSync {
         values["start"]?.let { config.shiftStartDate = it }
         values["cycle"]?.let { if (ShiftHelper.parseCycle(it) != null) config.shiftCycle = it }
         values["overrides"]?.let { config.shiftOverrides = it }
+        values["restarts"]?.let { config.shiftRestarts = it }
         values["cal_colors"]?.let { applyCalendarColors(context, it) }
     }
 

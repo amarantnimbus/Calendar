@@ -444,4 +444,11 @@
     <string name="shift_error_no_calendar">No hi ha cap calendari sincronitzat editable on guardar els torns.</string>
     <string name="sec_widgets">Ginys</string>
     <string name="shift_error_not_saved">No s\'ha pogut desar l\'esdeveniment de torns en aquest mòbil.</string>
+    <string name="shift_restart_cycle">Reinicia el cicle des d\'aquest dia</string>
+    <string name="save_failed">No s\'ha pogut acabar de desar. El canvi queda al mòbil i es tornarà a provar.</string>
+    <string name="until_add">Fins al…</string>
+    <string name="until_remove">Treure «Fins al»</string>
+    <string name="event_colors">Colors dels esdeveniments</string>
+    <string name="event_colors_reset">Restableix els colors per defecte</string>
+    <string name="event_color_default">Color del calendari</string>
 </resources>

@@ -1374,13 +1374,7 @@ class EventActivity : SimpleActivity() {
     private fun showEventColorDialog() {
         hideKeyboard()
         ensureBackgroundThread {
-            val isLocalEvent = mEventCalendarId == STORED_LOCALLY_ONLY
-            val colorCalendar = calendarsDB.getCalendarWithId(mCalendarId)
-            if (isLocalEvent || colorCalendar == null || getEventColors(colorCalendar).isEmpty()) {
-                showCustomEventColorDialog()
-            } else {
-                showCalDAVEventColorDialog()
-            }
+            showCustomEventColorDialog()
         }
     }
 
@@ -1393,34 +1387,7 @@ class EventActivity : SimpleActivity() {
         }
 
         runOnUiThread {
-            ColorPickerDialog(
-                activity = this,
-                color = currentColor,
-                addDefaultColorButton = true
-            ) { wasPositivePressed, newColor ->
-                if (wasPositivePressed) {
-                    gotNewEventColor(newColor, currentColor, calendar.color)
-                }
-            }
-        }
-    }
-
-    private fun showCalDAVEventColorDialog() {
-        val calendar =
-            eventsHelper.getCalendarWithCalDAVCalendarId(calendarId = mEventCalendarId)!!
-        val eventColors = getEventColors(calendar)
-        val currentColor = if (mEventColor == 0) {
-            calendar.color
-        } else {
-            mEventColor
-        }
-
-        runOnUiThread {
-            SelectEventColorDialog(
-                activity = this,
-                colors = eventColors,
-                currentColor = currentColor
-            ) { newColor ->
+            org.fossify.calendar.helpers.EventPalette.showPicker(this, mEventColor) { newColor ->
                 gotNewEventColor(newColor, currentColor, calendar.color)
             }
         }
@@ -1754,8 +1721,20 @@ class EventActivity : SimpleActivity() {
     /** Closes the screen and, in the background, sends the change to the server (Tailscale on and off by itself). */
     private fun pushAndFinish() {
         val app = applicationContext
+        org.fossify.calendar.helpers.RefreshBus.changed()
         ensureBackgroundThread { org.fossify.calendar.helpers.TailscaleSync.pushChanges(app) }
-        finish()
+        runOnUiThread { finish() }
+    }
+
+    /** The screen closes at once; the writing goes on in the background. */
+    private fun closeNow() {
+        hideKeyboard()
+        runOnUiThread { finish() }
+    }
+
+    private fun reportSaveError(e: Exception) {
+        toast(R.string.save_failed)
+        org.fossify.calendar.helpers.RefreshBus.changed()
     }
 
     private fun duplicateEvent() {
@@ -1969,19 +1948,22 @@ class EventActivity : SimpleActivity() {
 
     private fun storeEvent(wasRepeatable: Boolean) {
         if (mEvent.id == null) {
-            eventsHelper.insertEvent(mEvent, addToCalDAV = true, showToasts = true) {
-                hideKeyboard()
-
-                if (DateTime.now().isAfter(mEventStartDateTime.millis)) {
-                    if (
-                        mEvent.repeatInterval == 0 && mEvent.getReminders()
-                            .any { it.type == REMINDER_NOTIFICATION }
-                    ) {
-                        notifyEvent(mEvent)
+            closeNow()
+            try {
+                eventsHelper.insertEvent(mEvent, addToCalDAV = true, showToasts = true) {
+                    if (DateTime.now().isAfter(mEventStartDateTime.millis)) {
+                        if (
+                            mEvent.repeatInterval == 0 && mEvent.getReminders()
+                                .any { it.type == REMINDER_NOTIFICATION }
+                        ) {
+                            notifyEvent(mEvent)
+                        }
                     }
-                }
 
-                pushAndFinish()
+                    pushAndFinish()
+                }
+            } catch (e: Exception) {
+                reportSaveError(e)
             }
         } else {
             if (mRepeatInterval > 0 && wasRepeatable) {
@@ -1989,9 +1971,13 @@ class EventActivity : SimpleActivity() {
                     showEditRepeatingEventDialog()
                 }
             } else {
-                hideKeyboard()
-                eventsHelper.updateEvent(mEvent, updateAtCalDAV = true, showToasts = true) {
-                    pushAndFinish()
+                closeNow()
+                try {
+                    eventsHelper.updateEvent(mEvent, updateAtCalDAV = true, showToasts = true) {
+                        pushAndFinish()
+                    }
+                } catch (e: Exception) {
+                    reportSaveError(e)
                 }
             }
         }
@@ -2736,17 +2722,19 @@ class EventActivity : SimpleActivity() {
         val endTime = view.findViewById<android.widget.TextView>(R.id.dt_end_time)
         val timeZone = view.findViewById<android.widget.TextView>(R.id.dt_time_zone)
         val unscheduled = view.findViewById<org.fossify.commons.views.MyMaterialSwitch>(R.id.dt_unscheduled)
+        val untilAdd = view.findViewById<android.widget.TextView>(R.id.dt_until_add)
+        val untilRemove = view.findViewById<android.widget.TextView>(R.id.dt_until_remove)
+        val startRow = view.findViewById<android.view.View>(R.id.dt_start_row)
+        val endRow = view.findViewById<android.view.View>(R.id.dt_end_row)
+        // all-day events: one date; a second date ("Fins al…") only when the person asks for it
+        var untilShown = mEventStartDateTime.toLocalDate() != mEventEndDateTime.toLocalDate()
         val dialogTextColor = getProperTextColor()
         listOf<android.widget.TextView>(
-            allDay, unscheduled, startDate, startTime, endDate, endTime, timeZone,
+            allDay, unscheduled, startDate, startTime, endDate, endTime, timeZone, untilAdd, untilRemove,
             view.findViewById(R.id.dt_start_label), view.findViewById(R.id.dt_end_label)
         ).forEach { it.setTextColor(dialogTextColor) }
         view.findViewById<android.widget.ImageView>(R.id.dt_clock).applyColorFilter(dialogTextColor)
-        val rowsToHide = listOf<android.view.View>(
-            allDay,
-            view.findViewById(R.id.dt_start_row),
-            view.findViewById(R.id.dt_end_row)
-        )
+        val rowsToHide = listOf<android.view.View>(allDay)
 
         val savedUnscheduled = mIsUnscheduled
         val savedStart = mEventStartDateTime
@@ -2763,10 +2751,13 @@ class EventActivity : SimpleActivity() {
             endDate.text = Formatter.getDate(this, mEventEndDateTime)
             endTime.text = Formatter.getTime(this, mEventEndDateTime)
             val isAllDay = binding.eventAllDay.isChecked
-            // times stay visible (dimmed) while all-day; touching one makes the event timed
-            val timeAlpha = if (isAllDay) 0.4f else 1f
-            startTime.alpha = timeAlpha
-            endTime.alpha = timeAlpha
+            // all-day: only the date(s), no times
+            startTime.beGoneIf(isAllDay)
+            endTime.beGoneIf(isAllDay)
+            startRow.beGoneIf(mIsUnscheduled)
+            endRow.beGoneIf(mIsUnscheduled || (isAllDay && !untilShown))
+            untilAdd.beVisibleIf(isAllDay && !untilShown && !mIsUnscheduled)
+            untilRemove.beVisibleIf(isAllDay && untilShown && !mIsUnscheduled)
             timeZone.text = mEvent.getTimeZoneString()
             timeZone.beVisibleIf(config.allowChangingTimeZones && !isAllDay && !mIsUnscheduled)
             rowsToHide.forEach { it.beGoneIf(mIsUnscheduled) }
@@ -2787,18 +2778,27 @@ class EventActivity : SimpleActivity() {
         allDay.isChecked = savedAllDay
         allDay.setOnCheckedChangeListener(allDayListener)
         startDate.setOnClickListener { setupStartDate() }
-        startTime.setOnClickListener {
-            if (binding.eventAllDay.isChecked) {
-                binding.eventAllDay.isChecked = false
-            }
-            setupStartTime()
-        }
+        startTime.setOnClickListener { setupStartTime() }
         endDate.setOnClickListener { setupEndDate() }
-        endTime.setOnClickListener {
-            if (binding.eventAllDay.isChecked) {
-                binding.eventAllDay.isChecked = false
+        endTime.setOnClickListener { setupEndTime() }
+        untilAdd.setOnClickListener {
+            untilShown = true
+            if (!mEventEndDateTime.toLocalDate().isAfter(mEventStartDateTime.toLocalDate())) {
+                mEventEndDateTime = mEventStartDateTime.plusDays(1)
+                updateEndTexts()
+                updateHeader()
             }
-            setupEndTime()
+            refresh()
+            setupEndDate()
+        }
+        untilRemove.setOnClickListener {
+            untilShown = false
+            mEventEndDateTime = mEventEndDateTime.withDate(
+                mEventStartDateTime.year, mEventStartDateTime.monthOfYear, mEventStartDateTime.dayOfMonth
+            )
+            updateEndTexts()
+            updateHeader()
+            refresh()
         }
         timeZone.setOnClickListener { setupTimeZone() }
 

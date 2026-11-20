@@ -103,6 +103,28 @@
     </LinearLayout>
 
     <TextView
+        android:id="@+id/dt_until_add"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:background="?attr/selectableItemBackground"
+        android:paddingTop="10dp"
+        android:paddingBottom="10dp"
+        android:text="@string/until_add"
+        android:textSize="16sp"
+        android:visibility="gone" />
+
+    <TextView
+        android:id="@+id/dt_until_remove"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:background="?attr/selectableItemBackground"
+        android:paddingTop="10dp"
+        android:paddingBottom="10dp"
+        android:text="@string/until_remove"
+        android:textSize="16sp"
+        android:visibility="gone" />
+
+    <TextView
         android:id="@+id/dt_time_zone"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"

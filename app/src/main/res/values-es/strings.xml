@@ -444,4 +444,11 @@
     <string name="shift_error_no_calendar">No hay ningún calendario sincronizado editable donde guardar los turnos.</string>
     <string name="sec_widgets">Widgets</string>
     <string name="shift_error_not_saved">No se pudo guardar el evento de turnos en este móvil.</string>
+    <string name="shift_restart_cycle">Reinicia el ciclo desde este día</string>
+    <string name="save_failed">No se pudo terminar de guardar. El cambio queda en el móvil y se volverá a intentar.</string>
+    <string name="until_add">Hasta el…</string>
+    <string name="until_remove">Quitar «Hasta el»</string>
+    <string name="event_colors">Colores de los eventos</string>
+    <string name="event_colors_reset">Restablecer los colores por defecto</string>
+    <string name="event_color_default">Color del calendario</string>
 </resources>

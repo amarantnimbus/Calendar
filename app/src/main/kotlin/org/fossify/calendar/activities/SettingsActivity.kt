@@ -230,6 +230,9 @@ class SettingsActivity : SimpleActivity() {
         setupEventTransparency()
         setupPanelTransparency()
         setupMonthFullText()
+        binding.settingsEventColorsHolder.setOnClickListener {
+            org.fossify.calendar.helpers.EventPalette.showEditor(this)
+        }
         setupShifts()
         setupDeleteAllEvents()
         setupDisplayDescription()

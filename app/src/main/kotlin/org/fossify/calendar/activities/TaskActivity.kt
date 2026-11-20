@@ -1020,16 +1020,10 @@ class TaskActivity : SimpleActivity() {
             }
 
             runOnUiThread {
-                ColorPickerDialog(
-                    activity = this,
-                    color = currentColor,
-                    addDefaultColorButton = true
-                ) { wasPositivePressed, newColor ->
-                    if (wasPositivePressed) {
-                        if (newColor != currentColor) {
-                            mEventColor = newColor
-                            updateTaskColorInfo(defaultColor = calendar.color)
-                        }
+                org.fossify.calendar.helpers.EventPalette.showPicker(this, mEventColor) { newColor ->
+                    if (newColor != currentColor) {
+                        mEventColor = newColor
+                        updateTaskColorInfo(defaultColor = calendar.color)
                     }
                 }
             }

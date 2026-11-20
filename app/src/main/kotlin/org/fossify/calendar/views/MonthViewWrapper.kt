@@ -39,6 +39,7 @@ class MonthViewWrapper(
 ) : FrameLayout(context, attrs, defStyle) {
     companion object {
         private const val BACK_TO_CYCLE = 100
+        private const val RESTART_CYCLE = 101
     }
 
     private var dayWidth = 0f
@@ -217,10 +218,15 @@ class MonthViewWrapper(
             items.add(RadioItem(shift.ordinal, getShiftName(shift)))
         }
         items.add(RadioItem(BACK_TO_CYCLE, context.getString(R.string.shift_back_to_cycle)))
+        items.add(RadioItem(RESTART_CYCLE, context.getString(R.string.shift_restart_cycle)))
 
         RadioGroupDialog(context.getActivity(), items) {
-            val shift = Shift.values().getOrNull(it as Int)
-            ShiftHelper.setOverride(context.config, day.code, shift)
+            if (it as Int == RESTART_CYCLE) {
+                ShiftHelper.addRestart(context.config, day.code)
+            } else {
+                val shift = Shift.values().getOrNull(it)
+                ShiftHelper.setOverride(context.config, day.code, shift)
+            }
             binding.monthView.invalidate()
             if (context.config.caldavSync) {
                 ensureBackgroundThread { ShiftSync.syncAndPush(context) }

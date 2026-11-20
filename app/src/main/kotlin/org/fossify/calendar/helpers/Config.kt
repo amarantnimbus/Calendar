@@ -410,6 +410,10 @@ class Config(context: Context) : BaseConfig(context) {
         get() = prefs.getString("widget_debug", "") ?: ""
         set(value) = prefs.edit().putString("widget_debug", value).apply()
 
+    var eventPaletteRaw: String
+        get() = prefs.getString("event_palette", "") ?: ""
+        set(value) = prefs.edit().putString("event_palette", value).apply()
+
     var monthFullText: Boolean
         get() = prefs.getBoolean(MONTH_FULL_TEXT, false)
         set(monthFullText) = prefs.edit().putBoolean(MONTH_FULL_TEXT, monthFullText).apply()
@@ -468,6 +472,11 @@ class Config(context: Context) : BaseConfig(context) {
     var shiftOverrides: String
         get() = prefs.getString(SHIFT_OVERRIDES, "")!!
         set(shiftOverrides) = prefs.edit().putString(SHIFT_OVERRIDES, shiftOverrides).apply()
+
+    // Days from which the cycle starts again from its first day, e.g. "20270101;20270901".
+    var shiftRestarts: String
+        get() = prefs.getString(SHIFT_RESTARTS, "")!!
+        set(shiftRestarts) = prefs.edit().putString(SHIFT_RESTARTS, shiftRestarts).apply()
 
     var lastUsedEventSpan: Int
         get() = prefs.getInt(LAST_USED_EVENT_SPAN, YEAR_SECONDS)
