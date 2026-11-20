@@ -224,7 +224,6 @@ class WidgetListConfigureActivity : SimpleActivity() {
 
     private fun updateTextColor() {
         binding.configWidgetPreview.widgetHeaderInclude.widgetEventListToday.setTextColor(mTextColor)
-        binding.configWidgetPreview.widgetHeaderInclude.widgetEventGoToToday.setColorFilter(mTextColor)
         binding.configWidgetPreview.widgetHeaderInclude.widgetEventNewEvent.setColorFilter(mTextColor)
         (binding.configWidgetPreview.configEventsList.adapter as? EventListAdapter)?.updateTextColor(mTextColor)
         binding.configTextColor.setFillWithStroke(mTextColor, mTextColor)
