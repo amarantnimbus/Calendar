@@ -111,11 +111,11 @@ class MyWidgetListProvider : AppWidgetProvider() {
         val textColor = config.widgetTextColor
         val bgColor = config.widgetBgColor or 0xFF000000.toInt()
         val fs = context.getWidgetFontSize()
-        val sp1 = fs * 0.72f
+        val sp1 = fs * 0.62f
         val sp2 = fs * 0.7f
         val px1 = android.util.TypedValue.applyDimension(android.util.TypedValue.COMPLEX_UNIT_SP, sp1, dm)
         val px2 = android.util.TypedValue.applyDimension(android.util.TypedValue.COMPLEX_UNIT_SP, sp2, dm)
-        val spDay = fs * 0.8f
+        val spDay = fs * 0.7f
         val pxDay = android.util.TypedValue.applyDimension(android.util.TypedValue.COMPLEX_UNIT_SP, spDay, dm)
 
         val now = DateTime()

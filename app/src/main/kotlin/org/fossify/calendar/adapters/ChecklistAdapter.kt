@@ -27,6 +27,7 @@ class ChecklistAdapter(
     private val items: MutableList<DayIcons.CheckItem>,
     private val textColor: Int,
     private val onChanged: () -> Unit,
+    private val onRemoved: () -> Unit,
     private val onEnter: (Int) -> Unit,
     private val startDrag: (RecyclerView.ViewHolder) -> Unit
 ) : RecyclerView.Adapter<ChecklistAdapter.Holder>() {
@@ -40,7 +41,8 @@ class ChecklistAdapter(
         val row: LinearLayout,
         val handle: ImageView,
         val bubble: ImageView,
-        val text: EditText
+        val text: EditText,
+        val remove: ImageView
     ) : RecyclerView.ViewHolder(row) {
         var watcher: TextWatcher? = null
     }
@@ -73,10 +75,18 @@ class ChecklistAdapter(
             setSingleLine(true)
             layoutParams = LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.MATCH_PARENT, 1f)
         }
+        val remove = ImageView(context).apply {
+            setImageResource(R.drawable.ic_checklist_x)
+            setColorFilter((textColor and 0x00FFFFFF) or 0x99000000.toInt())
+            setPadding(dp(11), dp(11), dp(11), dp(11))
+            layoutParams = LinearLayout.LayoutParams(dp(40), dp(44))
+            contentDescription = context.getString(R.string.checklist_remove_item)
+        }
         row.addView(handle)
         row.addView(bubble)
         row.addView(text)
-        return Holder(row, handle, bubble, text)
+        row.addView(remove)
+        return Holder(row, handle, bubble, text, remove)
     }
 
     @SuppressLint("ClickableViewAccessibility")
@@ -112,6 +122,12 @@ class ChecklistAdapter(
                 items[pos].done = !items[pos].done
                 applyDone(holder, items[pos].done)
                 onChanged()
+            }
+        }
+        holder.remove.setOnClickListener {
+            val pos = holder.adapterPosition
+            if (pos != RecyclerView.NO_POSITION) {
+                remove(pos)
             }
         }
         holder.handle.setOnTouchListener { _, event ->
@@ -164,5 +180,6 @@ class ChecklistAdapter(
         items.removeAt(position)
         notifyItemRemoved(position)
         onChanged()
+        onRemoved()
     }
 }

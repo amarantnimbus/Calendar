@@ -169,18 +169,17 @@
             <org.fossify.commons.views.MyEditText
                 android:id="@+id/event_description"
                 android:layout_width="match_parent"
-                android:layout_height="0dp"
+                android:layout_height="wrap_content"
                 android:layout_marginStart="@dimen/activity_margin"
                 android:layout_marginTop="@dimen/activity_margin"
                 android:layout_marginEnd="@dimen/activity_margin"
-                android:layout_weight="1"
                 android:autoLink="all"
                 android:background="@null"
                 android:gravity="top"
                 android:hint="@string/comment_hint"
                 android:inputType="textCapSentences|textMultiLine"
                 android:linksClickable="true"
-                android:minHeight="200dp"
+                android:minHeight="72dp"
                 android:overScrollMode="ifContentScrolls"
                 android:padding="0dp"
                 android:scrollbars="vertical"
@@ -207,7 +206,8 @@
                 <LinearLayout
                     android:id="@+id/event_checklist_header"
                     android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
+                    android:layout_height="44dp"
+                    android:gravity="center_vertical"
                     android:orientation="horizontal"
                     android:visibility="gone">
 
@@ -217,13 +217,32 @@
                         android:layout_height="wrap_content"
                         android:layout_weight="1"
                         android:text="@string/checklist_title"
-                        android:textSize="13sp" />
+                        android:textSize="16sp" />
+
+                    <ImageView
+                        android:id="@+id/event_checklist_add_item"
+                        android:layout_width="40dp"
+                        android:layout_height="40dp"
+                        android:background="?attr/selectableItemBackgroundBorderless"
+                        android:contentDescription="@string/checklist_add_item"
+                        android:padding="9dp"
+                        android:src="@drawable/ic_checklist_plus" />
+
+                    <ImageView
+                        android:id="@+id/event_checklist_remove"
+                        android:layout_width="40dp"
+                        android:layout_height="40dp"
+                        android:background="?attr/selectableItemBackgroundBorderless"
+                        android:contentDescription="@string/checklist_remove"
+                        android:padding="9dp"
+                        android:src="@drawable/ic_checklist_trash" />
 
                     <org.fossify.commons.views.MyTextView
                         android:id="@+id/event_checklist_count"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:textSize="13sp" />
+                        android:paddingStart="6dp"
+                        android:textSize="16sp" />
 
                 </LinearLayout>
 
@@ -232,28 +251,6 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:overScrollMode="never"
-                    android:visibility="gone" />
-
-                <org.fossify.commons.views.MyTextView
-                    android:id="@+id/event_checklist_add_item"
-                    android:layout_width="match_parent"
-                    android:layout_height="44dp"
-                    android:background="?attr/selectableItemBackground"
-                    android:gravity="center_vertical"
-                    android:paddingStart="4dp"
-                    android:text="@string/checklist_add_item"
-                    android:textSize="@dimen/day_text_size"
-                    android:visibility="gone" />
-
-                <org.fossify.commons.views.MyTextView
-                    android:id="@+id/event_checklist_remove"
-                    android:layout_width="wrap_content"
-                    android:layout_height="40dp"
-                    android:background="?attr/selectableItemBackground"
-                    android:gravity="center_vertical"
-                    android:paddingEnd="12dp"
-                    android:text="@string/checklist_remove"
-                    android:textSize="13sp"
                     android:visibility="gone" />
 
                 <org.fossify.commons.views.MyTextView

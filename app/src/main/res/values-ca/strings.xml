@@ -459,4 +459,5 @@
     <string name="checklist_remove">Treu la llista</string>
     <string name="checklist_remove_confirm">Vols treure tota la llista?</string>
     <string name="checklist_item_hint">Element</string>
+    <string name="checklist_remove_item">Esborra l\'element</string>
 </resources>

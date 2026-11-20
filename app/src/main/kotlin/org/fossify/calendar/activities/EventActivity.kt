@@ -674,6 +674,7 @@ class EventActivity : SimpleActivity() {
                 items = mChecklist,
                 textColor = getProperTextColor(),
                 onChanged = { onChecklistChanged() },
+                onRemoved = { updateChecklistUi() },
                 onEnter = { pos -> addChecklistItem(pos + 1) },
                 startDrag = { holder -> mChecklistTouch?.startDrag(holder) }
             )
@@ -681,7 +682,7 @@ class EventActivity : SimpleActivity() {
             rv.adapter = adapter
             mChecklistTouch = androidx.recyclerview.widget.ItemTouchHelper(object : androidx.recyclerview.widget.ItemTouchHelper.SimpleCallback(
                 androidx.recyclerview.widget.ItemTouchHelper.UP or androidx.recyclerview.widget.ItemTouchHelper.DOWN,
-                androidx.recyclerview.widget.ItemTouchHelper.LEFT or androidx.recyclerview.widget.ItemTouchHelper.RIGHT
+                0
             ) {
                 override fun isLongPressDragEnabled() = false
 
@@ -703,7 +704,11 @@ class EventActivity : SimpleActivity() {
 
             val accent = getProperPrimaryColor()
             binding.eventChecklistAdd.setTextColor(accent)
-            binding.eventChecklistAddItem.setTextColor(accent)
+            val textColor = getProperTextColor()
+            binding.eventChecklistAddItem.setColorFilter(accent)
+            binding.eventChecklistRemove.setColorFilter(textColor)
+            binding.eventChecklistTitle.setTextColor(textColor)
+            binding.eventChecklistCount.setTextColor(textColor)
             binding.eventChecklistAdd.setOnClickListener {
                 mChecklistShown = true
                 if (mChecklist.isEmpty()) {
@@ -749,8 +754,6 @@ class EventActivity : SimpleActivity() {
             eventChecklistAdd.beGoneIf(active)
             eventChecklistHeader.beVisibleIf(active)
             eventChecklistList.beVisibleIf(active)
-            eventChecklistAddItem.beVisibleIf(active)
-            eventChecklistRemove.beVisibleIf(active)
         }
         updateChecklistCount()
     }
@@ -1049,6 +1052,9 @@ class EventActivity : SimpleActivity() {
     }
 
     private fun setupNewEvent() {
+        if (mChecklistAdapter == null) {
+            setupChecklist()
+        }
         window.setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_STATE_ALWAYS_VISIBLE)
         binding.eventTitle.requestFocus()
         binding.eventToolbar.title = getString(R.string.new_event)
